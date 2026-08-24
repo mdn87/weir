@@ -52,6 +52,25 @@ Raw HTML, screenshots, HAR bodies, downloaded documents, and rendered DOMs may c
 - Prefer managed worker images over unbounded `npx --yes` execution in production.
 - Track security posture of external browser dependencies.
 
+#### Audit snapshot (2026-08-24, benchmark host)
+
+Both candidate engines were license- and supply-chain-reviewed before the
+first benchmark; the full record (hashes, endpoints, workarounds) lives in the
+host-local external-tools manifest, outside this repo.
+
+- `@only-cli/oc` 0.4.0 (MIT): npm audit clean. The upstream repo was six days
+  old at audit time with a single pseudonymous owner — pin the version and
+  re-review on every upgrade. Normal reads contact only the target URL; its
+  `impers` dependency reaches `api.impersonate.pro` solely on explicit
+  `impers update`/`config`. Its transport spoofs browser TLS fingerprints
+  (curl-impersonate), which is dual-use: domain policy must decide where
+  fingerprint evasion is acceptable rather than treating it as a free default.
+- `agent-browser` 0.34.0 (Apache-2.0, vercel-labs): npm audit clean, zero
+  runtime npm deps, no telemetry found in the JS layer. postinstall fetches a
+  platform-native binary from versioned upstream GitHub releases. Its
+  persistent daemon binds 127.0.0.1 only, but outlives CLI calls and shares a
+  default session across reads until the adapter passes `--session` isolation.
+
 ## `oc` integration caution
 
 `oc` has useful private/internal-address blocking. WEIR should preserve that default for public acquisition. Internal services should use an explicit internal adapter or browser worker with its own allowlist.
