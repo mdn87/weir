@@ -178,10 +178,29 @@ title, price, shipping, condition) — `observed_at`, `enrichment`, and the raw 
 are excluded, so an unchanged listing hashes identically across observations, which is
 what Lode's listing-state change detection needs.
 
+## Live verification (2026-08-24, production Browse API, Lode keyset)
+
+- `weir search "Keychron C2 Pro" --source ebay`: 50 normalized listings
+  (838 reported, truncation flagged); **all 50 validate against
+  `marketplace-listing.schema.json` with zero errors**; 14 listings carry
+  explicit `shipping: unknown` — the no-guessing rule holding on real data.
+- Pagination: `--pages 2` → 100 listings, 100 unique item ids,
+  `{pages_fetched: 2, truncated: true}`.
+- `weir read <item-url> --engine ebay`: resolves the listing through
+  `get_item_by_legacy_id` and returns richer detail than the summary
+  (e.g. condition "Open box"/1500).
+- Rung-2 enrichment: `weir enrich <item-url>` read the live eBay item page
+  through oc (~23KB normalized content, no fallback needed), capture tagged
+  `enrichment: page`.
+- Credentials: the Lode production keyset via `EBAY_CLIENT_ID`/
+  `EBAY_CLIENT_SECRET` user env vars; WEIR's `ebay-app` profile reads the
+  same names, so one keyset serves both projects.
+
 ## Remaining to prove
 
-- Live Browse API run (requires eBay application keys in the environment).
-- Lode consuming `weir search --source ebay` captures in place of its own collector.
+- Lode consuming `weir search --source ebay` captures in place of its own
+  collector (Lode-side integration decision; sample captures live under
+  `benchmarks/results/live-slice-*.json`, local-only).
 
 ## Relationship to the roadmap
 

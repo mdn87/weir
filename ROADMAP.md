@@ -22,7 +22,7 @@ against live work instead of a synthetic corpus. Full design: `docs/marketplace-
 
 - [x] Decide `search` mode vs. overloaded `discover` for structured search (new `search` mode; requires query + source).
 - [x] Define the result-set / normalized-listing capture shape (`contracts/marketplace-listing.schema.json`; set rides in WebCapture content).
-- [x] Implement the `ebay` connector engine (`weir search` → Browse API item_summary; `weir read --engine ebay` → item by legacy id).
+- [x] Implement the `ebay` connector engine (`weir search` → Browse API item_summary; `weir read --engine ebay` → item by legacy id; live-verified against production with the Lode keyset).
 - [x] Implement enrichment fallback (`weir enrich`: oc → agent-browser-read page rung; browser observe waits for P2).
 - [x] Return immutable, hashed, provenance-bearing listing captures (per-listing state hash excludes observed_at).
 - [ ] Prove Lode can consume WEIR captures in place of its own eBay collector (needs live eBay app keys + Lode-side integration).
