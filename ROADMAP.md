@@ -25,7 +25,7 @@ against live work instead of a synthetic corpus. Full design: `docs/marketplace-
 - [x] Implement the `ebay` connector engine (`weir search` → Browse API item_summary; `weir read --engine ebay` → item by legacy id; live-verified against production with the Lode keyset).
 - [x] Implement enrichment fallback (`weir enrich`: oc → agent-browser-read page rung; browser observe waits for P2).
 - [x] Return immutable, hashed, provenance-bearing listing captures (per-listing state hash excludes observed_at).
-- [ ] Prove Lode can consume WEIR captures in place of its own eBay collector (needs live eBay app keys + Lode-side integration).
+- [x] Prove Lode can consume WEIR captures in place of its own eBay collector (Lode `WeirCollector`, vein `collector = "weir"`; live-verified: 50 production listings end-to-end with WEIR provenance in listing attributes).
 
 Gate: Lode obtains normalized eBay listings (with enrichment fallback) through WEIR by
 intent, and the same evidence bundle is comparable across providers.

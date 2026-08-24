@@ -196,11 +196,24 @@ what Lode's listing-state change detection needs.
   `EBAY_CLIENT_SECRET` user env vars; WEIR's `ebay-app` profile reads the
   same names, so one keyset serves both projects.
 
-## Remaining to prove
+## Lode consumption (proven 2026-08-24)
 
-- Lode consuming `weir search --source ebay` captures in place of its own
-  collector (Lode-side integration decision; sample captures live under
-  `benchmarks/results/live-slice-*.json`, local-only).
+Lode gained a `WeirCollector` (`src/lode/collectors/weir.py` in the Lode repo)
+selectable per vein via `collector = "weir"`. It shells out to
+`weir search --source ebay`, maps normalized listings into Lode `Listing`
+models, and preserves WEIR provenance (`weir_capture_id`,
+`weir_capture_hash`, `weir_listing_hash`, `weir_enrichment`) in listing
+attributes — the provider-parity evidence chain from the concept doc.
+Explicit unknowns survive the boundary: unknown shipping → `None`, unknown
+condition → `"unknown"`, unknown price → listing skipped with diagnostics
+(Lode refuses to guess cost inputs). Live-verified end-to-end: 50 production
+listings collected through the full chain (Lode → weir CLI → Browse API →
+normalized capture → Lode `Listing`), Lode suite green (334 tests).
+
+Every P0.5 gate item is now closed; the slice gate itself (Lode obtaining
+listings by intent with comparable evidence bundles) is met for the search
+path. Enrichment-on-demand from Lode (flagged candidates triggering
+`weir enrich`) remains a natural follow-on.
 
 ## Relationship to the roadmap
 
