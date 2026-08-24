@@ -15,10 +15,25 @@ This roadmap is exploratory. Engine promotion and final authority ownership requ
 
 Gate: WEIR can run the same read task through multiple engines and compare normalized evidence without callers depending on engine syntax.
 
+## P0.5 - Marketplace vertical slice (eBay -> Lode)
+
+First real consumer-driven slice. Proves the connector rung and enrichment ladder
+against live work instead of a synthetic corpus. Full design: `docs/marketplace-slice.md`.
+
+- [ ] Decide `search` mode vs. overloaded `discover` for structured search.
+- [ ] Define the result-set / normalized-listing capture shape.
+- [ ] Implement the `ebay` connector engine (`ebay.api.search`, `ebay.api.item`).
+- [ ] Implement enrichment fallback (`ebay.page.read`, then `ebay.browser.observe`).
+- [ ] Return immutable, hashed, provenance-bearing listing captures.
+- [ ] Prove Lode can consume WEIR captures in place of its own eBay collector.
+
+Gate: Lode obtains normalized eBay listings (with enrichment fallback) through WEIR by
+intent, and the same evidence bundle is comparable across providers.
+
 ## P1 - Public acquisition broker
 
 - [ ] Add route classifier.
-- [ ] Add connector/API adapter interface.
+- [ ] Add connector/API adapter interface (generalized from the eBay slice).
 - [ ] Add capture hashing and artifact persistence boundary.
 - [ ] Add deterministic reader fallback reasons.
 - [ ] Add domain policy.

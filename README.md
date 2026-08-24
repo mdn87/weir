@@ -121,18 +121,22 @@ Engine-local references such as `oc`'s `[17]` or browser snapshot `@e4` are ephe
 
 ```text
 contracts/              JSON Schemas for the public WEIR data model
-docs/                   architecture, authority, evaluation, and security notes
+docs/                   architecture, authority, evaluation, security, and slice notes
 profiles/               example site-profile definitions
 src/weir/                engine-neutral Python skeleton and read-only adapters
 tests/                   contract and adapter tests
 HARNESS_CONTRACT.md      boundary with the rest of Lugos
 ```
 
+`docs/marketplace-slice.md` defines the first consumer-driven vertical slice
+(marketplace acquisition for the Lode deal evaluator); `concept.md` carries the
+broader three-tier framing behind it.
+
 ## Current state
 
 **Seed / architecture experiment.**
 
-This repository deliberately does not declare `oc`, `agent-browser`, or Playwright the winner. The next meaningful milestone is an evidence-producing benchmark across real Lugos web tasks, followed by a routing decision.
+This repository deliberately does not declare `oc`, `agent-browser`, or Playwright the winner. The next meaningful milestone is an evidence-producing benchmark across real Lugos web tasks, followed by a routing decision. In parallel, the marketplace vertical slice (`docs/marketplace-slice.md`) gives WEIR a real consumer — the Lode deal evaluator — to test the connector rung and enrichment ladder against live work rather than only a synthetic corpus.
 
 The initial executable surface is intentionally read-only. Side-effectful browser execution must not be smuggled into the seed before the Fade/approval ownership boundary is resolved.
 

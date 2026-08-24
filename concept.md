@@ -606,3 +606,232 @@ Add HUD inspection, session streaming, approval cards, and manual takeover.
 Use benchmark and operating evidence to decide whether to keep oc, fork it, replace it, or use it only for specific site classes.
 
 The architecture should remain correct if oc disappears tomorrow. Its likely value is as a fast compact-reader engine, but it should earn that role against agent-browser read and a direct extraction implementation. The larger Web Plane is worth considering because it would serve ORCA research, Autowork campaigns, AETA source work, Operator workflows, Fade actions, model-specific behavior tuning, terminal browsing, and future visual supervision through one coherent capability boundary.
+
+---
+
+# Deal finding as WEIR's first vertical slice
+
+The abstract Web Plane needs a real consumer to prove it is useful rather than architectural make-work. Lode — the existing deal evaluator — is that consumer, and marketplace acquisition is a strong candidate for WEIR's first end-to-end vertical slice. This section records how deal finding should sit across the Lugos stack and why it exercises exactly the WEIR machinery that matters.
+
+## The mistake to avoid
+
+Two tempting conflations would damage the architecture:
+
+- Do **not** make WEIR itself the deal finder. Knowing what constitutes a deal — comps, history, dedup, scoring, thresholds, alerting — is domain intelligence and belongs to Lode.
+- Do **not** make Hermes the eBay collector. Lode already made the correct call: *"Do not make an LLM the primary collector, database, scheduler, or calculator."* An LLM as the collection layer is slower, nondeterministic, and unaccountable.
+
+WEIR is the layer in between: get things from the web reliably and preserve evidence. Nothing more, nothing less.
+
+## The clean three-tier shape
+
+```text
+        Chron / Lode deal finder
+        (veins, scheduling, watch intent)
+                    |
+                    v
+            search / watch intent
+                    |
+                    v
+                  WEIR
+          acquisition + evidence
+                    |
+        +-----------+------------------+
+        |                              |
+        v                              v
+   eBay Browse API            page / browser fallback
+   preferred                  oc / agent-browser
+        |                              |
+        +--------------+---------------+
+                       v
+              normalized listings
+                       |
+                       v
+                 Lode evaluation
+       dedupe / history / comps / scoring
+                       |
+                  strong candidate (strike)
+                       |
+                       v
+              Hermes / LLM review
+               when useful
+                       |
+                       v
+                     alert
+```
+
+Three responsibilities, cleanly separated:
+
+| Layer | Job |
+| --- | --- |
+| WEIR | Get things from the web reliably and preserve evidence |
+| Lode / Chron | Know what constitutes a deal; track listings, dedupe, score, and alert |
+| Hermes | Open-ended investigation and judgment when deterministic logic isn't enough |
+
+WEIR is the source/acquisition abstraction. Lode remains the domain intelligence. Hermes sits one level higher and *consumes* WEIR; it must not reinvent browsing.
+
+## What WEIR actually contributes to Lode
+
+Lode already collects through the eBay Browse API today — with pagination, per-run deduplication, listing-state change detection, shipping-inclusive cost, and an explicit refusal to guess unknown shipping or tax. WEIR does not replace that; it gives that logic a better conceptual home and two capabilities Lode does not have on its own.
+
+**1. A home for acquisition instead of one-off collectors.** Instead of:
+
+```text
+lode/
+  ebay_api.py
+  random web fallback
+  maybe browser later
+```
+
+the acquisition surface becomes a set of WEIR engines:
+
+```text
+WEIR
+  ebay.api.search
+  ebay.api.item
+  ebay.page.read
+  ebay.browser.observe
+```
+
+Lode asks WEIR by intent, not by engine:
+
+```text
+intent: marketplace_search
+source: ebay
+query: Keychron C2 Pro
+constraints:
+  switch: red
+  max_total_cost: 40
+evidence_required: true
+```
+
+WEIR selects the eBay Browse API because it is the highest-quality available interface — consistent with the capability ladder (connector/API before compact reader before rendered browser).
+
+**2. Enrichment via the capability ladder.** When the API returns a suspiciously incomplete listing, WEIR — not Lode, and not an LLM — escalates to acquire the actual item page:
+
+```text
+eBay API says:
+  title
+  $27.99
+  $8.45 shipping
+  condition: used
+
+Lode:
+  total = $36.44
+  potentially qualifies (candidate)
+
+WEIR enrichment:
+  retrieve listing page (ebay.page.read)
+  capture description
+  capture structured condition
+  maybe inspect photos separately (ebay.browser.observe)
+
+Lode:
+  classify candidate
+  compare against known value (yield / grade)
+  determine strike / not-strike
+```
+
+This is the first concrete instance of WEIR's engine-fallback and evidence-preservation claims running against a real workload rather than a benchmark corpus.
+
+## Chron watches: broaden the source, keep the loop deterministic
+
+For routine watches — a *vein* like "Keychron C2 Pro under $40" — do **not** put Hermes in the loop. The loop is cheap deterministic machinery, exactly what Lode was built around:
+
+```text
+schedule
+  -> eBay query
+  -> new/change detection
+  -> total-cost filter
+  -> product-specific rules
+  -> alert
+```
+
+Hermes there would only add latency and nondeterminism. Where WEIR materially improves Chron is by broadening the *collection* layer beyond a single marketplace:
+
+```text
+Chron
+  "red switch keyboard deal"
+
+WEIR
+  ├─ eBay Browse API
+  ├─ Newegg / public search
+  ├─ manufacturer clearance page
+  ├─ Slickdeals
+  ├─ Reddit deal thread
+  └─ arbitrary supplied URL
+             |
+             v
+      normalized evidence
+             |
+             v
+       Chron / Lode rules
+```
+
+A Chron finder then stops being an "eBay finder" and becomes a deal-finding *policy* operating over whatever sources WEIR can provide.
+
+## Where Hermes belongs
+
+Hermes is the durable-specialist layer: multi-step autonomy, memory, learned procedures. It earns its place only when the task stops being deterministic:
+
+- "Go investigate this weird listing."
+- "Figure out whether this workstation is actually a deal."
+- "Research this seller and comparable systems."
+- "Try several search phrasings — sellers call this thing five different names."
+- "Look outside eBay too and tell me what you conclude."
+
+```text
+Hermes specialist
+      |
+      | needs external evidence
+      v
+     WEIR
+   /   |    \
+ eBay Reddit manufacturer
+      |
+      v
+ evidence bundle
+      |
+      v
+ Hermes reasoning
+```
+
+Hermes should consume WEIR evidence, never browse independently.
+
+## The provider-parity payoff
+
+This fixes a real weakness in the current Lode plan. Lode's Phase 1 states that *"Providers cannot silently collect different evidence in Phase 1"* — the correct constraint, because otherwise Claude and Codex could score different pages and their evaluations would not be comparable. Today that is enforced by forbidding providers from browsing at all:
+
+```text
+WRONG
+Claude -> browses whatever
+Codex  -> browses whatever
+       -> compare answers
+```
+
+With WEIR producing one immutable evidence bundle, the constraint can later be relaxed safely rather than removed:
+
+```text
+BETTER
+          WEIR
+            |
+       evidence bundle
+        /         \
+     Claude       Codex
+        \         /
+       compare evaluations
+```
+
+Both providers review the same captured listing, comps, and source material. WEIR's `WebCapture` (content hash + provenance + immutable artifact refs) is exactly the object that makes "same evidence, different evaluators" verifiable rather than assumed.
+
+## Why this is a good first slice for WEIR
+
+Deal finding is not attractive because scraping eBay search pages with `oc` is easy — that would be the wrong build. It is attractive because implementing an **eBay acquisition engine that prefers the Browse API** forces WEIR to build, against a real consumer, the parts of the abstraction that actually matter:
+
+- structured search results and pagination (not just single-page reads)
+- a connector/API engine occupying rung 1 of the capability ladder, which currently has no adapter
+- provenance and immutable normalized captures
+- deterministic enrichment and engine fallback
+- caching by URL and content hash
+- a normalized listing shape independent of engine syntax
+
+Lode is already built to consume normalized listings, so it is a ready-made test of whether the WEIR abstraction is useful or merely architectural. See `docs/marketplace-slice.md` for how this slice maps onto WEIR's contracts, engines, and roadmap.
