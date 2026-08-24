@@ -29,7 +29,9 @@ class OcReader(ReaderEngine):
         path = shutil.which(self.binary)
         if not path:
             return EngineProbe(self.id, False, detail=f"{self.binary} not found on PATH")
-        proc = subprocess.run([path, "--help"], capture_output=True, text=True, timeout=15)
+        proc = subprocess.run(
+            [path, "--help"], capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=15
+        )
         return EngineProbe(self.id, proc.returncode == 0, detail=path)
 
     def read(self, request: WebRequest) -> ReaderResult:
@@ -48,7 +50,9 @@ class OcReader(ReaderEngine):
             env["OC_HOME"] = state_dir
             session = f"weir-{uuid.uuid4().hex}"
             cmd = [binary, "open", request.url, "--json", "--session", session]
-            proc = subprocess.run(cmd, capture_output=True, text=True, env=env, timeout=120)
+            proc = subprocess.run(
+                cmd, capture_output=True, text=True, encoding="utf-8", errors="replace", env=env, timeout=120
+            )
 
         if proc.returncode == 2:
             raise EngineCannotRead(proc.stderr.strip() or "oc reported no readable content")

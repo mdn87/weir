@@ -17,7 +17,7 @@ def _run_detached_safe(cmd: list[str], timeout: int) -> tuple[int, str, str]:
     so PIPE capture never sees EOF and blocks far past the child's own exit.
     File redirection keeps subprocess.run waiting on process exit only.
     """
-    with tempfile.TemporaryDirectory(prefix="weir-ab-") as tmp:
+    with tempfile.TemporaryDirectory(prefix="weir-ab-", ignore_cleanup_errors=True) as tmp:
         out_path = Path(tmp) / "stdout"
         err_path = Path(tmp) / "stderr"
         with out_path.open("wb") as out, err_path.open("wb") as err:
