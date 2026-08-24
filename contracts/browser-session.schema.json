@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://lugos.local/weir/browser-session.schema.json",
+  "title": "BrowserSession",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["contract_version", "session_id", "owner_run_id", "engine", "worker_id", "profile_id", "data_class", "state", "allowed_domains"],
+  "properties": {
+    "contract_version": {"const": "0.1"},
+    "session_id": {"type": "string"},
+    "owner_run_id": {"type": "string"},
+    "engine": {"type": "string"},
+    "worker_id": {"type": "string"},
+    "profile_id": {"type": "string"},
+    "data_class": {"enum": ["public", "personal", "bwa_internal", "restricted"]},
+    "allowed_domains": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
+    "controller_lease": {"type": ["string", "null"]},
+    "current_url": {"type": ["string", "null"], "format": "uri"},
+    "state": {"enum": ["opening", "active", "paused", "lost", "closed"]},
+    "created_at": {"type": ["string", "null"], "format": "date-time"},
+    "expires_at": {"type": ["string", "null"], "format": "date-time"}
+  }
+}

@@ -1,0 +1,22 @@
+contract_version: "0.1"
+id: github-public
+domains:
+  - github.com
+  - api.github.com
+preferred_engines:
+  - github_connector
+  - oc
+  - agent_browser_read
+auth_mode: optional
+allowed_modes:
+  - discover
+  - read
+approval_risks: []
+known_failures:
+  login_gate: prefer_public_api
+  javascript_shell: escalate_reader
+retention:
+  public_content: content_hash_and_capture
+notes:
+  - Prefer the GitHub connector or API for structured repository objects when available.
+  - Generic readers remain useful for public prose and pages outside connector coverage.

@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://lugos.local/weir/observation.schema.json",
+  "title": "Observation",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["contract_version", "observation_id", "session_id", "captured_at", "url", "elements"],
+  "properties": {
+    "contract_version": {"const": "0.1"},
+    "observation_id": {"type": "string"},
+    "session_id": {"type": "string"},
+    "capture_id": {"type": ["string", "null"]},
+    "captured_at": {"type": "string", "format": "date-time"},
+    "url": {"type": "string", "format": "uri"},
+    "title": {"type": ["string", "null"]},
+    "elements": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": true,
+        "required": ["ref", "role"],
+        "properties": {
+          "ref": {"type": "string"},
+          "role": {"type": "string"},
+          "label": {"type": ["string", "null"]},
+          "state": {"type": ["string", "null"]}
+        }
+      }
+    },
+    "files": {"type": "array", "items": {"type": "object"}},
+    "notes": {"type": "array", "items": {"type": "string"}}
+  }
+}

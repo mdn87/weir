@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://lugos.local/weir/web-request.schema.json",
+  "title": "WebRequest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["contract_version", "request_id", "run_id", "mode", "data_class", "auth_context", "evidence_required", "side_effects_allowed"],
+  "properties": {
+    "contract_version": {"const": "0.1"},
+    "request_id": {"type": "string", "minLength": 1},
+    "run_id": {"type": "string", "minLength": 1},
+    "intent": {"type": "string"},
+    "mode": {"enum": ["discover", "read", "observe", "interact", "commit"]},
+    "url": {"type": ["string", "null"], "format": "uri"},
+    "query": {"type": ["string", "null"]},
+    "data_class": {"enum": ["public", "personal", "bwa_internal", "restricted"]},
+    "auth_context": {"type": "string"},
+    "profile_id": {"type": ["string", "null"]},
+    "allowed_domains": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
+    "preferred_engine": {"type": ["string", "null"]},
+    "maximum_depth": {"type": "integer", "minimum": 0, "default": 0},
+    "evidence_required": {"type": "boolean"},
+    "side_effects_allowed": {"type": "boolean"},
+    "capture_policy": {"enum": ["metadata", "content", "full_evidence"], "default": "content"}
+  },
+  "anyOf": [
+    {"required": ["url"]},
+    {"required": ["query"]}
+  ]
+}

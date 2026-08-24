@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://lugos.local/weir/web-capture.schema.json",
+  "title": "WebCapture",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["contract_version", "capture_id", "request_id", "captured_at", "engine", "requested_url", "final_url", "trust", "content_hash"],
+  "properties": {
+    "contract_version": {"const": "0.1"},
+    "capture_id": {"type": "string"},
+    "request_id": {"type": "string"},
+    "captured_at": {"type": "string", "format": "date-time"},
+    "engine": {"type": "string"},
+    "engine_version": {"type": ["string", "null"]},
+    "requested_url": {"type": "string", "format": "uri"},
+    "final_url": {"type": "string", "format": "uri"},
+    "title": {"type": ["string", "null"]},
+    "http_status": {"type": ["integer", "null"]},
+    "auth_scope": {"type": "string"},
+    "trust": {"enum": ["untrusted_external_content", "trusted_internal_source", "unknown"]},
+    "content_hash": {"type": "string"},
+    "content": {},
+    "raw_artifact_ref": {"type": ["string", "null"]},
+    "screenshot_artifact_ref": {"type": ["string", "null"]}
+  }
+}

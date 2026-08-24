@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://lugos.local/weir/execution-receipt.schema.json",
+  "title": "ExecutionReceipt",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["contract_version", "receipt_id", "action_id", "executed_by", "executed_at", "result", "verification"],
+  "properties": {
+    "contract_version": {"const": "0.1"},
+    "receipt_id": {"type": "string"},
+    "action_id": {"type": "string"},
+    "executed_by": {"type": "string"},
+    "executed_at": {"type": "string", "format": "date-time"},
+    "before_capture_id": {"type": ["string", "null"]},
+    "after_capture_id": {"type": ["string", "null"]},
+    "result": {"enum": ["completed", "failed", "blocked", "cancelled"]},
+    "verification": {
+      "type": "object",
+      "required": ["confidence"],
+      "properties": {
+        "method": {"type": ["string", "null"]},
+        "confidence": {"enum": ["verified", "probable", "uncertain", "failed", "blocked"]},
+        "evidence_refs": {"type": "array", "items": {"type": "string"}}
+      }
+    }
+  }
+}
