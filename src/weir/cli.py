@@ -7,7 +7,7 @@ import sys
 import uuid
 
 from weir.engines.base import WeirEngineError
-from weir.models import DataClass, RequestMode, WebRequest
+from weir.models import DataClass, RequestMode, WebCapture, WebRequest
 from weir.router import EngineRegistry
 
 
@@ -51,7 +51,8 @@ def main(argv: list[str] | None = None) -> int:
         except (WeirEngineError, ValueError, KeyError) as exc:
             print(json.dumps({"ok": False, "engine": args.engine, "error": str(exc)}), file=sys.stderr)
             return 2
-        print(json.dumps({"ok": True, "request": request.to_dict(), "result": result.to_dict()}, indent=2))
+        capture = WebCapture.from_reader_result(result, request)
+        print(json.dumps({"ok": True, "request": request.to_dict(), "capture": capture.to_dict()}, indent=2))
         return 0
 
     return 1

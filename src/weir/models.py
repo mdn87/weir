@@ -1,6 +1,10 @@
 from __future__ import annotations
 
+import hashlib
+import json
+import uuid
 from dataclasses import asdict, dataclass, field
+from datetime import datetime, timezone
 from enum import StrEnum
 from typing import Any
 
@@ -21,6 +25,12 @@ class DataClass(StrEnum):
     PERSONAL = "personal"
     BWA_INTERNAL = "bwa_internal"
     RESTRICTED = "restricted"
+
+
+class TrustLabel(StrEnum):
+    UNTRUSTED_EXTERNAL_CONTENT = "untrusted_external_content"
+    TRUSTED_INTERNAL_SOURCE = "trusted_internal_source"
+    UNKNOWN = "unknown"
 
 
 @dataclass(slots=True)
@@ -73,3 +83,57 @@ class ReaderResult:
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
+
+
+def _content_hash(content: Any) -> str:
+    canonical = json.dumps(content, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
+    return "sha256:" + hashlib.sha256(canonical.encode("utf-8")).hexdigest()
+
+
+@dataclass(slots=True)
+class WebCapture:
+    """Contract-shaped capture emitted for every retained read.
+
+    Mirrors contracts/web-capture.schema.json exactly; the schema declares
+    additionalProperties=false, so engine diagnostics stay on ReaderResult.
+    """
+
+    capture_id: str
+    request_id: str
+    captured_at: str
+    engine: str
+    requested_url: str
+    final_url: str
+    trust: TrustLabel
+    content_hash: str
+    engine_version: str | None = None
+    title: str | None = None
+    http_status: int | None = None
+    auth_scope: str = "none"
+    content: Any = None
+    raw_artifact_ref: str | None = None
+    screenshot_artifact_ref: str | None = None
+    contract_version: str = CONTRACT_VERSION
+
+    @classmethod
+    def from_reader_result(cls, result: ReaderResult, request: WebRequest) -> WebCapture:
+        return cls(
+            capture_id=f"webcap-{uuid.uuid4().hex}",
+            request_id=request.request_id,
+            captured_at=datetime.now(timezone.utc).isoformat(),
+            engine=result.engine,
+            engine_version=result.engine_version,
+            requested_url=result.requested_url,
+            final_url=result.final_url,
+            title=result.title,
+            http_status=result.http_status,
+            auth_scope=request.auth_context,
+            trust=TrustLabel.UNTRUSTED_EXTERNAL_CONTENT,
+            content_hash=_content_hash(result.content),
+            content=result.content,
+        )
+
+    def to_dict(self) -> dict[str, Any]:
+        value = asdict(self)
+        value["trust"] = self.trust.value
+        return value

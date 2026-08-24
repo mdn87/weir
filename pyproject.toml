@@ -12,6 +12,9 @@ license = {text = "MIT"}
 authors = [{name = "Matthew Newman"}]
 dependencies = []
 
+[project.optional-dependencies]
+test = ["jsonschema>=4.21"]
+
 [project.scripts]
 weir = "weir.cli:main"
 

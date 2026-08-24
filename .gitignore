@@ -9,5 +9,6 @@ build/
 .coverage
 .env
 .weir/
+.autowork/
 artifacts/
 benchmarks/results/
