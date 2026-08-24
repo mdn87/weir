@@ -1,0 +1,9 @@
+{
+  "corpus": "fake-smoke",
+  "version": "0.1",
+  "tasks": [
+    {"task_id": "fake-ok", "url": "fake://ok/page", "description": "deterministic success"},
+    {"task_id": "fake-cannot-read", "url": "fake://cannot-read/page", "description": "normalized cannot_read"},
+    {"task_id": "fake-failure", "url": "fake://failure/page", "description": "normalized engine_failure"}
+  ]
+}

@@ -1,0 +1,51 @@
+{
+  "corpus": "public-acquisition",
+  "version": "0.1",
+  "tasks": [
+    {
+      "task_id": "static-short",
+      "url": "https://example.com",
+      "description": "short static documentation-style page"
+    },
+    {
+      "task_id": "docs-long",
+      "url": "https://docs.python.org/3/library/subprocess.html",
+      "description": "very long technical documentation page"
+    },
+    {
+      "task_id": "markdown-native",
+      "url": "https://raw.githubusercontent.com/python/peps/main/peps/pep-0020.rst",
+      "description": "site serving plain-text/markup content natively"
+    },
+    {
+      "task_id": "json-api",
+      "url": "https://api.github.com/repos/python/cpython",
+      "description": "public JSON API endpoint"
+    },
+    {
+      "task_id": "rss-feed",
+      "url": "https://hnrss.org/frontpage",
+      "description": "RSS/Atom feed"
+    },
+    {
+      "task_id": "github-repo-docs",
+      "url": "https://github.com/python/cpython",
+      "description": "GitHub repository landing page"
+    },
+    {
+      "task_id": "github-issue",
+      "url": "https://github.com/python/cpython/issues/100000",
+      "description": "GitHub issue page"
+    },
+    {
+      "task_id": "news-article",
+      "url": "https://en.wikipedia.org/wiki/Weir",
+      "description": "article layout with heavy chrome"
+    },
+    {
+      "task_id": "js-app-shell",
+      "url": "https://react.dev/",
+      "description": "JavaScript-heavy application shell"
+    }
+  ]
+}

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from weir.engines import AgentBrowserReader, OcReader
+from weir.engines import AgentBrowserReader, FakeReader, OcReader
 from weir.engines.base import ReaderEngine
 
 
@@ -15,6 +15,7 @@ class EngineRegistry:
         self._engines: dict[str, ReaderEngine] = {
             "oc": OcReader(),
             "agent-browser-read": AgentBrowserReader(),
+            "fake": FakeReader(),
         }
 
     def get(self, engine_id: str) -> ReaderEngine:

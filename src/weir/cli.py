@@ -3,9 +3,11 @@ from __future__ import annotations
 import argparse
 from dataclasses import asdict
 import json
+from pathlib import Path
 import sys
 import uuid
 
+from weir.bench import load_corpus, run_benchmark, summarize
 from weir.engines.base import WeirEngineError
 from weir.models import DataClass, RequestMode, WebCapture, WebRequest
 from weir.router import EngineRegistry
@@ -19,8 +21,14 @@ def _parser() -> argparse.ArgumentParser:
 
     read = sub.add_parser("read", help="read one public URL through an explicit engine")
     read.add_argument("url")
-    read.add_argument("--engine", choices=["oc", "agent-browser-read"], required=True)
+    read.add_argument("--engine", choices=["oc", "agent-browser-read", "fake"], required=True)
     read.add_argument("--run-id", default=None)
+
+    bench = sub.add_parser("bench", help="run a task corpus through one or more engines")
+    bench.add_argument("--corpus", required=True, help="path to a JSON task corpus")
+    bench.add_argument("--engines", required=True, help="comma-separated engine ids")
+    bench.add_argument("--out", default="benchmarks/results", help="output directory for JSONL records")
+    bench.add_argument("--run-id", default=None)
     return parser
 
 
@@ -53,6 +61,17 @@ def main(argv: list[str] | None = None) -> int:
             return 2
         capture = WebCapture.from_reader_result(result, request)
         print(json.dumps({"ok": True, "request": request.to_dict(), "capture": capture.to_dict()}, indent=2))
+        return 0
+
+    if args.command == "bench":
+        try:
+            engines = [registry.get(engine_id.strip()) for engine_id in args.engines.split(",") if engine_id.strip()]
+            tasks = load_corpus(Path(args.corpus))
+        except (KeyError, OSError, ValueError, json.JSONDecodeError) as exc:
+            print(json.dumps({"ok": False, "error": str(exc)}), file=sys.stderr)
+            return 2
+        out_path, records = run_benchmark(engines, tasks, Path(args.out), run_id=args.run_id)
+        print(json.dumps({"ok": True, "records": str(out_path), "summary": summarize(records)}, indent=2))
         return 0
 
     return 1
