@@ -212,8 +212,20 @@ normalized capture → Lode `Listing`), Lode suite green (334 tests).
 
 Every P0.5 gate item is now closed; the slice gate itself (Lode obtaining
 listings by intent with comparable evidence bundles) is met for the search
-path. Enrichment-on-demand from Lode (flagged candidates triggering
-`weir enrich`) remains a natural follow-on.
+path.
+
+**Enrichment-on-demand is also wired (2026-08-24):** veins opting in via
+`enrich_candidates = true` trigger `weir enrich` for candidate/strike
+listings with empty descriptions, bounded by `max_enrichments_per_run`
+(default 5). Page text becomes the listing description (4KB cap) with
+enrichment provenance in attributes; failures are best-effort and the API
+listing stays authoritative. Live-verified through the full chain.
+
+Wiring it exposed and fixed a real Windows execution hazard in WEIR: eBay
+tracking URLs (`&hash=item...`) were re-parsed by cmd.exe when adapters
+invoked npm `.cmd` shims (BatBadBut class). Adapters now unwrap shims to
+direct node invocations, and the eBay connector emits bare canonical item
+URLs with tracking parameters confined to the raw payload.
 
 ## Relationship to the roadmap
 
