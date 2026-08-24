@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://lugos.local/weir/site-profile.schema.json",
+  "title": "SiteProfile",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["contract_version", "id", "domains", "preferred_engines", "auth_mode", "allowed_modes"],
+  "properties": {
+    "contract_version": {"const": "0.1"},
+    "id": {"type": "string"},
+    "domains": {"type": "array", "items": {"type": "string"}, "minItems": 1, "uniqueItems": true},
+    "preferred_engines": {"type": "array", "items": {"type": "string"}},
+    "auth_mode": {"enum": ["none", "optional", "dedicated_profile"]},
+    "allowed_modes": {"type": "array", "items": {"enum": ["discover", "read", "observe", "interact", "commit"]}, "uniqueItems": true},
+    "approval_risks": {"type": "array", "items": {"type": "string"}},
+    "known_failures": {"type": "object"},
+    "retention": {"type": "object"},
+    "notes": {"type": "array", "items": {"type": "string"}}
+  }
+}

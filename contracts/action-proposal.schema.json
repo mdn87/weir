@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://lugos.local/weir/action-proposal.schema.json",
+  "title": "ActionProposal",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["contract_version", "action_id", "session_id", "type", "risk", "requires_approval", "semantic_target", "preconditions", "expected_postconditions"],
+  "properties": {
+    "contract_version": {"const": "0.1"},
+    "action_id": {"type": "string"},
+    "session_id": {"type": "string"},
+    "observation_id": {"type": ["string", "null"]},
+    "type": {"type": "string"},
+    "semantic_target": {"type": "object"},
+    "parameters": {"type": "object"},
+    "risk": {"enum": ["read_only", "reversible", "local_mutation", "external_upload", "external_submit", "message_send", "purchase", "account_change", "credential_change", "destructive", "unknown"]},
+    "requires_approval": {"type": "boolean"},
+    "preconditions": {"type": "array", "items": {"type": "object"}},
+    "expected_postconditions": {"type": "array", "items": {"type": "object"}},
+    "evidence_refs": {"type": "array", "items": {"type": "string"}}
+  }
+}
