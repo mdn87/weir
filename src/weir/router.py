@@ -4,7 +4,7 @@ import urllib.parse
 from dataclasses import asdict, dataclass, field
 from typing import Any
 
-from weir.engines import AgentBrowserReader, FakeReader, HttpConnector, OcReader
+from weir.engines import AgentBrowserReader, EbayConnector, FakeReader, HttpConnector, OcReader
 from weir.engines.base import ReaderEngine
 from weir.models import RequestMode, WebRequest
 
@@ -19,6 +19,7 @@ class EngineRegistry:
     def __init__(self) -> None:
         self._engines: dict[str, ReaderEngine] = {
             "http": HttpConnector(),
+            "ebay": EbayConnector(),
             "oc": OcReader(),
             "agent-browser-read": AgentBrowserReader(),
             "fake": FakeReader(),
@@ -44,6 +45,8 @@ class RouteDecision:
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
 
+
+MARKETPLACE_SOURCES = {"ebay": "ebay"}
 
 API_HOST_PREFIXES = ("api.",)
 API_HOSTS = {"raw.githubusercontent.com", "hnrss.org"}
@@ -82,11 +85,23 @@ def classify(request: WebRequest) -> RouteDecision:
     advisory and moves that engine to the front without removing fallbacks.
     """
     request.validate()
+    if request.mode is RequestMode.SEARCH:
+        if request.source in MARKETPLACE_SOURCES:
+            return RouteDecision(
+                route_class="connector",
+                engine_candidates=[MARKETPLACE_SOURCES[request.source]],
+                reasons=[f"structured marketplace search routes to the {request.source} connector (rung 1)"],
+            )
+        return RouteDecision(
+            route_class="unsupported",
+            engine_candidates=[],
+            reasons=[f"no connector seeded for search source {request.source!r}"],
+        )
     if request.mode is not RequestMode.READ:
         return RouteDecision(
             route_class="unsupported",
             engine_candidates=[],
-            reasons=[f"mode {request.mode} has no seeded route; only read is classified"],
+            reasons=[f"mode {request.mode} has no seeded route; only read and search are classified"],
         )
     if not request.url:
         return RouteDecision(

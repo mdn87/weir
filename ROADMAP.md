@@ -20,12 +20,12 @@ Gate: WEIR can run the same read task through multiple engines and compare norma
 First real consumer-driven slice. Proves the connector rung and enrichment ladder
 against live work instead of a synthetic corpus. Full design: `docs/marketplace-slice.md`.
 
-- [ ] Decide `search` mode vs. overloaded `discover` for structured search.
-- [ ] Define the result-set / normalized-listing capture shape.
-- [ ] Implement the `ebay` connector engine (`ebay.api.search`, `ebay.api.item`).
-- [ ] Implement enrichment fallback (`ebay.page.read`, then `ebay.browser.observe`).
-- [ ] Return immutable, hashed, provenance-bearing listing captures.
-- [ ] Prove Lode can consume WEIR captures in place of its own eBay collector.
+- [x] Decide `search` mode vs. overloaded `discover` for structured search (new `search` mode; requires query + source).
+- [x] Define the result-set / normalized-listing capture shape (`contracts/marketplace-listing.schema.json`; set rides in WebCapture content).
+- [x] Implement the `ebay` connector engine (`weir search` → Browse API item_summary; `weir read --engine ebay` → item by legacy id).
+- [x] Implement enrichment fallback (`weir enrich`: oc → agent-browser-read page rung; browser observe waits for P2).
+- [x] Return immutable, hashed, provenance-bearing listing captures (per-listing state hash excludes observed_at).
+- [ ] Prove Lode can consume WEIR captures in place of its own eBay collector (needs live eBay app keys + Lode-side integration).
 
 Gate: Lode obtains normalized eBay listings (with enrichment fallback) through WEIR by
 intent, and the same evidence bundle is comparable across providers.

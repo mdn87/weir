@@ -22,11 +22,21 @@ def _parser() -> argparse.ArgumentParser:
 
     read = sub.add_parser("read", help="read one public URL; --engine auto routes via the classifier")
     read.add_argument("url")
-    read.add_argument("--engine", choices=["auto", "http", "oc", "agent-browser-read", "fake"], default="auto")
+    read.add_argument("--engine", choices=["auto", "http", "ebay", "oc", "agent-browser-read", "fake"], default="auto")
     read.add_argument("--run-id", default=None)
 
     route = sub.add_parser("route", help="show the route decision for a URL without fetching")
     route.add_argument("url")
+
+    search = sub.add_parser("search", help="structured marketplace search through a source connector")
+    search.add_argument("query")
+    search.add_argument("--source", default="ebay")
+    search.add_argument("--pages", type=int, default=1, help="maximum result pages to fetch")
+    search.add_argument("--run-id", default=None)
+
+    enrich = sub.add_parser("enrich", help="rung-2 page enrichment for a listing URL (compact reader chain)")
+    enrich.add_argument("url")
+    enrich.add_argument("--run-id", default=None)
 
     bench = sub.add_parser("bench", help="run a task corpus through one or more engines")
     bench.add_argument("--corpus", required=True, help="path to a JSON task corpus")
@@ -55,6 +65,71 @@ def main(argv: list[str] | None = None) -> int:
             url=args.url,
         )
         print(json.dumps({"url": args.url, "decision": classify(request).to_dict()}, indent=2))
+        return 0
+
+    if args.command == "search":
+        request = WebRequest(
+            request_id=f"webreq-{uuid.uuid4().hex}",
+            run_id=args.run_id or f"local-{uuid.uuid4().hex}",
+            mode=RequestMode.SEARCH,
+            data_class=DataClass.PUBLIC,
+            auth_context="app",
+            query=args.query,
+            source=args.source,
+            profile_id=f"{args.source}-app",
+            maximum_depth=max(args.pages - 1, 0),
+            evidence_required=True,
+            side_effects_allowed=False,
+        )
+        decision = classify(request)
+        if not decision.engine_candidates:
+            print(json.dumps({"ok": False, "route": decision.to_dict()}), file=sys.stderr)
+            return 2
+        engine = registry.get(decision.engine_candidates[0])
+        try:
+            result = engine.search(request)  # type: ignore[attr-defined]
+        except (WeirEngineError, ValueError) as exc:
+            print(json.dumps({"ok": False, "engine": engine.id, "error": str(exc)}), file=sys.stderr)
+            return 2
+        capture = WebCapture.from_reader_result(result, request)
+        print(json.dumps(
+            {"ok": True, "request": request.to_dict(), "route": decision.to_dict(), "capture": capture.to_dict()},
+            indent=2,
+        ))
+        return 0
+
+    if args.command == "enrich":
+        request = WebRequest(
+            request_id=f"webreq-{uuid.uuid4().hex}",
+            run_id=args.run_id or f"local-{uuid.uuid4().hex}",
+            mode=RequestMode.READ,
+            data_class=DataClass.PUBLIC,
+            auth_context="none",
+            url=args.url,
+            evidence_required=True,
+            side_effects_allowed=False,
+        )
+        try:
+            check_target_policy(args.url, request.allowed_domains)
+        except EnginePolicyBlocked as exc:
+            print(json.dumps({"ok": False, "class": "policy_blocked", "error": str(exc)}), file=sys.stderr)
+            return 2
+        fallbacks = []
+        result = None
+        for engine_id in ["oc", "agent-browser-read"]:
+            try:
+                result = registry.get(engine_id).read(request)
+                break
+            except (WeirEngineError, ValueError, KeyError) as exc:
+                fallbacks.append({"engine": engine_id, "error": str(exc)})
+        if result is None:
+            print(json.dumps({"ok": False, "attempts": fallbacks, "error": "enrichment readers failed"}), file=sys.stderr)
+            return 2
+        capture = WebCapture.from_reader_result(result, request)
+        envelope = {"ok": True, "enrichment": "page", "capture": capture.to_dict()}
+        if fallbacks:
+            envelope["fallbacks"] = fallbacks
+        print(json.dumps(envelope, indent=2))
         return 0
 
     if args.command == "read":

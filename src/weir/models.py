@@ -14,6 +14,7 @@ CONTRACT_VERSION = "0.1"
 
 class RequestMode(StrEnum):
     DISCOVER = "discover"
+    SEARCH = "search"
     READ = "read"
     OBSERVE = "observe"
     INTERACT = "interact"
@@ -43,6 +44,7 @@ class WebRequest:
     intent: str = ""
     url: str | None = None
     query: str | None = None
+    source: str | None = None
     profile_id: str | None = None
     allowed_domains: list[str] = field(default_factory=list)
     preferred_engine: str | None = None
@@ -55,8 +57,14 @@ class WebRequest:
     def validate(self) -> None:
         if not self.url and not self.query:
             raise ValueError("WebRequest requires url or query")
-        if self.mode in {RequestMode.DISCOVER, RequestMode.READ, RequestMode.OBSERVE} and self.side_effects_allowed:
+        no_side_effect_modes = {RequestMode.DISCOVER, RequestMode.SEARCH, RequestMode.READ, RequestMode.OBSERVE}
+        if self.mode in no_side_effect_modes and self.side_effects_allowed:
             raise ValueError(f"{self.mode} requests cannot enable side effects")
+        if self.mode is RequestMode.SEARCH:
+            if not self.query:
+                raise ValueError("search requests require a query")
+            if not self.source:
+                raise ValueError("search requests require a source (records from one known source)")
         if self.auth_context == "none" and self.profile_id is not None:
             raise ValueError("profile_id requires a non-none auth_context")
         if self.maximum_depth < 0:

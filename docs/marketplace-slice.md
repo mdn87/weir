@@ -155,19 +155,33 @@ comparable multi-provider evaluation downstream.
 - engine fallback and provenance work end-to-end against a live workload;
 - a real consumer (Lode) validates the abstraction instead of a synthetic benchmark.
 
-## Open definitional questions
+## Definitional decisions (resolved 2026-08-24 with the seed implementation)
 
-1. `search` mode vs. overloading `discover` — decide before the connector lands.
-2. Result-set capture: a new `WebCaptureSet` contract, or a `WebCapture` whose `content`
-   is a typed listing array? (Leaning toward the latter to avoid a second top-level
-   object.)
-3. Does WEIR own Browse API pagination/rate-limit, or expose raw pages and let Lode
-   keep owning it during the slice? (Recommend WEIR owns it, so Newegg/Slickdeals reuse
-   it — but stage the migration so Lode is never blocked.)
-4. Which rung-2 reader wins enrichment for eBay item pages — `oc` vs `agent-browser
-   read` — is a benchmark question, not an architecture question.
-5. Credential/profile handling for the eBay application keys through the profile
-   boundary, never the request object.
+1. **`search` is a new mode** on `WebRequest` (option 1). It requires `query` and
+   `source`, and cannot enable side effects. `discover` remains "find sources".
+2. **Result set rides on `WebCapture`** (option 2): `content` carries
+   `{query, source, listings[], pagination}`; each listing validates against the new
+   `contracts/marketplace-listing.schema.json`. No second top-level contract.
+3. **WEIR owns pagination**: the connector follows Browse API `next` links up to a
+   bounded page count (`maximum_depth + 1`, hard cap 10) and reports
+   `{pages_fetched, total_reported, truncated}` so consumers can see what was dropped.
+4. Rung-2 reader choice for eBay item pages remains a benchmark question; `weir enrich`
+   currently runs the oc → agent-browser-read chain and tags the capture
+   `enrichment: page`. Rung 3 (`ebay.browser.observe`) waits for P2.
+5. **Credentials resolve by profile id from the environment** (`ebay-app` →
+   `WEIR_EBAY_CLIENT_ID` / `WEIR_EBAY_CLIENT_SECRET` / `WEIR_EBAY_ENV`), never from the
+   request object. Missing credentials are a normalized `engine_unavailable`, and the
+   OAuth client-credentials token is cached in-process with early expiry.
+
+Per-listing `content_hash` covers only the state-bearing fields (source, item id, url,
+title, price, shipping, condition) — `observed_at`, `enrichment`, and the raw payload
+are excluded, so an unchanged listing hashes identically across observations, which is
+what Lode's listing-state change detection needs.
+
+## Remaining to prove
+
+- Live Browse API run (requires eBay application keys in the environment).
+- Lode consuming `weir search --source ebay` captures in place of its own collector.
 
 ## Relationship to the roadmap
 
