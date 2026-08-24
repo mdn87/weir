@@ -22,6 +22,10 @@ class EngineFailure(WeirEngineError):
     pass
 
 
+class EnginePolicyBlocked(WeirEngineError):
+    """Target rejected by policy (scheme, private address, domain constraint)."""
+
+
 @dataclass(frozen=True, slots=True)
 class EngineProbe:
     engine: str

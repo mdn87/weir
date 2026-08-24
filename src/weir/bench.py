@@ -8,7 +8,13 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from weir.engines.base import EngineCannotRead, EngineFailure, EngineUnavailable, ReaderEngine
+from weir.engines.base import (
+    EngineCannotRead,
+    EngineFailure,
+    EnginePolicyBlocked,
+    EngineUnavailable,
+    ReaderEngine,
+)
 from weir.models import DataClass, RequestMode, WebCapture, WebRequest
 
 
@@ -56,6 +62,8 @@ class BenchRecord:
 def _failure_class(exc: Exception) -> str:
     if isinstance(exc, EngineUnavailable):
         return "engine_unavailable"
+    if isinstance(exc, EnginePolicyBlocked):
+        return "policy_blocked"
     if isinstance(exc, EngineCannotRead):
         return "cannot_read"
     if isinstance(exc, EngineFailure):

@@ -1,18 +1,24 @@
 from __future__ import annotations
 
-from weir.engines import AgentBrowserReader, FakeReader, OcReader
+import urllib.parse
+from dataclasses import asdict, dataclass, field
+from typing import Any
+
+from weir.engines import AgentBrowserReader, FakeReader, HttpConnector, OcReader
 from weir.engines.base import ReaderEngine
+from weir.models import RequestMode, WebRequest
 
 
 class EngineRegistry:
     """Small seed registry.
 
     This is intentionally not the final policy router. Explicit engine choice
-    keeps P0 benchmark runs reproducible while the route evidence is gathered.
+    keeps benchmark runs reproducible while the route evidence is gathered.
     """
 
     def __init__(self) -> None:
         self._engines: dict[str, ReaderEngine] = {
+            "http": HttpConnector(),
             "oc": OcReader(),
             "agent-browser-read": AgentBrowserReader(),
             "fake": FakeReader(),
@@ -27,3 +33,81 @@ class EngineRegistry:
 
     def all(self) -> list[ReaderEngine]:
         return list(self._engines.values())
+
+
+@dataclass(frozen=True, slots=True)
+class RouteDecision:
+    route_class: str
+    engine_candidates: list[str]
+    reasons: list[str] = field(default_factory=list)
+
+    def to_dict(self) -> dict[str, Any]:
+        return asdict(self)
+
+
+API_HOST_PREFIXES = ("api.",)
+API_HOSTS = {"raw.githubusercontent.com", "hnrss.org"}
+API_PATH_SUFFIXES = (".json", ".xml", ".rss", ".atom", ".txt", ".md", ".rst", ".csv")
+FEED_PATH_MARKERS = ("/feed", "/rss", "/atom", "/llms.txt")
+
+
+def _looks_api_shaped(url: str) -> list[str]:
+    """Deterministic API/feed-shape heuristics.
+
+    Evidence: first route comparison showed renderer engines truncate JSON
+    APIs (oc returned 464 chars of a ~7KB response), so API-shaped targets
+    route to the direct connector first. Extend this list only with
+    benchmark evidence.
+    """
+    parsed = urllib.parse.urlsplit(url)
+    host = (parsed.hostname or "").lower()
+    path = parsed.path.lower()
+    reasons = []
+    if host.startswith(API_HOST_PREFIXES):
+        reasons.append(f"host prefix marks an API host: {host}")
+    if host in API_HOSTS:
+        reasons.append(f"host serves raw/feed content natively: {host}")
+    if path.endswith(API_PATH_SUFFIXES):
+        reasons.append(f"path suffix marks structured content: {path}")
+    if any(marker in path for marker in FEED_PATH_MARKERS):
+        reasons.append(f"path marks a feed endpoint: {path}")
+    return reasons
+
+
+def classify(request: WebRequest) -> RouteDecision:
+    """Map a read request to a route class and ordered engine candidates.
+
+    Seed classifier for the public lane: connector/API outranks compact
+    readers per the capability ladder; a caller's preferred_engine is
+    advisory and moves that engine to the front without removing fallbacks.
+    """
+    request.validate()
+    if request.mode is not RequestMode.READ:
+        return RouteDecision(
+            route_class="unsupported",
+            engine_candidates=[],
+            reasons=[f"mode {request.mode} has no seeded route; only read is classified"],
+        )
+    if not request.url:
+        return RouteDecision(
+            route_class="discover",
+            engine_candidates=[],
+            reasons=["query-only requests need the discovery route, which is not seeded yet"],
+        )
+
+    api_reasons = _looks_api_shaped(request.url)
+    if api_reasons:
+        route_class = "connector"
+        candidates = ["http", "oc", "agent-browser-read"]
+        reasons = api_reasons + ["connector/API outranks renderers on the capability ladder"]
+    else:
+        route_class = "compact_reader"
+        candidates = ["oc", "agent-browser-read"]
+        reasons = ["no API/feed shape detected; compact reader first, rendered reader fallback"]
+
+    preferred = request.preferred_engine
+    if preferred and preferred in candidates and candidates[0] != preferred:
+        candidates = [preferred] + [c for c in candidates if c != preferred]
+        reasons.append(f"caller preference {preferred!r} honored (advisory)")
+
+    return RouteDecision(route_class=route_class, engine_candidates=candidates, reasons=reasons)

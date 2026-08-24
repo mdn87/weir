@@ -8,9 +8,10 @@ import sys
 import uuid
 
 from weir.bench import load_corpus, run_benchmark, summarize
-from weir.engines.base import WeirEngineError
+from weir.engines.base import EnginePolicyBlocked, WeirEngineError
+from weir.engines.http_connector import check_target_policy
 from weir.models import DataClass, RequestMode, WebCapture, WebRequest
-from weir.router import EngineRegistry
+from weir.router import EngineRegistry, classify
 
 
 def _parser() -> argparse.ArgumentParser:
@@ -19,10 +20,13 @@ def _parser() -> argparse.ArgumentParser:
 
     sub.add_parser("engines", help="show reader-engine availability")
 
-    read = sub.add_parser("read", help="read one public URL through an explicit engine")
+    read = sub.add_parser("read", help="read one public URL; --engine auto routes via the classifier")
     read.add_argument("url")
-    read.add_argument("--engine", choices=["oc", "agent-browser-read", "fake"], required=True)
+    read.add_argument("--engine", choices=["auto", "http", "oc", "agent-browser-read", "fake"], default="auto")
     read.add_argument("--run-id", default=None)
+
+    route = sub.add_parser("route", help="show the route decision for a URL without fetching")
+    route.add_argument("url")
 
     bench = sub.add_parser("bench", help="run a task corpus through one or more engines")
     bench.add_argument("--corpus", required=True, help="path to a JSON task corpus")
@@ -41,6 +45,18 @@ def main(argv: list[str] | None = None) -> int:
         print(json.dumps(probes, indent=2))
         return 0
 
+    if args.command == "route":
+        request = WebRequest(
+            request_id=f"webreq-{uuid.uuid4().hex}",
+            run_id=f"local-{uuid.uuid4().hex}",
+            mode=RequestMode.READ,
+            data_class=DataClass.PUBLIC,
+            auth_context="none",
+            url=args.url,
+        )
+        print(json.dumps({"url": args.url, "decision": classify(request).to_dict()}, indent=2))
+        return 0
+
     if args.command == "read":
         run_id = args.run_id or f"local-{uuid.uuid4().hex}"
         request = WebRequest(
@@ -50,17 +66,51 @@ def main(argv: list[str] | None = None) -> int:
             data_class=DataClass.PUBLIC,
             auth_context="none",
             url=args.url,
-            preferred_engine=args.engine,
+            preferred_engine=None if args.engine == "auto" else args.engine,
             evidence_required=True,
             side_effects_allowed=False,
         )
-        try:
-            result = registry.get(args.engine).read(request)
-        except (WeirEngineError, ValueError, KeyError) as exc:
-            print(json.dumps({"ok": False, "engine": args.engine, "error": str(exc)}), file=sys.stderr)
+        if args.engine != "fake":
+            # Boundary policy: the public lane rejects private/internal targets
+            # before any engine runs, instead of trusting engine-local blocking.
+            try:
+                check_target_policy(args.url, request.allowed_domains)
+            except EnginePolicyBlocked as exc:
+                print(json.dumps({"ok": False, "class": "policy_blocked", "error": str(exc)}), file=sys.stderr)
+                return 2
+
+        if args.engine == "auto":
+            decision = classify(request)
+            candidates = decision.engine_candidates
+        else:
+            decision = None
+            candidates = [args.engine]
+
+        fallbacks: list[dict[str, str]] = []
+        result = None
+        for engine_id in candidates:
+            try:
+                result = registry.get(engine_id).read(request)
+                break
+            except EnginePolicyBlocked as exc:
+                fallbacks.append({"engine": engine_id, "error": str(exc), "class": "policy_blocked"})
+                break  # a policy block must not be laundered through another engine
+            except (WeirEngineError, ValueError, KeyError) as exc:
+                fallbacks.append({"engine": engine_id, "error": str(exc)})
+        if result is None:
+            print(
+                json.dumps({"ok": False, "attempts": fallbacks, "error": "all candidate engines failed"}),
+                file=sys.stderr,
+            )
             return 2
+
         capture = WebCapture.from_reader_result(result, request)
-        print(json.dumps({"ok": True, "request": request.to_dict(), "capture": capture.to_dict()}, indent=2))
+        envelope: dict = {"ok": True, "request": request.to_dict(), "capture": capture.to_dict()}
+        if decision is not None:
+            envelope["route"] = decision.to_dict()
+        if fallbacks:
+            envelope["fallbacks"] = fallbacks
+        print(json.dumps(envelope, indent=2))
         return 0
 
     if args.command == "bench":
