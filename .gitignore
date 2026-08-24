@@ -12,3 +12,6 @@ build/
 .autowork/
 artifacts/
 benchmarks/results/
+
+.claude/handoff.md
+.claude/handoff-history/
