@@ -33,11 +33,13 @@ ITEM_URL_PATTERN = re.compile(r"ebay\.[a-z.]+/itm/(?:[^/]+/)?(\d+)")
 
 # Profile indirection: credentials are resolved from the environment by
 # profile id and never travel inside a WebRequest (authority-boundaries.md).
+# Each entry lists env var names in priority order; the Lode names come
+# second so one keyset can serve both projects without duplication.
 PROFILES = {
     "ebay-app": {
-        "client_id": "WEIR_EBAY_CLIENT_ID",
-        "client_secret": "WEIR_EBAY_CLIENT_SECRET",
-        "environment": "WEIR_EBAY_ENV",
+        "client_id": ("WEIR_EBAY_CLIENT_ID", "EBAY_CLIENT_ID"),
+        "client_secret": ("WEIR_EBAY_CLIENT_SECRET", "EBAY_CLIENT_SECRET"),
+        "environment": ("WEIR_EBAY_ENV",),
     },
 }
 
@@ -123,15 +125,22 @@ class EbayConnector(ReaderEngine):
         profile = PROFILES.get(profile_id or "ebay-app")
         if profile is None:
             raise EngineUnavailable(f"unknown ebay profile {profile_id!r}; known: {sorted(PROFILES)}")
-        client_id = self._environ.get(profile["client_id"], "")
-        client_secret = self._environ.get(profile["client_secret"], "")
-        environment = self._environ.get(profile["environment"], "") or "production"
+
+        def resolve(names: tuple[str, ...]) -> str:
+            for name in names:
+                value = self._environ.get(name, "")
+                if value:
+                    return value
+            return ""
+
+        client_id = resolve(profile["client_id"])
+        client_secret = resolve(profile["client_secret"])
+        environment = resolve(profile["environment"]) or "production"
         if environment not in API_HOSTS:
             raise EngineUnavailable(f"unsupported ebay environment {environment!r}")
         if not client_id or not client_secret:
-            raise EngineUnavailable(
-                f"ebay credentials not configured: set {profile['client_id']} and {profile['client_secret']}"
-            )
+            wanted = " or ".join(profile["client_id"]) + " / " + " or ".join(profile["client_secret"])
+            raise EngineUnavailable(f"ebay credentials not configured: set {wanted}")
         return client_id, client_secret, environment
 
     def probe(self) -> EngineProbe:
