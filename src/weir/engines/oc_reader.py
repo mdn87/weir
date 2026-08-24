@@ -9,6 +9,7 @@ import uuid
 from pathlib import Path
 
 from weir.engines.base import EngineCannotRead, EngineFailure, EngineProbe, EngineUnavailable, ReaderEngine
+from weir.engines.shims import safe_argv
 from weir.models import ReaderResult, RequestMode, WebRequest
 
 
@@ -49,7 +50,7 @@ class OcReader(ReaderEngine):
             env = os.environ.copy()
             env["OC_HOME"] = state_dir
             session = f"weir-{uuid.uuid4().hex}"
-            cmd = [binary, "open", request.url, "--json", "--session", session]
+            cmd = safe_argv(binary, ["open", request.url, "--json", "--session", session])
             proc = subprocess.run(
                 cmd, capture_output=True, text=True, encoding="utf-8", errors="replace", env=env, timeout=120
             )

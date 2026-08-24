@@ -7,6 +7,7 @@ import tempfile
 from pathlib import Path
 
 from weir.engines.base import EngineFailure, EngineProbe, EngineUnavailable, ReaderEngine
+from weir.engines.shims import safe_argv
 from weir.models import ReaderResult, RequestMode, WebRequest
 
 
@@ -61,7 +62,7 @@ class AgentBrowserReader(ReaderEngine):
         if not binary:
             raise EngineUnavailable(f"{self.binary} not found on PATH")
 
-        cmd = [binary, "read", request.url, "--json"]
+        cmd = safe_argv(binary, ["read", request.url, "--json"])
         returncode, stdout, stderr = _run_detached_safe(cmd, timeout=120)
         if returncode != 0:
             raise EngineFailure(stderr.strip() or f"agent-browser exited {returncode}")

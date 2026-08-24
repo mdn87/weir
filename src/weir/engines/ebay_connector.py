@@ -75,6 +75,18 @@ def _money(value: Any) -> dict[str, str] | str:
     return "unknown"
 
 
+def _canonical_url(raw_url: str) -> str:
+    """Strip tracking query/fragment from an item URL.
+
+    Browse API itemWebUrl values carry '&hash=item...' tracking parameters;
+    the canonical evidence URL is the bare scheme+host+path.
+    """
+    if not raw_url:
+        return ""
+    parts = urllib.parse.urlsplit(raw_url)
+    return urllib.parse.urlunsplit((parts.scheme, parts.netloc, parts.path, "", ""))
+
+
 def normalize_summary(item: dict[str, Any], observed_at: str) -> dict[str, Any]:
     """Normalize one Browse API item summary; unknown stays unknown."""
     shipping: dict[str, str] | str = "unknown"
@@ -91,7 +103,7 @@ def normalize_summary(item: dict[str, Any], observed_at: str) -> dict[str, Any]:
     listing = {
         "source": "ebay",
         "source_item_id": str(item.get("itemId") or ""),
-        "canonical_url": item.get("itemWebUrl") or "",
+        "canonical_url": _canonical_url(item.get("itemWebUrl") or ""),
         "title": item.get("title") or "",
         "price": _money(item.get("price")),
         "shipping": shipping,
