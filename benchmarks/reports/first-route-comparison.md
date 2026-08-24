@@ -52,6 +52,38 @@
    Both fixed; the invalid run is retained as evidence that unknown-class
    failures were harness bugs, not engine behavior.
 
+## Addendum: three-engine run with the direct HTTP connector (`three-engine`)
+
+Same corpus rerun with the new stdlib `http` connector included.
+
+| engine | success | failure | mean latency |
+|---|---|---|---|
+| http | 8/9 | 1 | 1.06 s (skewed by one 7.2 s failed attempt) |
+| oc | 9/9 | 0 | 0.71 s |
+| agent-browser-read | 8/9 | 1 | 0.60 s |
+
+Connector-relevant tasks:
+
+| task | http | oc | agent-browser-read |
+|---|---|---|---|
+| json-api | **6,296 chars, 0.22 s** | 464 chars (truncated), 0.54 s | 6,972 chars, 0.82 s |
+| markdown-native | **1,755 chars, 0.12 s** | 1,562 chars, 0.36 s | 2,292 chars, 0.21 s |
+| rss-feed | connection reset (WinError 10054) | 12,519 chars, 1.5 s | 16,065 chars, 0.37 s |
+
+Findings:
+
+1. **The connector rule is confirmed for JSON APIs**: full fidelity at the
+   lowest latency, versus oc's budget-truncated 464 chars.
+2. **The fallback chain has a real target**: hnrss.org force-closed the
+   plain-urllib connection during the benchmark while both impersonating
+   engines succeeded — but a manual retry minutes later succeeded through
+   `http` with no fallback, so the reset was transient or intermittent
+   filtering, not a stable block. Either way the auto chain covers it:
+   connector fails with a normalized `network_failure` and oc runs next.
+   Single-run-per-task remains the biggest evidence gap.
+3. oc remains the only 9/9 engine on this corpus; agent-browser still exits 1
+   on react.dev.
+
 ## Gaps before a routing decision
 
 - oc does not expose a `--version`; probe records `null`. Version must come

@@ -32,11 +32,11 @@ intent, and the same evidence bundle is comparable across providers.
 
 ## P1 - Public acquisition broker
 
-- [ ] Add route classifier.
-- [ ] Add connector/API adapter interface (generalized from the eBay slice).
-- [ ] Add capture hashing and artifact persistence boundary.
-- [ ] Add deterministic reader fallback reasons.
-- [ ] Add domain policy.
+- [x] Add route classifier (seed: connector vs compact_reader, deterministic reasons; `weir route`).
+- [x] Add connector/API adapter interface (generic `http` engine; eBay slice to build on it).
+- [ ] Add capture hashing and artifact persistence boundary (hashing done in P0; persistence open).
+- [x] Add deterministic reader fallback reasons (auto-read fallback chain; policy blocks abort, never fall through).
+- [x] Add domain policy (boundary target policy: schemes, private addresses, allowed_domains, per-redirect-hop).
 - [ ] Add cache policy by data class.
 - [ ] Add site profiles only where benchmark evidence supports them.
 - [ ] Add AITU spans.
