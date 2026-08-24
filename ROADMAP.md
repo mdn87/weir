@@ -7,11 +7,11 @@ This roadmap is exploratory. Engine promotion and final authority ownership requ
 - [x] Define subsystem boundary and name.
 - [x] Seed core data contracts.
 - [x] Seed read-only `oc` and `agent-browser read` adapters.
-- [ ] Validate schemas against fixtures.
-- [ ] Build repeatable benchmark runner.
-- [ ] Add task corpus for public acquisition.
-- [ ] Record exact engine versions and normalized metrics.
-- [ ] Produce first route comparison report.
+- [x] Validate schemas against fixtures.
+- [x] Build repeatable benchmark runner.
+- [x] Add task corpus for public acquisition.
+- [x] Record engine versions and normalized metrics (oc exposes no version; tracked via package manifest).
+- [x] Produce first route comparison report (`benchmarks/reports/first-route-comparison.md` — directional, not a promotion decision).
 
 Gate: WEIR can run the same read task through multiple engines and compare normalized evidence without callers depending on engine syntax.
 
