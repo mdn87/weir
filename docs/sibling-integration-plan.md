@@ -1,7 +1,10 @@
 # Sibling integration plan — Fable review packet
 
-- Status: proposed for architecture review
+- Status: reviewed — `contracts may freeze` with amendments A1–A9 and corrections
+  C1–C6 (see the Fable review findings and decision record at the end)
 - Prepared: 2026-08-27
+- Reviewed: 2026-08-27 by Fable (direct WEIR inspection plus six independent
+  sibling-repository verification passes)
 - Scope: WEIR, `lugos-mcp`, Autowork, Fade, HUD, Mission Control, Dias, and APU
 
 No sibling repository is changed by this document. Implementation starts only after
@@ -753,23 +756,208 @@ For substantial authority or persistence changes, use a PR and land it after the
 gate is green. Small independent safety fixes may land directly after validation. Do
 not combine unrelated existing working-tree changes with these commits.
 
+## Fable review findings (2026-08-27)
+
+Reviewed against WEIR `main` at `955f2c4` (contracts, `work_context.py`, `models.py`,
+`broker.py`, `actions.py`, `browser/broker.py` read directly). All six sibling areas
+were independently re-verified by read-only inspection agents. Every baseline matches
+its pin: Fade `b2e2772` (own repo, clean), `lugos-mcp` `c68bafc` (clean), Lugos parent
+`ec8366d0` (8 dirty/untracked entries, none under `autowork/` or `lugos-hud/src`),
+Mission Control `3478e78` (clean), Dias `e3faa94` (tracked-clean; untracked runtime
+dirs preserved), APU `29b027a` (clean; untracked `.dias/`). The gap table's claims all
+verified; the corrections below are where the plan's *assumptions* failed contact with
+the code.
+
+One baseline risk dissolves: Dias `feat/portfolio-phase-1e` is a strict fast-forward
+of `main` (1 ahead, 0 behind, pushed). Recording it as the 1C base is low-risk.
+
+No decision is replaced. The following amendments are contract-level and must be
+resolved in Batch 0 fixtures before the freeze:
+
+- **A1 — `WorkContext.evidence_refs` conflicts with root immutability.** The field
+  participates in the hash basis, so accumulating references would change
+  `context_hash` and break the "same root hash everywhere" gate. Freeze it as
+  caller-supplied *input* references fixed at creation (typically empty); all
+  outward evidence binding lives in `EvidenceReference`. State this in the fixture.
+- **A2 — Define the artifact re-hash basis.** `content_hash` is a digest of canonical
+  content JSON (post-truncation), while `artifact_ref` may point at raw bytes.
+  D4's pre-launch re-hash needs an unambiguous basis: either add an explicit
+  `artifact_hash` to `EvidenceReference` or define the materialized artifact as
+  exactly the canonical content JSON. Also: the acquisition cache key must include
+  `capture_policy` so a policy-trimmed capture never satisfies a fuller policy, and
+  a reference minted from a metadata-policy capture must not satisfy an
+  `evidence_inputs` entry that requires content.
+- **A3 — Caller identity, not just loopback.** Any local process can reach a
+  loopback port, and a single shared secret does not distinguish callers. Fade's
+  existing service already has a constant-time bearer check, loopback-only binding,
+  and arming flags — the packet understates it; the actual gap is that one token
+  makes Aire and any future WEIR caller indistinguishable. The WEIR service must
+  authenticate named clients with per-client secrets stored under user-only ACLs
+  outside the repository and logs, and Fade's WEIR authority module gets its own
+  token, never Aire's. Related: HUD snapshot/event reads are entirely
+  unauthenticated today (only command POSTs take a bearer), so any registered
+  projection is world-readable on the port — `weir` projection redaction must be
+  complete at construction time; there is no later gate.
+- **A4 — Permit expiry needs a clock authority.** WEIR validates `expires_at`
+  against its own clock; the fixture must state the maximum tolerated skew and Fade
+  must issue with margin. Without this, same-host v1 works by accident and any
+  later topology change breaks silently.
+- **A5 — Unknown outcome and quarantine must be first-class.** `ReceiptResult`
+  currently has no unknown value, and the completed/failed validation invariants do
+  not cover it. Add `outcome_unknown` with its own rules (no verification claim, no
+  post-state assertion, reservation record retained) and make quarantine durable:
+  it blocks new permits for the session and only operator disposition clears it —
+  never a restart, retry, or timeout. Verification found Fade's current crash mode
+  is worse than "ambiguous": the effect fires before any record is written and
+  replay keys off the record's *absence*, so a crash-then-retry silently
+  re-executes. Reserve-before-effect is non-negotiable.
+- **A6 — `fill`/`select` parameters are form values.** The proposal's `parameters`
+  carry the text to be filled; D10 excludes form values from events and projections.
+  Resolve the tension explicitly: the full-authority proposal (Batch 2 lookup) is
+  the only channel that carries parameters, Fade's authenticated approval surface
+  renders them for the operator, and HUD/Mission Control projections never do.
+  Classify parameters by `data_class` in the fixture. HUD's fleet projection
+  already ships raw message previews through this same pipeline — that precedent
+  must not be inherited by the `weir` projection.
+- **A7 — Permit field names must survive Fade's payload screen.** Fade rejects any
+  payload containing keys named `token`, `authorization`, `secret`, and similar at
+  any depth (`FORBIDDEN_KEYS`). Freeze `ExecutionPermit`/proposal fixture field
+  names to avoid that vocabulary (e.g. no `permit_token`), or the permit dies at
+  Fade's own parser.
+- **A8 — D4's binding joint is `correlation_id`/`assignment_id`, not `run_id`.**
+  `DispatchRequest` carries no `run_id`; the orchestrator mints it at dispatch,
+  after parsing. The evidence-input agreement check therefore binds at assignment
+  compile time against `correlation_id`/`assignment_id`, and the orchestrator — not
+  the caller — attests the run linkage. The fixture must state this so v5 does not
+  invent a request-side `run_id` with nothing to check it against.
+- **A9 — D9's selection rule needs three refinements.** (1) "Exactly one candidate"
+  over-rejects: several sessions in one cwd is normal and today resolves via the
+  `active` flag — freeze the rule as *unique active candidate among exact-cwd
+  matches*. (2) Explicit ID + mismatched cwd is currently **silently ignored**, not
+  merely tolerated — the trace's own cwd is recorded and later drives intervention
+  in that other project's directory; the change to reject is a real behavior
+  change, not a tightening of an existing check. (3) "No attribution" has no
+  representation today (every caller expects a trace or a ValueError) — it needs a
+  typed outcome and non-zero CLI exit handling.
+
+### Plan corrections from sibling verification (mandatory)
+
+These do not reopen D1–D12; they correct batch assumptions that verification showed
+to be wrong.
+
+- **C1 — Batch 5's ordering is inverted at the contract edge.** Mission Control's
+  snapshot schema is a closed union of exactly five projection names with
+  `.max(5)`, parsed with a throwing `.parse`: a sixth `weir` projection rejects the
+  *entire* snapshot and degrades the event stream. Mission Control must tolerate
+  the `weir` projection (deployed) **before** HUD registers it, or HUD's
+  registration stays flag-off until then. The required HUD↔MC parity fixture test
+  does not exist today — make it a Batch 5 exit gate, not an afterthought. D11's
+  "viewer roles remain read-only" also overstates the present: HUD has no role
+  model at all; the operator/viewer distinction is new work, and until it exists
+  the unauthenticated read surface is the binding constraint (see A3).
+- **C2 — Dias v2 is new machinery, not added fields.** All 16 contract schemas set
+  `additionalProperties: false` with `schemaVersion` as `const: 1`, consumers
+  validate with strict AJV, and the display client silently drops non-validating
+  frames — a v2 frame reaching a v1 display makes it go dark, not warn. v2 means
+  separate schema files plus version dispatch that does not exist on any route; the
+  1C canary must explicitly detect the silent-drop mode. Reuse the in-repo
+  `instanceId` + monotonic `revision` idiom from the chip-board/portfolio contracts
+  rather than inventing new shapes. There is no durable store anywhere in the tree
+  (every fs call is read-only), so SQLite is a genuinely new dependency — the
+  plan's driver caution stands. Two behavioral notes: an existing test *asserts*
+  same-key/different-command replay returns the first receipt (flip it
+  deliberately, with a reason code), and the broker's capacity-pressure denial is
+  currently indistinguishable from a real focus denial — give it its own reason
+  code in v2.
+- **C3 — Autowork v5 is not "purely additive."** Version handling is exact-set
+  across ~11 enumerated edit sites in one file, `to_dict` silently drops fields of
+  unhandled versions, and `__post_init__` silently downgrades newer fields — a
+  missed site loses `work_context`/`evidence_inputs` without an error (a stale
+  error string shows the v4 bump already missed a site). The closed modality tuple
+  must widen for evidence files — a breaking validator change — and the
+  Claude/Antigravity routes hard-reject non-text inputs, so v5 evidence is
+  Codex-lane-only until those executors are extended; the cross-provider canary in
+  Batch 4 must account for this. The inbox path parses with no
+  `owned_artifact_roots`, so orchestrator-materialized evidence is unreachable
+  through it without a signature change, and `rebind_execution_workspace` must be
+  taught to re-fingerprint `evidence_inputs` (it only covers `visual_inputs`
+  today). Reuse the existing visual-input path hardening (strict resolve,
+  `..`/symlink/reparse rejection, TOCTOU fingerprints) — it is solid.
+- **C4 — Batch 6 needs a second Fade server, not a second route.** The action
+  service is one shared `do_POST` closure with pre-routing shared auth and an
+  Aire-shaped run store (hard-coded `aire.fixed-continuation`/`kvm` fields,
+  `fade_*.json` glob, shared ID namespace). Preserving Aire byte-for-byte while
+  adding WEIR authority means a second `FadeActionServer` instance on its own port
+  with its own token and its own runs directory (the constructor supports it; the
+  CLI needs a second `--port`). Also: the action service emits zero lifecycle
+  events today — `events.py` builders exist but are wired only into the recipe
+  runner — so D10's Fade events are new wiring, not reuse. The Fade→Playwright
+  isolation is structurally sound today (the browser adapter is reachable only via
+  the recipe runner); the D5 negative test keeps it that way.
+- **C5 — Batch 3's context needs an origin, and the plumbing is wider than one
+  adapter.** The MCP server entry receives no session or auth material; today's
+  only identity channel is ambient process env — exactly the pattern the plan
+  rejects. Decide where the authenticated binding is established upstream of
+  `create_server` before writing the adapter. The router passes the same three
+  positional arguments to all 21 adapters, so the versioned dispatch context is a
+  cross-cutting signature change, and the second dispatch path (`tool_call.py`,
+  used by CLI/HUD) bypasses the server layer entirely — the fail-closed rule needs
+  an explicit test there. A per-action migration seam already exists (each leaf
+  ToolSpec declares its backend), but it is a static edit; the runtime feature
+  flag per action is new mechanism.
+- **C6 — Batch 1B is schema-breaking and APU is not review-only today.** The
+  evidence validators are exact-set on read and write, so selector-provenance
+  fields require an `EVIDENCE_SCHEMA_VERSION` bump (the compatibility table's
+  "additive fields" row is wrong), and deployed 0.8.0 wheels cannot read v2 events.
+  No test covers the cross-project fallback — removing it fails nothing — so add
+  the negative coverage *first*. The likely consumer-breakage source on Windows is
+  cwd normalization (case-insensitive compare without short-name resolution) plus
+  the 40-line `_peek_session` scan, both of which the fallback currently masks.
+  Most importantly: `intervene()` spawns `codex resume` in the *trace's* recorded
+  cwd, and `apu apply` mutates files — D9's "review-only" must be scoped explicitly
+  to the behavior-watch/evidence subsystem with `intervene` carved out and gated,
+  and its `durable_policy_mutation: False` literal made a checked invariant.
+  Wrong-cwd intervention is the live hazard strict attribution fixes; do not rely
+  on `intervene` before 1B lands.
+
+Parallelization findings:
+
+- Batches 1A/1B/1C remain the safe first parallel wave (disjoint repositories).
+  The Dias base precondition is satisfied by recording the portfolio branch as the
+  base (it is a pushed fast-forward of `main`). **Batches 4 and 5 must not run
+  concurrently in one Lugos parent checkout** — Autowork and HUD are in-tree
+  siblings, so sequence them or use separate worktrees; the parent's unrelated
+  local changes must be preserved. C1 adds a hard ordering inside Batch 5:
+  Mission Control contract tolerance lands and deploys before HUD registers the
+  projection.
+- D5 needs a mechanical guard, not a convention: add a negative test that Fade's
+  existing Playwright adapter path cannot service a WEIR proposal (wrong client
+  identity at the WEIR action endpoint), landing with Batch 6.
+
 ## Fable decision record
 
-Fill this table from the manual review before implementation.
+Recorded from the 2026-08-27 manual review.
 
 | Decision | Proposed default | Fable response |
 | --- | --- | --- |
-| D1 WorkContext owner/immutability | accept | — |
-| D2 context-specific EvidenceReference | accept | — |
-| D3 persistent authenticated WEIR service | accept | — |
-| D4 brokered evidence; provider network disabled | accept | — |
-| D5 Fade authority/coordinator; WEIR effect driver | accept | — |
-| D6 one-use permit; no exact lease-generation binding | accept | — |
-| D7 explicit unknown outcome; no blind replay | accept | — |
-| D8 Dias instance + target generation + durable digest store | accept | — |
-| D9 strict APU attribution | accept | — |
-| D10 producer events + HUD projection | accept | — |
-| D11 explicit-ID UI commands; selection non-authoritative | accept | — |
-| D12 same-host canary before remote relay | accept | — |
+| D1 WorkContext owner/immutability | accept | accept, with A1 (freeze `evidence_refs` at creation) |
+| D2 context-specific EvidenceReference | accept | accept, with A2 (explicit artifact-hash basis, cache-policy key) |
+| D3 persistent authenticated WEIR service | accept | accept, with A3 (per-caller identity, not just loopback; ACL'd client secrets) |
+| D4 brokered evidence; provider network disabled | accept | accept, with A8 (binding joint is correlation/assignment; orchestrator attests run linkage) and C3 |
+| D5 Fade authority/coordinator; WEIR effect driver | accept | accept, plus negative test that Fade's own browser path cannot serve a WEIR proposal (isolation verified structurally sound today); C4 applies |
+| D6 one-use permit; no exact lease-generation binding | accept | accept, with A4 (expiry clock authority and skew fixture) and A7 (field vocabulary); no-lease-binding confirmed against the recovery path |
+| D7 explicit unknown outcome; no blind replay | accept | accept, with A5 — verification showed Fade's current crash mode silently re-executes, so reserve-before-effect is non-negotiable |
+| D8 Dias instance + target generation + durable digest store | accept | accept, with C2; portfolio branch recorded as the 1C base (pushed fast-forward of `main`) |
+| D9 strict APU attribution | accept | accept, with A9 (unique-active rule, cwd-mismatch reject is a behavior change, typed no-attribution) and C6 (`intervene` carve-out; schema version bump) |
+| D10 producer events + HUD projection | accept | accept, with A6 and C1/C4 (redaction complete at construction — HUD reads are unauthenticated; Fade event emission is new wiring) |
+| D11 explicit-ID UI commands; selection non-authoritative | accept | accept; note the role gate itself is new work (C1) — HUD has no role model today |
+| D12 same-host canary before remote relay | accept | accept |
 
-Review verdict: `awaiting Fable review`.
+Review verdict: `contracts may freeze` for the WEIR-owned contract set — conditional
+on amendments A1–A9 being folded into the Batch 0 fixtures before the freeze is
+declared. Corrections C1–C6 are mandatory revisions to the implementation batches
+(compatibility rows for Dias, APU, and Mission Control claimed additivity the code
+does not support, and Batch 5's landing order inverts at the contract edge) but do
+not reopen D1–D12. The batch dependency map is otherwise sound with the hardened
+preconditions recorded above. All seven baselines were re-verified at their pins by
+independent inspection before this verdict.
