@@ -20,6 +20,7 @@ from weir.engines.base import FailureClass
 
 CONTRACTS = Path(__file__).resolve().parents[1] / "contracts"
 NOW = datetime(2026, 8, 27, 12, 0, tzinfo=timezone.utc)
+VALID_DEADLINE = datetime.max.replace(tzinfo=timezone.utc) - timedelta(days=1)
 
 
 def _command(
@@ -29,6 +30,7 @@ def _command(
     epoch: int = 1,
     fence: int = 3,
     payload=None,
+    deadline_at: datetime = VALID_DEADLINE,
 ) -> WorkerCommand:
     actual_payload = {"session_id": "session-1"} if payload is None else payload
     return WorkerCommand.build(
@@ -40,7 +42,7 @@ def _command(
         expected_revision=revision,
         session_epoch=epoch,
         lease_fence=fence,
-        deadline_at=NOW + timedelta(minutes=1),
+        deadline_at=deadline_at,
         payload=actual_payload,
     )
 
@@ -62,7 +64,9 @@ class BrowserProtocolTests(unittest.TestCase):
 
     def test_expired_command_is_rejected(self):
         with self.assertRaises(CommandExpired):
-            _command().validate(now=NOW + timedelta(minutes=2))
+            _command(deadline_at=NOW + timedelta(minutes=1)).validate(
+                now=NOW + timedelta(minutes=2)
+            )
 
     def test_command_runtime_rejects_types_the_schema_rejects(self):
         command = _command()
@@ -104,7 +108,7 @@ class BrowserProtocolTests(unittest.TestCase):
             guard.begin_worker_command(reused)
 
         extended = replace(
-            command, deadline_at=(NOW + timedelta(minutes=2)).isoformat()
+            command, deadline_at=(VALID_DEADLINE - timedelta(minutes=1)).isoformat()
         )
         with self.assertRaises(WorkerIdempotencyConflict):
             guard.begin_worker_command(extended)
