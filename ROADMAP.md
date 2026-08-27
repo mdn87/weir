@@ -34,14 +34,18 @@ intent, and the same evidence bundle is comparable across providers.
 
 - [x] Add route classifier (seed: connector vs compact_reader, deterministic reasons; `weir route`).
 - [x] Add connector/API adapter interface (generic `http` engine; eBay slice to build on it).
-- [ ] Add capture hashing and artifact persistence boundary (hashing done in P0; persistence open).
+- [x] Add a reusable acquisition broker so CLI and library callers share routing, policy, fallback, and capture behavior.
+- [x] Add capture hashing and artifact persistence boundary (optional immutable manifests + content-addressed artifacts).
 - [x] Add deterministic reader fallback reasons (auto-read fallback chain; policy blocks abort, never fall through).
-- [x] Add domain policy (boundary target policy: schemes, private addresses, allowed_domains, per-redirect-hop).
-- [ ] Add cache policy by data class.
-- [ ] Add site profiles only where benchmark evidence supports them.
-- [ ] Add AITU spans.
+- [x] Add domain policy (initial + returned targets for every engine; per-hop enforcement in the HTTP connector).
+- [x] Bound normalized output (5 MiB reader limit; structured results fail rather than break their contract).
+- [x] Add cache policy by data class (shared cache only for unauthenticated public evidence).
+- [x] Add site profiles only where benchmark evidence supports them (GitHub public + live eBay slice).
+- [x] Add metadata-only AITU-compatible spans (`web.route`, fetch/search, fallback, cache, persistence).
 
-Gate: public research campaigns can acquire sources through WEIR with provenance, bounded output, deterministic fallback, and no authenticated browser dependency.
+Gate met (2026-08-27): public research callers can use `AcquisitionBroker` or the CLI
+to acquire sources with provenance, bounded output, deterministic fallback, optional
+immutable persistence, and no authenticated browser dependency.
 
 ## P2 - Browser session broker
 

@@ -4,9 +4,15 @@ from pathlib import Path
 
 from jsonschema import FormatChecker, ValidationError
 from jsonschema.validators import Draft202012Validator
-
-from weir.engines.base import EngineCannotRead, EngineUnavailable
-from weir.engines.ebay_connector import EbayConnector, listing_hash, normalize_summary
+from referencing import Registry, Resource
+from weir.engines.base import (
+    EngineCannotRead,
+    EngineFailure,
+    EnginePolicyBlocked,
+    EngineUnavailable,
+    FailureClass,
+)
+from weir.engines.ebay_connector import EbayConnector, normalize_summary
 from weir.models import DataClass, RequestMode, WebCapture, WebRequest
 from weir.router import classify
 
@@ -35,7 +41,12 @@ SEARCH_PAGE_1 = {
     "itemSummaries": [ITEM_FULL, ITEM_THIN],
     "next": "https://api.ebay.com/buy/browse/v1/item_summary/search?q=x&offset=50",
 }
-SEARCH_PAGE_2 = {"total": 3, "itemSummaries": [dict(ITEM_FULL, itemId="v1|110003|0", itemWebUrl="https://www.ebay.com/itm/110003")]}
+SEARCH_PAGE_2 = {
+    "total": 3,
+    "itemSummaries": [
+        dict(ITEM_FULL, itemId="v1|110003|0", itemWebUrl="https://www.ebay.com/itm/110003")
+    ],
+}
 
 ENV = {"WEIR_EBAY_CLIENT_ID": "cid", "WEIR_EBAY_CLIENT_SECRET": "cs", "WEIR_EBAY_ENV": "production"}
 
@@ -87,16 +98,29 @@ class EbaySearchTests(unittest.TestCase):
         self.assertEqual(full["condition"], {"raw": "New", "condition_id": "1000"})
         self.assertEqual(thin["shipping"], "unknown")
         self.assertEqual(thin["condition"], "unknown")
+        self.assertEqual(result.auth_scope, "app:ebay-app")
+
+    def test_intent_constraints_are_preserved_but_not_misapplied_as_provider_filters(self):
+        request = _search_request()
+        request.constraints = {"switch": "red", "max_total_cost": 40}
+        result = self.engine.search(request)
+        self.assertEqual(result.content["constraints"], request.constraints)
+        self.assertEqual(result.diagnostics["unapplied_constraints"], ["max_total_cost", "switch"])
 
     def test_pagination_is_bounded_and_reported(self):
         one_page = self.engine.search(_search_request(pages=1))
-        self.assertEqual(one_page.content["pagination"], {"pages_fetched": 1, "total_reported": 3, "truncated": True})
+        self.assertEqual(
+            one_page.content["pagination"],
+            {"pages_fetched": 1, "total_reported": 3, "truncated": True},
+        )
         two_pages = self.engine.search(_search_request(pages=2))
         self.assertEqual(len(two_pages.content["listings"]), 3)
         self.assertFalse(two_pages.content["pagination"]["truncated"])
 
     def test_listings_validate_against_contract(self):
-        schema = json.loads((CONTRACTS / "marketplace-listing.schema.json").read_text(encoding="utf-8"))
+        schema = json.loads(
+            (CONTRACTS / "marketplace-listing.schema.json").read_text(encoding="utf-8")
+        )
         validator = Draft202012Validator(schema, format_checker=FormatChecker())
         for listing in self.engine.search(_search_request(pages=2)).content["listings"]:
             validator.validate(listing)
@@ -107,7 +131,10 @@ class EbaySearchTests(unittest.TestCase):
         first = normalize_summary(ITEM_FULL, "2026-08-24T00:00:00+00:00")
         later = normalize_summary(ITEM_FULL, "2026-08-25T09:00:00+00:00")
         self.assertEqual(first["content_hash"], later["content_hash"])
-        changed = normalize_summary(dict(ITEM_FULL, price={"value": "29.99", "currency": "USD"}), "2026-08-25T09:00:00+00:00")
+        changed = normalize_summary(
+            dict(ITEM_FULL, price={"value": "29.99", "currency": "USD"}),
+            "2026-08-25T09:00:00+00:00",
+        )
         self.assertNotEqual(first["content_hash"], changed["content_hash"])
 
     def test_search_result_wraps_into_valid_webcapture(self):
@@ -115,6 +142,76 @@ class EbaySearchTests(unittest.TestCase):
         request = _search_request()
         capture = WebCapture.from_reader_result(self.engine.search(request), request)
         Draft202012Validator(schema, format_checker=FormatChecker()).validate(capture.to_dict())
+
+    def test_search_result_has_its_own_result_set_contract(self):
+        listing_schema = json.loads(
+            (CONTRACTS / "marketplace-listing.schema.json").read_text(encoding="utf-8")
+        )
+        result_schema = json.loads(
+            (CONTRACTS / "marketplace-search-result.schema.json").read_text(encoding="utf-8")
+        )
+        registry = Registry().with_resource(
+            listing_schema["$id"], Resource.from_contents(listing_schema)
+        )
+        validator = Draft202012Validator(
+            result_schema, registry=registry, format_checker=FormatChecker()
+        )
+        validator.validate(self.engine.search(_search_request(pages=2)).content)
+
+    def test_off_origin_pagination_url_is_blocked_before_bearer_token_can_leak(self):
+        seen_urls = []
+
+        def hostile_transport(req):
+            seen_urls.append(req.full_url)
+            if "/oauth2/token" in req.full_url:
+                return 200, TOKEN_RESPONSE
+            page = dict(SEARCH_PAGE_1, next="https://attacker.example/collect")
+            return 200, json.dumps(page).encode()
+
+        engine = EbayConnector(transport=hostile_transport, environ=ENV)
+        with self.assertRaises(EnginePolicyBlocked):
+            engine.search(_search_request(pages=2))
+        self.assertFalse(any("attacker.example" in url for url in seen_urls))
+
+    def test_transient_api_failures_retry_with_a_small_bound(self):
+        statuses = [429, 503, 200]
+        sleeps = []
+
+        def flaky_transport(req):
+            if "/oauth2/token" in req.full_url:
+                return 200, TOKEN_RESPONSE
+            status = statuses.pop(0)
+            return status, json.dumps(dict(SEARCH_PAGE_1, next=None)).encode()
+
+        engine = EbayConnector(transport=flaky_transport, environ=ENV, sleeper=sleeps.append)
+        result = engine.search(_search_request())
+        self.assertEqual(result.http_status, 200)
+        self.assertEqual(sleeps, [0.25, 0.5])
+
+    def test_exhausted_transient_failures_have_a_stable_failure_class(self):
+        def throttled_transport(req):
+            if "/oauth2/token" in req.full_url:
+                return 200, TOKEN_RESPONSE
+            return 429, b"{}"
+
+        engine = EbayConnector(transport=throttled_transport, environ=ENV, sleeper=lambda _: None)
+        with self.assertRaises(EngineFailure) as raised:
+            engine.search(_search_request())
+        self.assertEqual(raised.exception.failure_class, FailureClass.NETWORK_FAILURE)
+
+    def test_malformed_provider_listings_are_dropped_and_reported(self):
+        malformed = dict(ITEM_THIN, itemWebUrl="https://attacker.example/itm/110002")
+
+        def malformed_transport(req):
+            if "/oauth2/token" in req.full_url:
+                return 200, TOKEN_RESPONSE
+            page = {"total": 2, "itemSummaries": [ITEM_FULL, malformed]}
+            return 200, json.dumps(page).encode()
+
+        engine = EbayConnector(transport=malformed_transport, environ=ENV)
+        result = engine.search(_search_request())
+        self.assertEqual(len(result.content["listings"]), 1)
+        self.assertEqual(result.diagnostics["invalid_listings"], 1)
 
 
 class EbayReadTests(unittest.TestCase):
@@ -135,10 +232,27 @@ class EbayReadTests(unittest.TestCase):
     def test_item_url_resolves_via_api(self):
         result = self.engine.read(self._read_request("https://www.ebay.com/itm/110001"))
         self.assertEqual(result.content["listing"]["source_item_id"], "v1|110001|0")
+        self.assertEqual(result.auth_scope, "app:ebay-app")
 
     def test_non_item_url_is_cannot_read(self):
         with self.assertRaises(EngineCannotRead):
             self.engine.read(self._read_request("https://www.ebay.com/sch/i.html?_nkw=keyboard"))
+
+    def test_lookalike_host_or_path_cannot_be_treated_as_an_ebay_item(self):
+        for url in [
+            "https://notebay.com/itm/110001",
+            "https://www.ebay.xyz/itm/110001",
+            "https://attacker.example/ebay.com/itm/110001",
+        ]:
+            with self.assertRaises(EngineCannotRead):
+                self.engine.read(self._read_request(url))
+
+    def test_api_use_requires_explicit_profile_provenance(self):
+        request = self._read_request("https://www.ebay.com/itm/110001")
+        request.auth_context = "none"
+        request.profile_id = None
+        with self.assertRaises(EngineUnavailable):
+            self.engine.read(request)
 
 
 class SearchRoutingTests(unittest.TestCase):
@@ -160,6 +274,18 @@ class SearchRoutingTests(unittest.TestCase):
         request.url = "https://www.ebay.com"
         with self.assertRaises(ValueError):
             request.validate()
+
+    def test_ebay_item_read_routes_to_api_before_page_readers(self):
+        request = WebRequest(
+            request_id="r1",
+            run_id="run1",
+            mode=RequestMode.READ,
+            data_class=DataClass.PUBLIC,
+            auth_context="app",
+            profile_id="ebay-app",
+            url="https://www.ebay.com/itm/example/110001",
+        )
+        self.assertEqual(classify(request).engine_candidates, ["ebay", "oc", "agent-browser-read"])
 
 
 if __name__ == "__main__":

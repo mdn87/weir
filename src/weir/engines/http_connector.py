@@ -12,6 +12,7 @@ from weir.engines.base import (
     EngineFailure,
     EnginePolicyBlocked,
     EngineProbe,
+    FailureClass,
     ReaderEngine,
 )
 from weir.models import ReaderResult, RequestMode, WebRequest
@@ -42,7 +43,9 @@ def check_target_policy(url: str, allowed_domains: list[str]) -> None:
     try:
         infos = socket.getaddrinfo(host, None)
     except OSError as exc:
-        raise EngineFailure(f"network_failure: cannot resolve {host!r}: {exc}") from exc
+        raise EngineFailure(
+            f"cannot resolve {host!r}: {exc}", FailureClass.NETWORK_FAILURE
+        ) from exc
     for info in infos:
         address = ipaddress.ip_address(info[4][0])
         if not address.is_global:
@@ -85,7 +88,10 @@ class HttpConnector(ReaderEngine):
         opener = urllib.request.build_opener(redirect_handler)
         req = urllib.request.Request(
             request.url,
-            headers={"User-Agent": USER_AGENT, "Accept": "application/json, application/feed+json, */*"},
+            headers={
+                "User-Agent": USER_AGENT,
+                "Accept": "application/json, application/feed+json, */*",
+            },
         )
         try:
             with opener.open(req, timeout=60) as response:
@@ -96,17 +102,17 @@ class HttpConnector(ReaderEngine):
                 charset = response.headers.get_content_charset() or "utf-8"
         except urllib.error.HTTPError as exc:
             if exc.code in {401, 403}:
-                raise EngineCannotRead(f"auth_required_or_blocked: HTTP {exc.code}") from exc
+                raise EngineCannotRead(f"HTTP {exc.code}", FailureClass.AUTH_REQUIRED) from exc
             if 400 <= exc.code < 500:
                 raise EngineCannotRead(f"HTTP {exc.code}") from exc
             raise EngineFailure(f"HTTP {exc.code}") from exc
         except urllib.error.URLError as exc:
-            raise EngineFailure(f"network_failure: {exc.reason}") from exc
+            raise EngineFailure(str(exc.reason), FailureClass.NETWORK_FAILURE) from exc
         except TimeoutError as exc:
-            raise EngineFailure("network_failure: timeout") from exc
+            raise EngineFailure("timeout", FailureClass.NETWORK_FAILURE) from exc
 
         if len(body) > MAX_RESPONSE_BYTES:
-            raise EngineFailure(f"response exceeds {MAX_RESPONSE_BYTES} byte cap")
+            raise EngineCannotRead(f"response exceeds {MAX_RESPONSE_BYTES} byte cap")
 
         text = body.decode(charset, errors="replace")
         content: dict[str, object] = {"content_type": content_type}
@@ -125,6 +131,7 @@ class HttpConnector(ReaderEngine):
             title=None,
             http_status=status,
             engine_version="stdlib",
+            auth_scope="none",
             content=content,
             diagnostics={"redirect_hops": redirect_handler.hops, "bytes": len(body)},
         )

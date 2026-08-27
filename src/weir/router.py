@@ -5,7 +5,8 @@ from dataclasses import asdict, dataclass, field
 from typing import Any
 
 from weir.engines import AgentBrowserReader, EbayConnector, FakeReader, HttpConnector, OcReader
-from weir.engines.base import ReaderEngine
+from weir.engines.base import Engine
+from weir.engines.ebay_connector import is_ebay_item_url
 from weir.models import RequestMode, WebRequest
 
 
@@ -16,23 +17,32 @@ class EngineRegistry:
     keeps benchmark runs reproducible while the route evidence is gathered.
     """
 
-    def __init__(self) -> None:
-        self._engines: dict[str, ReaderEngine] = {
-            "http": HttpConnector(),
-            "ebay": EbayConnector(),
-            "oc": OcReader(),
-            "agent-browser-read": AgentBrowserReader(),
-            "fake": FakeReader(),
-        }
+    def __init__(self, engines: list[Engine] | None = None) -> None:
+        if engines is None:
+            engines = [
+                HttpConnector(),
+                EbayConnector(),
+                OcReader(),
+                AgentBrowserReader(),
+                FakeReader(),
+            ]
+        self._engines: dict[str, Engine] = {}
+        for engine in engines:
+            self.register(engine)
 
-    def get(self, engine_id: str) -> ReaderEngine:
+    def register(self, engine: Engine) -> None:
+        if engine.id in self._engines:
+            raise ValueError(f"duplicate engine id {engine.id!r}")
+        self._engines[engine.id] = engine
+
+    def get(self, engine_id: str) -> Engine:
         try:
             return self._engines[engine_id]
         except KeyError as exc:
             known = ", ".join(sorted(self._engines))
             raise KeyError(f"unknown engine {engine_id!r}; known: {known}") from exc
 
-    def all(self) -> list[ReaderEngine]:
+    def all(self) -> list[Engine]:
         return list(self._engines.values())
 
 
@@ -90,7 +100,10 @@ def classify(request: WebRequest) -> RouteDecision:
             return RouteDecision(
                 route_class="connector",
                 engine_candidates=[MARKETPLACE_SOURCES[request.source]],
-                reasons=[f"structured marketplace search routes to the {request.source} connector (rung 1)"],
+                reasons=[
+                    f"structured marketplace search routes to the {request.source} "
+                    "connector (rung 1)"
+                ],
             )
         return RouteDecision(
             route_class="unsupported",
@@ -101,13 +114,31 @@ def classify(request: WebRequest) -> RouteDecision:
         return RouteDecision(
             route_class="unsupported",
             engine_candidates=[],
-            reasons=[f"mode {request.mode} has no seeded route; only read and search are classified"],
+            reasons=[
+                f"mode {request.mode} has no seeded route; only read and search are classified"
+            ],
         )
     if not request.url:
         return RouteDecision(
             route_class="discover",
             engine_candidates=[],
             reasons=["query-only requests need the discovery route, which is not seeded yet"],
+        )
+
+    if is_ebay_item_url(request.url):
+        candidates = ["ebay", "oc", "agent-browser-read"]
+        reasons = [
+            "eBay item URL has a first-party Browse API connector; compact readers remain fallbacks"
+        ]
+        if request.preferred_engine in candidates and request.preferred_engine != candidates[0]:
+            candidates = [request.preferred_engine] + [
+                item for item in candidates if item != request.preferred_engine
+            ]
+            reasons.append(f"caller preference {request.preferred_engine!r} honored (advisory)")
+        return RouteDecision(
+            route_class="connector",
+            engine_candidates=candidates,
+            reasons=reasons,
         )
 
     api_reasons = _looks_api_shaped(request.url)

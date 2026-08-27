@@ -2,14 +2,32 @@ from __future__ import annotations
 
 import hashlib
 import json
+import math
+import re
 import uuid
 from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
 from enum import StrEnum
 from typing import Any
 
-
 CONTRACT_VERSION = "0.1"
+SOURCE_NAME_PATTERN = re.compile(r"[a-z0-9][a-z0-9_-]*")
+DOMAIN_NAME_PATTERN = re.compile(
+    r"(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)"
+    r"(?:\.(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?))*"
+)
+
+
+def _is_json_value(value: Any) -> bool:
+    if value is None or isinstance(value, (str, bool, int)):
+        return True
+    if isinstance(value, float):
+        return math.isfinite(value)
+    if isinstance(value, list):
+        return all(_is_json_value(item) for item in value)
+    if isinstance(value, dict):
+        return all(isinstance(key, str) and _is_json_value(item) for key, item in value.items())
+    return False
 
 
 class RequestMode(StrEnum):
@@ -45,6 +63,7 @@ class WebRequest:
     url: str | None = None
     query: str | None = None
     source: str | None = None
+    constraints: dict[str, Any] = field(default_factory=dict)
     profile_id: str | None = None
     allowed_domains: list[str] = field(default_factory=list)
     preferred_engine: str | None = None
@@ -57,7 +76,12 @@ class WebRequest:
     def validate(self) -> None:
         if not self.url and not self.query:
             raise ValueError("WebRequest requires url or query")
-        no_side_effect_modes = {RequestMode.DISCOVER, RequestMode.SEARCH, RequestMode.READ, RequestMode.OBSERVE}
+        no_side_effect_modes = {
+            RequestMode.DISCOVER,
+            RequestMode.SEARCH,
+            RequestMode.READ,
+            RequestMode.OBSERVE,
+        }
         if self.mode in no_side_effect_modes and self.side_effects_allowed:
             raise ValueError(f"{self.mode} requests cannot enable side effects")
         if self.mode is RequestMode.SEARCH:
@@ -65,10 +89,33 @@ class WebRequest:
                 raise ValueError("search requests require a query")
             if not self.source:
                 raise ValueError("search requests require a source (records from one known source)")
+        if self.source is not None and (
+            not isinstance(self.source, str)
+            or self.source != self.source.strip().lower()
+            or not SOURCE_NAME_PATTERN.fullmatch(self.source)
+        ):
+            raise ValueError("source must be a normalized lowercase name")
         if self.auth_context == "none" and self.profile_id is not None:
             raise ValueError("profile_id requires a non-none auth_context")
         if self.maximum_depth < 0:
             raise ValueError("maximum_depth cannot be negative")
+        if self.capture_policy not in {"metadata", "content", "full_evidence"}:
+            raise ValueError(f"unknown capture_policy {self.capture_policy!r}")
+        if (
+            not isinstance(self.allowed_domains, list)
+            or any(
+                not isinstance(domain, str)
+                or not domain
+                or len(domain) > 253
+                or domain != domain.strip().lower()
+                or not DOMAIN_NAME_PATTERN.fullmatch(domain)
+                for domain in self.allowed_domains
+            )
+            or len(set(self.allowed_domains)) != len(self.allowed_domains)
+        ):
+            raise ValueError("allowed_domains entries must be normalized lowercase domain names")
+        if not isinstance(self.constraints, dict) or not _is_json_value(self.constraints):
+            raise ValueError("constraints must be a JSON-compatible object")
 
     def to_dict(self) -> dict[str, Any]:
         self.validate()
@@ -87,6 +134,7 @@ class ReaderResult:
     title: str | None = None
     http_status: int | None = None
     engine_version: str | None = None
+    auth_scope: str | None = None
     diagnostics: dict[str, Any] = field(default_factory=dict)
 
     def to_dict(self) -> dict[str, Any]:
@@ -94,7 +142,13 @@ class ReaderResult:
 
 
 def _content_hash(content: Any) -> str:
-    canonical = json.dumps(content, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
+    canonical = json.dumps(
+        content,
+        sort_keys=True,
+        separators=(",", ":"),
+        ensure_ascii=False,
+        allow_nan=False,
+    )
     return "sha256:" + hashlib.sha256(canonical.encode("utf-8")).hexdigest()
 
 
@@ -135,11 +189,21 @@ class WebCapture:
             final_url=result.final_url,
             title=result.title,
             http_status=result.http_status,
-            auth_scope=request.auth_context,
+            auth_scope=result.auth_scope or request.auth_context,
             trust=TrustLabel.UNTRUSTED_EXTERNAL_CONTENT,
             content_hash=_content_hash(result.content),
             content=result.content,
         )
+
+    @classmethod
+    def from_dict(cls, value: dict[str, Any]) -> WebCapture:
+        """Rehydrate a capture loaded from the immutable store or cache."""
+        fields = dict(value)
+        fields["trust"] = TrustLabel(fields["trust"])
+        capture = cls(**fields)
+        if capture.content is not None and _content_hash(capture.content) != capture.content_hash:
+            raise ValueError(f"capture {capture.capture_id!r} failed its content-hash check")
+        return capture
 
     def to_dict(self) -> dict[str, Any]:
         value = asdict(self)

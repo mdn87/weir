@@ -4,7 +4,6 @@ from pathlib import Path
 
 from jsonschema import FormatChecker, ValidationError
 from jsonschema.validators import Draft202012Validator
-
 from weir.models import DataClass, ReaderResult, RequestMode, WebCapture, WebRequest
 
 CONTRACTS = Path(__file__).resolve().parents[1] / "contracts"
@@ -40,6 +39,27 @@ def _reader_result() -> ReaderResult:
 class WebRequestContractTests(unittest.TestCase):
     def test_request_dict_matches_schema(self):
         _validator("web-request.schema.json").validate(_request().to_dict())
+
+    def test_schema_rejects_null_url_and_query(self):
+        value = _request().to_dict()
+        value["url"] = None
+        value["query"] = None
+        with self.assertRaises(ValidationError):
+            _validator("web-request.schema.json").validate(value)
+
+    def test_schema_enforces_search_fields_and_read_only_side_effect_rule(self):
+        value = _request().to_dict()
+        value["mode"] = "search"
+        value["url"] = None
+        value["query"] = "keyboard"
+        value["source"] = None
+        with self.assertRaises(ValidationError):
+            _validator("web-request.schema.json").validate(value)
+
+        value["source"] = "ebay"
+        value["side_effects_allowed"] = True
+        with self.assertRaises(ValidationError):
+            _validator("web-request.schema.json").validate(value)
 
 
 class WebCaptureContractTests(unittest.TestCase):

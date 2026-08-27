@@ -1,0 +1,24 @@
+contract_version: "0.1"
+id: ebay-marketplace
+domains:
+  - ebay.com
+  - api.ebay.com
+sources:
+  - ebay
+preferred_engines:
+  - ebay
+  - oc
+  - agent-browser-read
+auth_mode: optional
+allowed_modes:
+  - search
+  - read
+approval_risks: []
+known_failures:
+  api_credentials_missing: connector_unavailable
+  item_page_thin: escalate_reader
+retention:
+  public_content: content_hash_and_capture
+notes:
+  - The Browse API connector is preferred for structured search and item detail.
+  - Compact page readers remain available for evidence enrichment.

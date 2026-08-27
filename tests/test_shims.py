@@ -18,14 +18,14 @@ TRACKING_URL = "https://www.ebay.com/itm/377439547044?_trkparms=abc&hash=item57e
 
 class SafeArgvTests(unittest.TestCase):
     def test_plain_binaries_pass_through(self):
-        self.assertEqual(safe_argv("/usr/bin/oc", ["open", TRACKING_URL]), ["/usr/bin/oc", "open", TRACKING_URL])
+        self.assertEqual(
+            safe_argv("/usr/bin/oc", ["open", TRACKING_URL]), ["/usr/bin/oc", "open", TRACKING_URL]
+        )
 
     def test_npm_shim_is_unwrapped_to_node(self):
         with tempfile.TemporaryDirectory() as tmp:
             shim = Path(tmp) / "tool.CMD"
             shim.write_text(NPM_SHIM, encoding="utf-8")
-            script = Path(tmp) / ".." / "tool" / "src"
-            script = Path(tmp) / "tool" / "src"
             # shim resolves %dp0%\..\tool\src\cli.js relative to the shim dir
             target = Path(tmp).parent / "tool" / "src" / "cli.js"
             target.parent.mkdir(parents=True, exist_ok=True)

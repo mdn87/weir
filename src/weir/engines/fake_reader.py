@@ -2,7 +2,13 @@ from __future__ import annotations
 
 from urllib.parse import urlparse
 
-from weir.engines.base import EngineCannotRead, EngineFailure, EngineProbe, EngineUnavailable, ReaderEngine
+from weir.engines.base import (
+    EngineCannotRead,
+    EngineFailure,
+    EngineProbe,
+    EngineUnavailable,
+    ReaderEngine,
+)
 from weir.models import ReaderResult, RequestMode, WebRequest
 
 
@@ -45,5 +51,6 @@ class FakeReader(ReaderEngine):
             title=f"Fake page for {request.url}",
             http_status=200,
             engine_version="0",
+            auth_scope="none",
             content={"url": request.url, "text": f"deterministic content for {request.url}"},
         )

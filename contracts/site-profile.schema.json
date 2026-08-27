@@ -8,10 +8,24 @@
   "properties": {
     "contract_version": {"const": "0.1"},
     "id": {"type": "string"},
-    "domains": {"type": "array", "items": {"type": "string"}, "minItems": 1, "uniqueItems": true},
-    "preferred_engines": {"type": "array", "items": {"type": "string"}},
+    "domains": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "maxLength": 253,
+        "pattern": "^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)(?:\\.(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?))*$"
+      },
+      "minItems": 1,
+      "uniqueItems": true
+    },
+    "sources": {
+      "type": "array",
+      "items": {"type": "string", "pattern": "^[a-z0-9][a-z0-9_-]*$"},
+      "uniqueItems": true
+    },
+    "preferred_engines": {"type": "array", "items": {"type": "string", "minLength": 1}, "minItems": 1, "uniqueItems": true},
     "auth_mode": {"enum": ["none", "optional", "dedicated_profile"]},
-    "allowed_modes": {"type": "array", "items": {"enum": ["discover", "read", "observe", "interact", "commit"]}, "uniqueItems": true},
+    "allowed_modes": {"type": "array", "items": {"enum": ["discover", "search", "read", "observe", "interact", "commit"]}, "minItems": 1, "uniqueItems": true},
     "approval_risks": {"type": "array", "items": {"type": "string"}},
     "known_failures": {"type": "object"},
     "retention": {"type": "object"},

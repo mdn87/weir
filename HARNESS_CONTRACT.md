@@ -105,6 +105,11 @@ read(request) -> normalized result
 explicit cannot-read/failure distinction where possible
 ```
 
+Callers use the acquisition broker rather than invoking adapters directly. The broker
+applies target and site-profile policy before execution, keeps policy failures from
+falling through to a less constrained engine, and returns stable per-attempt failure
+classes. Optional persistence, cache, and trace sinks do not change the capture schema.
+
 A browser engine will additionally require:
 
 ```text
@@ -173,6 +178,7 @@ Minimum normalized failures:
 
 ```text
 engine_unavailable
+engine_failure
 network_failure
 blocked_target
 cannot_read

@@ -6,9 +6,14 @@ import shutil
 import subprocess
 import tempfile
 import uuid
-from pathlib import Path
 
-from weir.engines.base import EngineCannotRead, EngineFailure, EngineProbe, EngineUnavailable, ReaderEngine
+from weir.engines.base import (
+    EngineCannotRead,
+    EngineFailure,
+    EngineProbe,
+    EngineUnavailable,
+    ReaderEngine,
+)
 from weir.engines.shims import safe_argv
 from weir.models import ReaderResult, RequestMode, WebRequest
 
@@ -31,7 +36,12 @@ class OcReader(ReaderEngine):
         if not path:
             return EngineProbe(self.id, False, detail=f"{self.binary} not found on PATH")
         proc = subprocess.run(
-            [path, "--help"], capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=15
+            [path, "--help"],
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            timeout=15,
         )
         return EngineProbe(self.id, proc.returncode == 0, detail=path)
 
@@ -51,9 +61,18 @@ class OcReader(ReaderEngine):
             env["OC_HOME"] = state_dir
             session = f"weir-{uuid.uuid4().hex}"
             cmd = safe_argv(binary, ["open", request.url, "--json", "--session", session])
-            proc = subprocess.run(
-                cmd, capture_output=True, text=True, encoding="utf-8", errors="replace", env=env, timeout=120
-            )
+            try:
+                proc = subprocess.run(
+                    cmd,
+                    capture_output=True,
+                    text=True,
+                    encoding="utf-8",
+                    errors="replace",
+                    env=env,
+                    timeout=120,
+                )
+            except subprocess.TimeoutExpired as exc:
+                raise EngineFailure("oc timed out after 120 seconds") from exc
 
         if proc.returncode == 2:
             raise EngineCannotRead(proc.stderr.strip() or "oc reported no readable content")
@@ -75,6 +94,7 @@ class OcReader(ReaderEngine):
             title=payload.get("title"),
             http_status=None,
             engine_version=None,
+            auth_scope="none",
             content=payload,
             diagnostics={"isolated_session": True},
         )

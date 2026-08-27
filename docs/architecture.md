@@ -80,6 +80,12 @@ Potential engines:
 
 The acquisition plane should return immutable captures. A reader's mutable navigation session is an optimization, not the evidence record.
 
+The implemented P1 `AcquisitionBroker` is the reusable boundary for this plane. It
+combines route classification, site-profile policy, target checks, engine attempts,
+stable failure classes, capture construction, bounded content, optional immutable
+storage/cache, and metadata-only spans. The CLI delegates to it; embedders do not need
+to reproduce CLI control flow.
+
 ## 4. Authenticated operations plane
 
 Characteristics:

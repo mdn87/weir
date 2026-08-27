@@ -1,7 +1,11 @@
 import contextlib
 import io
 import json
+import os
+import tempfile
 import unittest
+from pathlib import Path
+from unittest import mock
 
 from weir.cli import main
 
@@ -14,7 +18,11 @@ class ReadBoundaryPolicyTests(unittest.TestCase):
         return code, stderr.getvalue()
 
     def test_private_target_is_blocked_before_any_engine(self):
-        for url in ["http://127.0.0.1/", "http://192.168.1.1/admin", "http://169.254.169.254/latest"]:
+        for url in [
+            "http://127.0.0.1/",
+            "http://192.168.1.1/admin",
+            "http://169.254.169.254/latest",
+        ]:
             code, err = self._run(["read", url, "--engine", "oc"])
             self.assertEqual(code, 2)
             payload = json.loads(err)
@@ -31,6 +39,23 @@ class ReadBoundaryPolicyTests(unittest.TestCase):
             code = main(["read", "fake://ok/page", "--engine", "fake"])
         self.assertEqual(code, 0)
         self.assertTrue(json.loads(stdout.getvalue())["ok"])
+
+    def test_configured_state_dir_persists_then_reuses_public_capture(self):
+        with tempfile.TemporaryDirectory() as temp:
+            with mock.patch.dict(os.environ, {"WEIR_STATE_DIR": temp}, clear=True):
+                outputs = []
+                for _ in range(2):
+                    stdout = io.StringIO()
+                    with contextlib.redirect_stdout(stdout):
+                        self.assertEqual(main(["read", "fake://ok/page", "--engine", "fake"]), 0)
+                    outputs.append(json.loads(stdout.getvalue()))
+
+            self.assertEqual(outputs[0]["cache"]["status"], "miss")
+            self.assertEqual(outputs[1]["cache"]["status"], "hit")
+            self.assertEqual(
+                outputs[0]["capture"]["capture_id"], outputs[1]["capture"]["capture_id"]
+            )
+            self.assertTrue(any((Path(temp) / "captures").glob("*.json")))
 
 
 if __name__ == "__main__":

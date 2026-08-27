@@ -14,6 +14,13 @@ The browser or reader engine must therefore be treated as an untrusted-input tra
 - Redirects remain subject to policy.
 - Public readers should reject private/internal network targets by default.
 - Internal browsing requires a separate allowlisted route rather than globally disabling SSRF protections.
+- Authenticated connectors validate every provider-supplied pagination or redirect URL
+  against the configured API origin before attaching a bearer token.
+
+The direct HTTP connector validates every redirect hop before following it. External
+compact readers manage redirects inside their own process, so WEIR revalidates the
+reported final URL before retaining evidence; managed deployments should also enforce
+worker-level network egress controls because post-read validation cannot undo a fetch.
 
 ### Prompt injection
 
@@ -32,6 +39,10 @@ Page text is always data. It cannot:
 - Credentials are not embedded in `WebRequest`.
 - Personal, business, test, and restricted profiles are isolated.
 - Captures from authenticated sessions are not reused as public cache entries.
+- Service connectors require an explicit profile ID and record that opaque profile scope
+  on the capture; fallback public readers record `auth_scope: none`.
+- Credential profile IDs and site-routing profiles remain separate: search sources and
+  URL domains select site policy, never the name of a credential profile.
 
 ### Controller lease
 
@@ -44,6 +55,20 @@ Side-effectful operations require typed risk classification. High-risk browser p
 ### Artifact retention
 
 Raw HTML, screenshots, HAR bodies, downloaded documents, and rendered DOMs may contain sensitive material. Store them under an explicit artifact/retention policy and keep ordinary telemetry metadata-only by default.
+
+The P1 local store persists ordinary `public` content when configured. `personal` and
+`bwa_internal` content requires an explicit `full_evidence` capture policy;
+`restricted` captures are never written by the public broker. Only unauthenticated
+public evidence enters the shared file cache. Artifact and cache lookups accept opaque
+IDs or SHA-256 digests only, preventing path traversal through storage references.
+
+### Connector retries and result integrity
+
+Retries cover transient network, throttling, and provider-server failures only, use a
+small exponential bound, and never widen the API origin. Malformed marketplace entries
+are omitted with diagnostics instead of being relabeled as trusted eBay records.
+Structured result sets keep their schema: WEIR fails an oversized set rather than
+returning an unrelated truncation shape under the marketplace contract.
 
 ### Engine supply chain
 

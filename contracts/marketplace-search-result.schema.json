@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://lugos.local/weir/marketplace-search-result.schema.json",
+  "title": "MarketplaceSearchResult",
+  "description": "Engine-neutral structured result set carried in WebCapture.content for mode=search.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["query", "source", "constraints", "listings", "pagination"],
+  "properties": {
+    "query": {"type": "string", "minLength": 1},
+    "source": {"type": "string", "pattern": "^[a-z0-9][a-z0-9_-]*$"},
+    "constraints": {"type": "object"},
+    "listings": {
+      "type": "array",
+      "items": {"$ref": "https://lugos.local/weir/marketplace-listing.schema.json"}
+    },
+    "pagination": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["pages_fetched", "total_reported", "truncated"],
+      "properties": {
+        "pages_fetched": {"type": "integer", "minimum": 1, "maximum": 10},
+        "total_reported": {"type": ["integer", "null"], "minimum": 0},
+        "truncated": {"type": "boolean"}
+      }
+    }
+  }
+}

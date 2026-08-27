@@ -12,7 +12,10 @@ CORPUS = Path(__file__).resolve().parents[1] / "benchmarks" / "tasks" / "fake-sm
 class BenchTests(unittest.TestCase):
     def test_load_corpus(self):
         tasks = load_corpus(CORPUS)
-        self.assertEqual([t.task_id for t in tasks], ["fake-ok", "fake-cannot-read", "fake-failure"])
+        self.assertEqual(
+            [t.task_id for t in tasks],
+            ["fake-ok", "fake-cannot-read", "fake-failure"],
+        )
 
     def test_run_benchmark_normalizes_outcomes(self):
         tasks = load_corpus(CORPUS)
@@ -46,7 +49,10 @@ class BenchTests(unittest.TestCase):
         summary = summarize(records)
         self.assertEqual(summary["fake"]["success"], 1)
         self.assertEqual(summary["fake"]["failure"], 2)
-        self.assertEqual(summary["fake"]["failure_classes"], {"cannot_read": 1, "engine_failure": 1})
+        self.assertEqual(
+            summary["fake"]["failure_classes"],
+            {"cannot_read": 1, "engine_failure": 1},
+        )
 
 
 if __name__ == "__main__":

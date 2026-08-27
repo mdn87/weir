@@ -1,10 +1,23 @@
 import unittest
 
-from weir.models import DataClass, RequestMode, WebRequest
-from weir.router import classify
+from weir.engines.base import EngineProbe, SearchEngine
+from weir.models import DataClass, ReaderResult, RequestMode, WebRequest
+from weir.router import EngineRegistry, classify
 
 
-def _request(url: str, preferred_engine: str | None = None, mode: RequestMode = RequestMode.READ) -> WebRequest:
+class SearchOnlyEngine(SearchEngine):
+    id = "search-only"
+
+    def probe(self) -> EngineProbe:
+        return EngineProbe(self.id, True)
+
+    def search(self, request: WebRequest) -> ReaderResult:
+        return ReaderResult(self.id, "https://example.com", "https://example.com", {})
+
+
+def _request(
+    url: str, preferred_engine: str | None = None, mode: RequestMode = RequestMode.READ
+) -> WebRequest:
     return WebRequest(
         request_id="r1",
         run_id="run1",
@@ -17,6 +30,10 @@ def _request(url: str, preferred_engine: str | None = None, mode: RequestMode = 
 
 
 class ClassifyTests(unittest.TestCase):
+    def test_registry_accepts_an_independent_search_capability(self):
+        registry = EngineRegistry([SearchOnlyEngine()])
+        self.assertIsInstance(registry.get("search-only"), SearchEngine)
+
     def test_api_host_routes_to_connector_first(self):
         decision = classify(_request("https://api.github.com/repos/python/cpython"))
         self.assertEqual(decision.route_class, "connector")
@@ -36,7 +53,9 @@ class ClassifyTests(unittest.TestCase):
         self.assertEqual(decision.engine_candidates, ["oc", "agent-browser-read"])
 
     def test_preferred_engine_is_advisory_front_of_line(self):
-        decision = classify(_request("https://en.wikipedia.org/wiki/Weir", preferred_engine="agent-browser-read"))
+        decision = classify(
+            _request("https://en.wikipedia.org/wiki/Weir", preferred_engine="agent-browser-read")
+        )
         self.assertEqual(decision.engine_candidates[0], "agent-browser-read")
         self.assertIn("oc", decision.engine_candidates)
 
@@ -52,6 +71,15 @@ class ClassifyTests(unittest.TestCase):
         decision = classify(_request("https://example.com", mode=RequestMode.OBSERVE))
         self.assertEqual(decision.route_class, "unsupported")
         self.assertEqual(decision.engine_candidates, [])
+
+    def test_ebay_caller_preference_remains_advisory(self):
+        request = _request(
+            "https://www.ebay.com/itm/110001",
+            preferred_engine="agent-browser-read",
+        )
+        decision = classify(request)
+        self.assertEqual(decision.engine_candidates[0], "agent-browser-read")
+        self.assertIn("ebay", decision.engine_candidates)
 
 
 if __name__ == "__main__":

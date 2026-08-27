@@ -160,8 +160,9 @@ comparable multi-provider evaluation downstream.
 1. **`search` is a new mode** on `WebRequest` (option 1). It requires `query` and
    `source`, and cannot enable side effects. `discover` remains "find sources".
 2. **Result set rides on `WebCapture`** (option 2): `content` carries
-   `{query, source, listings[], pagination}`; each listing validates against the new
-   `contracts/marketplace-listing.schema.json`. No second top-level contract.
+   `{query, source, constraints, listings[], pagination}`. The set validates against
+   `contracts/marketplace-search-result.schema.json`, which references
+   `contracts/marketplace-listing.schema.json`. There is no second top-level artifact.
 3. **WEIR owns pagination**: the connector follows Browse API `next` links up to a
    bounded page count (`maximum_depth + 1`, hard cap 10) and reports
    `{pages_fetched, total_reported, truncated}` so consumers can see what was dropped.
@@ -172,6 +173,16 @@ comparable multi-provider evaluation downstream.
    `WEIR_EBAY_CLIENT_ID` / `WEIR_EBAY_CLIENT_SECRET` / `WEIR_EBAY_ENV`), never from the
    request object. Missing credentials are a normalized `engine_unavailable`, and the
    OAuth client-credentials token is cached in-process with early expiry.
+6. **Intent constraints travel with the evidence but remain domain-neutral.** WEIR does
+   not reinterpret `max_total_cost` as item price or guess missing shipping; Lode owns
+   those semantics. The connector reports which constraints were not applied.
+
+The P1 hardening pass also made provider responses untrusted in practice: Browse API
+pagination URLs must remain on the configured HTTPS API origin before WEIR attaches a
+bearer token, transient failures retry within a three-attempt bound, malformed listing
+URLs are dropped with diagnostics, and direct item reads require explicit `ebay-app`
+profile provenance. Auto-routing now prefers the eBay API for genuine item URLs and
+keeps the compact page readers as fallbacks.
 
 Per-listing `content_hash` covers only the state-bearing fields (source, item id, url,
 title, price, shipping, condition) — `observed_at`, `enrichment`, and the raw payload

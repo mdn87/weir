@@ -42,6 +42,55 @@ class WebRequestTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             request.validate()
 
+    def test_constraints_must_be_json_compatible(self):
+        request = WebRequest(
+            request_id="req-4",
+            run_id="run-1",
+            mode=RequestMode.SEARCH,
+            data_class=DataClass.PUBLIC,
+            auth_context="app",
+            profile_id="ebay-app",
+            query="keyboard",
+            source="ebay",
+        )
+        for invalid in [
+            {"brands": {"Keychron"}},
+            {"brands": ("Keychron",)},
+            {1: "non-string key"},
+            {"score": float("nan")},
+        ]:
+            with self.subTest(invalid=invalid):
+                request.constraints = invalid
+                with self.assertRaisesRegex(ValueError, "JSON-compatible"):
+                    request.validate()
+
+    def test_search_source_must_be_a_normalized_name(self):
+        request = WebRequest(
+            request_id="req-5",
+            run_id="run-1",
+            mode=RequestMode.SEARCH,
+            data_class=DataClass.PUBLIC,
+            auth_context="app",
+            profile_id="ebay-app",
+            query="keyboard",
+            source="eBay marketplace",
+        )
+        with self.assertRaisesRegex(ValueError, "normalized lowercase"):
+            request.validate()
+
+    def test_allowed_domains_reject_malformed_labels(self):
+        request = WebRequest(
+            request_id="req-6",
+            run_id="run-1",
+            mode=RequestMode.READ,
+            data_class=DataClass.PUBLIC,
+            auth_context="none",
+            url="https://example.com",
+            allowed_domains=["example..com"],
+        )
+        with self.assertRaisesRegex(ValueError, "normalized lowercase domain names"):
+            request.validate()
+
 
 if __name__ == "__main__":
     unittest.main()

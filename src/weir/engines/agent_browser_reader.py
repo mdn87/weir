@@ -22,7 +22,9 @@ def _run_detached_safe(cmd: list[str], timeout: int) -> tuple[int, str, str]:
         out_path = Path(tmp) / "stdout"
         err_path = Path(tmp) / "stderr"
         with out_path.open("wb") as out, err_path.open("wb") as err:
-            proc = subprocess.run(cmd, stdin=subprocess.DEVNULL, stdout=out, stderr=err, timeout=timeout)
+            proc = subprocess.run(
+                cmd, stdin=subprocess.DEVNULL, stdout=out, stderr=err, timeout=timeout
+            )
         return (
             proc.returncode,
             out_path.read_text(encoding="utf-8", errors="replace"),
@@ -63,7 +65,10 @@ class AgentBrowserReader(ReaderEngine):
             raise EngineUnavailable(f"{self.binary} not found on PATH")
 
         cmd = safe_argv(binary, ["read", request.url, "--json"])
-        returncode, stdout, stderr = _run_detached_safe(cmd, timeout=120)
+        try:
+            returncode, stdout, stderr = _run_detached_safe(cmd, timeout=120)
+        except subprocess.TimeoutExpired as exc:
+            raise EngineFailure("agent-browser read timed out after 120 seconds") from exc
         if returncode != 0:
             raise EngineFailure(stderr.strip() or f"agent-browser exited {returncode}")
 
@@ -87,5 +92,6 @@ class AgentBrowserReader(ReaderEngine):
             final_url=final_url or request.url,
             title=data.get("title"),
             http_status=data.get("status"),
+            auth_scope="none",
             content=payload,
         )

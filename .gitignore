@@ -10,8 +10,11 @@ build/
 .env
 .weir/
 .autowork/
+.lugos-wip/
 artifacts/
 benchmarks/results/
 
 .claude/handoff.md
 .claude/handoff-history/
+.Codex/handoff.md
+.Codex/handoff-history/

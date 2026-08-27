@@ -4,13 +4,13 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "lugos-weir"
-version = "0.0.1"
+version = "0.1.0"
 description = "WEIR - Web Evidence, Interaction & Retrieval for Lugos"
 readme = "README.md"
 requires-python = ">=3.11"
 license = {text = "MIT"}
 authors = [{name = "Matthew Newman"}]
-dependencies = []
+dependencies = ["PyYAML>=6.0"]
 
 [project.optional-dependencies]
 test = ["jsonschema>=4.21"]
@@ -20,6 +20,10 @@ weir = "weir.cli:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.pytest.ini_options]
+addopts = "--import-mode=importlib"
+testpaths = ["tests"]
 
 [tool.unittest]
 start-directory = "tests"

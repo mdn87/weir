@@ -18,7 +18,7 @@
     "http_status": {"type": ["integer", "null"]},
     "auth_scope": {"type": "string"},
     "trust": {"enum": ["untrusted_external_content", "trusted_internal_source", "unknown"]},
-    "content_hash": {"type": "string"},
+    "content_hash": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
     "content": {},
     "raw_artifact_ref": {"type": ["string", "null"]},
     "screenshot_artifact_ref": {"type": ["string", "null"]}

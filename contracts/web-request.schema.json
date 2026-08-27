@@ -13,19 +13,50 @@
     "mode": {"enum": ["discover", "search", "read", "observe", "interact", "commit"]},
     "url": {"type": ["string", "null"], "format": "uri"},
     "query": {"type": ["string", "null"]},
-    "source": {"type": ["string", "null"]},
+    "source": {"type": ["string", "null"], "pattern": "^[a-z0-9][a-z0-9_-]*$"},
+    "constraints": {"type": "object", "default": {}},
     "data_class": {"enum": ["public", "personal", "bwa_internal", "restricted"]},
     "auth_context": {"type": "string"},
     "profile_id": {"type": ["string", "null"]},
-    "allowed_domains": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
+    "allowed_domains": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "maxLength": 253,
+        "pattern": "^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)(?:\\.(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?))*$"
+      },
+      "uniqueItems": true
+    },
     "preferred_engine": {"type": ["string", "null"]},
     "maximum_depth": {"type": "integer", "minimum": 0, "default": 0},
     "evidence_required": {"type": "boolean"},
     "side_effects_allowed": {"type": "boolean"},
     "capture_policy": {"enum": ["metadata", "content", "full_evidence"], "default": "content"}
   },
-  "anyOf": [
-    {"required": ["url"]},
-    {"required": ["query"]}
+  "allOf": [
+    {
+      "anyOf": [
+        {"required": ["url"], "properties": {"url": {"type": "string", "format": "uri"}}},
+        {"required": ["query"], "properties": {"query": {"type": "string", "minLength": 1}}}
+      ]
+    },
+    {
+      "if": {"required": ["mode"], "properties": {"mode": {"enum": ["discover", "search", "read", "observe"]}}},
+      "then": {"properties": {"side_effects_allowed": {"const": false}}}
+    },
+    {
+      "if": {"required": ["mode"], "properties": {"mode": {"const": "search"}}},
+      "then": {
+        "required": ["query", "source"],
+        "properties": {
+          "query": {"type": "string", "minLength": 1},
+          "source": {"type": "string", "minLength": 1}
+        }
+      }
+    },
+    {
+      "if": {"required": ["auth_context"], "properties": {"auth_context": {"const": "none"}}},
+      "then": {"properties": {"profile_id": {"type": "null"}}}
+    }
   ]
 }

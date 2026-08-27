@@ -114,6 +114,8 @@ WEIR defines stable objects independent of engine syntax:
 - `ActionProposal`
 - `ExecutionReceipt`
 - `SiteProfile`
+- `MarketplaceListing`
+- `MarketplaceSearchResult`
 
 Engine-local references such as `oc`'s `[17]` or browser snapshot `@e4` are ephemeral. Durable recipes and evidence must use semantic locators, capture hashes, preconditions, postconditions, and verifier rules.
 
@@ -123,7 +125,7 @@ Engine-local references such as `oc`'s `[17]` or browser snapshot `@e4` are ephe
 contracts/              JSON Schemas for the public WEIR data model
 docs/                   architecture, authority, evaluation, security, and slice notes
 profiles/               example site-profile definitions
-src/weir/                engine-neutral Python skeleton and read-only adapters
+src/weir/                acquisition broker, policies, persistence, telemetry, and adapters
 tests/                   contract and adapter tests
 HARNESS_CONTRACT.md      boundary with the rest of Lugos
 ```
@@ -134,23 +136,61 @@ broader three-tier framing behind it.
 
 ## Current state
 
-**Seed / architecture experiment.**
+**P1 public acquisition broker, read-only.**
 
-This repository deliberately does not declare `oc`, `agent-browser`, or Playwright the winner. The next meaningful milestone is an evidence-producing benchmark across real Lugos web tasks, followed by a routing decision. In parallel, the marketplace vertical slice (`docs/marketplace-slice.md`) gives WEIR a real consumer — the Lode deal evaluator — to test the connector rung and enrichment ladder against live work rather than only a synthetic corpus.
+The reusable `AcquisitionBroker` now owns route selection, site-profile policy,
+domain checks, bounded fallback, capture creation, optional immutable persistence,
+public-cache eligibility, and metadata-only trace spans. The CLI is a thin caller of
+that same path. The eBay marketplace slice is a live consumer through Lode, including
+structured search, pagination, listing hashes, and page enrichment.
 
-The initial executable surface is intentionally read-only. Side-effectful browser execution must not be smuggled into the seed before the Fade/approval ownership boundary is resolved.
+WEIR still does not declare one reader the universal winner. Existing benchmark
+evidence promotes direct HTTP for API-shaped resources and keeps `oc` then
+`agent-browser read` as the general compact-reader chain. More repeated fidelity
+evidence remains useful, but it no longer blocks callers from using the broker.
+
+The executable surface remains intentionally read-only. P2 browser sessions and P3
+action execution stay separate until profile isolation, controller leases, and the
+Fade/approval ownership boundary are implemented.
 
 ## Development
 
 Requires Python 3.11+.
 
 ```bash
-python -m pip install -e .
+python -m pip install -e ".[test]"
 weir engines
-weir read https://example.com --engine oc
+weir read https://example.com --engine auto
+weir search "Keychron C2 Pro" --source ebay --pages 2
+weir search "Keychron C2 Pro" --constraints '{"switch":"red","max_total_cost":40}'
 ```
 
 The reader commands expect the selected external engine to already be installed. They return a WEIR-normalized JSON envelope rather than exposing the rest of Lugos to engine-specific output.
+
+Search constraints are preserved in the evidence bundle for the domain consumer. The
+eBay adapter does not silently reinterpret `max_total_cost` as item price, because Lode
+owns shipping-inclusive cost, unknown-value handling, and scoring.
+
+### Optional state and traces
+
+The default CLI remains stateless. Set these paths to enable the corresponding local
+boundaries:
+
+```bash
+export WEIR_STATE_DIR=.weir
+export WEIR_PROFILE_DIR=profiles
+export WEIR_TRACE_FILE=.weir/aitu-spans.jsonl
+```
+
+`WEIR_STATE_DIR` stores immutable capture manifests, content-addressed public artifacts,
+and a short-lived file cache. Only unauthenticated `public` read/search requests qualify
+for that shared cache; authenticated, personal, internal, and restricted evidence bypasses it. A cache
+hit returns the original immutable capture and names its capture ID in the envelope.
+
+`WEIR_TRACE_FILE` receives metadata-only `web.*` JSONL spans. Queries, page bodies,
+credentials, and raw artifacts are not trace attributes. Normalized reader content is
+limited to 5 MiB; oversized prose captures carry an explicit bounded preview, while an
+oversized structured-search set fails instead of violating its result-set contract.
 
 ## Name
 

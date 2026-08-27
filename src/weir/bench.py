@@ -8,13 +8,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from weir.engines.base import (
-    EngineCannotRead,
-    EngineFailure,
-    EnginePolicyBlocked,
-    EngineUnavailable,
-    ReaderEngine,
-)
+from weir.engines.base import ReaderEngine, WeirEngineError
 from weir.models import DataClass, RequestMode, WebCapture, WebRequest
 
 
@@ -60,14 +54,8 @@ class BenchRecord:
 
 
 def _failure_class(exc: Exception) -> str:
-    if isinstance(exc, EngineUnavailable):
-        return "engine_unavailable"
-    if isinstance(exc, EnginePolicyBlocked):
-        return "policy_blocked"
-    if isinstance(exc, EngineCannotRead):
-        return "cannot_read"
-    if isinstance(exc, EngineFailure):
-        return "engine_failure"
+    if isinstance(exc, WeirEngineError):
+        return exc.failure_class.value
     return "unknown"
 
 
@@ -127,7 +115,9 @@ def run_task(engine: ReaderEngine, task: BenchTask, run_id: str) -> BenchRecord:
 
     latency = round(time.perf_counter() - started, 3)
     capture = WebCapture.from_reader_result(result, request)
-    content_chars = len(json.dumps(capture.content, ensure_ascii=False)) if capture.content is not None else 0
+    content_chars = (
+        len(json.dumps(capture.content, ensure_ascii=False)) if capture.content is not None else 0
+    )
     return BenchRecord(
         run_id=run_id,
         task_id=task.task_id,
@@ -172,7 +162,14 @@ def summarize(records: list[BenchRecord]) -> dict[str, Any]:
     for record in records:
         stats = by_engine.setdefault(
             record.engine,
-            {"tasks": 0, "success": 0, "failure": 0, "skipped": 0, "total_latency": 0.0, "failure_classes": {}},
+            {
+                "tasks": 0,
+                "success": 0,
+                "failure": 0,
+                "skipped": 0,
+                "total_latency": 0.0,
+                "failure_classes": {},
+            },
         )
         stats["tasks"] += 1
         stats[record.verdict] += 1
@@ -183,6 +180,8 @@ def summarize(records: list[BenchRecord]) -> dict[str, Any]:
 
     for stats in by_engine.values():
         attempted = stats["success"] + stats["failure"]
-        stats["mean_latency_seconds"] = round(stats["total_latency"] / attempted, 3) if attempted else None
+        stats["mean_latency_seconds"] = (
+            round(stats["total_latency"] / attempted, 3) if attempted else None
+        )
         del stats["total_latency"]
     return by_engine

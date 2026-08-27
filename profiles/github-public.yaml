@@ -4,9 +4,9 @@ domains:
   - github.com
   - api.github.com
 preferred_engines:
-  - github_connector
+  - http
   - oc
-  - agent_browser_read
+  - agent-browser-read
 auth_mode: optional
 allowed_modes:
   - discover
