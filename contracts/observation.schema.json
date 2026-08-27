@@ -4,30 +4,99 @@
   "title": "Observation",
   "type": "object",
   "additionalProperties": false,
-  "required": ["contract_version", "observation_id", "session_id", "captured_at", "url", "elements"],
+  "required": [
+    "contract_version",
+    "observation_id",
+    "session_id",
+    "session_revision",
+    "session_epoch",
+    "capture_id",
+    "captured_at",
+    "url",
+    "title",
+    "elements",
+    "accessibility_snapshot",
+    "artifact_refs",
+    "observation_hash"
+  ],
   "properties": {
-    "contract_version": {"const": "0.1"},
-    "observation_id": {"type": "string"},
-    "session_id": {"type": "string"},
-    "capture_id": {"type": ["string", "null"]},
-    "captured_at": {"type": "string", "format": "date-time"},
-    "url": {"type": "string", "format": "uri"},
-    "title": {"type": ["string", "null"]},
+    "contract_version": {"const": "0.2"},
+    "observation_id": {"$ref": "#/$defs/id"},
+    "session_id": {"$ref": "#/$defs/id"},
+    "session_revision": {"type": "integer", "minimum": 0},
+    "session_epoch": {"type": "integer", "minimum": 1},
+    "capture_id": {"$ref": "#/$defs/id"},
+    "captured_at": {"$ref": "#/$defs/timestamp"},
+    "url": {"type": "string", "format": "uri", "pattern": "^https?://"},
+    "title": {
+      "oneOf": [
+        {"type": "null"},
+        {"$ref": "#/$defs/nonEmptyText"}
+      ]
+    },
     "elements": {
       "type": "array",
-      "items": {
-        "type": "object",
-        "additionalProperties": true,
-        "required": ["ref", "role"],
-        "properties": {
-          "ref": {"type": "string"},
-          "role": {"type": "string"},
-          "label": {"type": ["string", "null"]},
-          "state": {"type": ["string", "null"]}
+      "items": {"$ref": "#/$defs/observedElement"}
+    },
+    "accessibility_snapshot": {"$ref": "#/$defs/jsonValue"},
+    "artifact_refs": {
+      "type": "array",
+      "items": {"type": "string", "minLength": 1},
+      "uniqueItems": true
+    },
+    "observation_hash": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"}
+  },
+  "$defs": {
+    "id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,255}$"
+    },
+    "timestamp": {"type": "string", "format": "date-time"},
+    "nonEmptyText": {"type": "string", "minLength": 1, "pattern": ".*\\S.*"},
+    "role": {"type": "string", "pattern": "^[a-z][a-z0-9_-]{0,63}$"},
+    "state": {"type": "string", "pattern": "^[a-z][a-z0-9_-]{0,63}$"},
+    "observedElement": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["ref", "role", "name", "test_id", "state"],
+      "properties": {
+        "ref": {"$ref": "#/$defs/id"},
+        "role": {"$ref": "#/$defs/role"},
+        "name": {
+          "oneOf": [
+            {"type": "null"},
+            {"$ref": "#/$defs/nonEmptyText"}
+          ]
+        },
+        "test_id": {
+          "oneOf": [
+            {"type": "null"},
+            {"$ref": "#/$defs/nonEmptyText"}
+          ]
+        },
+        "state": {
+          "oneOf": [
+            {"type": "null"},
+            {"$ref": "#/$defs/state"}
+          ]
         }
       }
     },
-    "files": {"type": "array", "items": {"type": "object"}},
-    "notes": {"type": "array", "items": {"type": "string"}}
+    "jsonValue": {
+      "oneOf": [
+        {"type": "null"},
+        {"type": "boolean"},
+        {"type": "string"},
+        {"type": "number"},
+        {
+          "type": "array",
+          "items": {"$ref": "#/$defs/jsonValue"}
+        },
+        {
+          "type": "object",
+          "additionalProperties": {"$ref": "#/$defs/jsonValue"}
+        }
+      ]
+    }
   }
 }

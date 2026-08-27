@@ -6,6 +6,7 @@ from pathlib import Path
 import yaml
 from jsonschema import FormatChecker
 from jsonschema.validators import Draft202012Validator
+from weir.actions import Risk
 from weir.engines.base import EnginePolicyBlocked
 from weir.models import DataClass, RequestMode, WebRequest
 
@@ -38,6 +39,23 @@ class SiteProfileTests(unittest.TestCase):
             validator.validate(yaml.safe_load(path.read_text(encoding="utf-8")))
 
         registry = SiteProfileRegistry.from_directory(ROOT / "profiles")
+        self.assertIn("github-public", [profile.id for profile in registry.all()])
+        self.assertIn("ebay-marketplace", [profile.id for profile in registry.all()])
+
+        template = next(
+            profile
+            for profile in registry.all()
+            if profile.id == "example-authenticated-portal"
+        )
+        self.assertIn(Risk.EXTERNAL_SUBMIT, template.approval_risks)
+        self.assertEqual(
+            template.known_failures["login_expired"], "pause_for_reauthentication"
+        )
+        self.assertEqual(template.retention["har"], "metadata_only")
+        self.assertTrue(template.notes)
+
+    def test_packaged_resource_loader_accepts_traversable_profile_data(self):
+        registry = SiteProfileRegistry.from_resource_directory(ROOT / "profiles")
         self.assertIn("github-public", [profile.id for profile in registry.all()])
         self.assertIn("ebay-marketplace", [profile.id for profile in registry.all()])
 
@@ -145,6 +163,19 @@ class SiteProfileTests(unittest.TestCase):
         request = _request("https://example.com", profile_id="browser-profile")
         with self.assertRaisesRegex(EnginePolicyBlocked, "authenticated access"):
             SiteProfileRegistry([profile]).apply(request, ["oc"])
+
+    def test_retention_policy_is_typed_and_fails_closed_on_typos(self):
+        value = {
+            "contract_version": "0.1",
+            "id": "bad-retention",
+            "domains": ["example.com"],
+            "preferred_engines": ["playwright-observer"],
+            "auth_mode": "dedicated_profile",
+            "allowed_modes": ["observe"],
+            "retention": {"screenshots": "full-evidnce"},
+        }
+        with self.assertRaisesRegex(ValueError, "invalid 'screenshots'"):
+            SiteProfile.from_dict(value)
 
     def test_invalid_yaml_is_reported_with_its_path(self):
         with tempfile.TemporaryDirectory() as temp:

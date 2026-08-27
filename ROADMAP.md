@@ -49,38 +49,58 @@ immutable persistence, and no authenticated browser dependency.
 
 ## P2 - Browser session broker
 
-- [ ] Define browser worker protocol.
-- [ ] Add `agent-browser` interactive adapter.
-- [ ] Add direct Playwright/CDP comparison adapter.
-- [ ] Add profile isolation.
-- [ ] Add controller leases.
-- [ ] Add session attach/takeover semantics.
-- [ ] Add structured observations and semantic locators.
-- [ ] Add browser-session evidence capture.
+- [x] Define the versioned browser command protocol and digest-bound command envelope.
+  The result-envelope schema is a remote-transport target; current in-process workers
+  still return typed Python values directly.
+- [x] Add a contained `agent-browser` session adapter (ephemeral observation only;
+  persistent profile/state/CDP modes are rejected because they conflict with its domain allowlist).
+- [x] Add a direct Playwright comparison adapter (fresh nonpersistent contexts,
+  opaque read-only profile-state provider, JavaScript disabled, GET/HEAD-only
+  transport, pinned DNS, observation only).
+- [x] Add profile isolation and one-live-session reservations per worker-local profile
+  namespace. Global cross-worker credential locking requires a store-schema decision.
+- [x] Add expiring controller leases with monotonic fencing generations.
+- [x] Add same-owner recovery, durable per-session command reservation, worker-context
+  quarantine, and fenced manual takeover/return semantics.
+- [ ] Add an authorized, audited dead-worker reservation retirement path; until then,
+  unacknowledged OPEN dispatches remain quarantined and direct store edits are unsupported.
+- [ ] Move the Playwright adapter behind a killable worker-process boundary with a
+  broker-enforced wall-clock deadline plus OS memory and egress limits. Declared
+  response-size checks are defense in depth, not a substitute for process containment.
+- [x] Add structured observations and deterministic semantic locators.
+- [x] Add immutable browser-observation and screenshot evidence capture.
+- [ ] Add a reversible DOM-interaction worker surface only after it accepts an
+  authorization permit rather than a raw action request.
 
-Gate: WEIR can observe and perform reversible interactions in an authenticated test application while preserving session isolation and durable evidence.
+Gate status: observation passed against a local authenticated Playwright fixture with
+session isolation and durable evidence. DOM interaction remains intentionally closed,
+so the full observe-and-interact gate is not yet met.
 
 ## P3 - Action authority integration
 
 - [ ] Resolve Fade/Operator execution ownership.
-- [ ] Compile observations into `ActionProposal` objects.
-- [ ] Add risk taxonomy.
-- [ ] Add approval handoff.
+- [x] Compile observations into hash-bound `ActionProposal` objects.
+- [x] Add a non-downclassifiable risk taxonomy.
+- [x] Add a default-deny approval authority interface.
+- [ ] Connect an authenticated Fade/Operator approval authority.
 - [ ] Reacquire state immediately before execution.
-- [ ] Add post-action verification and `ExecutionReceipt`.
+- [x] Add deterministic semantic post-action verification and `ExecutionReceipt` contracts.
+- [ ] Produce receipts from a real authorized executor.
 - [ ] Add bounded recovery patterns.
 
 Gate: a staged external action cannot execute without policy evaluation and, when required, explicit approval; success is proven by post-state evidence.
 
 ## P4 - Lugos integration
 
+- [x] Define explicit, hashed `WorkContext` identity for objective/run/assignment/correlation provenance.
 - [ ] `lugos-mcp` surface.
 - [ ] task-router integration.
 - [ ] run-profile policy.
 - [ ] Autowork campaign integration.
 - [ ] Sulis provenance/summary records.
 - [ ] AETA source-capture handoff.
-- [ ] AITU traces and metrics.
+- [x] Add a metadata-only browser session/event journal suitable for AITU/HUD projection.
+- [ ] Register that journal with the AITU/HUD integration surfaces.
 - [ ] HUD session/evidence/approval views.
 - [ ] COGIN/APU behavior-registry feedback.
 
@@ -88,11 +108,12 @@ Gate: multiple Lugos seats can request web capabilities without direct engine kn
 
 ## P5 - Visual fallback
 
-- [ ] Screenshot/crop evidence adapter.
+- [x] Screenshot evidence adapter with content-addressed binary retention.
+- [ ] Targeted crop evidence adapter.
 - [ ] Argus interpretation contract.
 - [ ] Visual verifier.
 - [ ] Ambiguity classification.
-- [ ] Manual takeover path.
+- [x] Manual takeover path with atomic pause/fence rotation/return.
 
 Gate: structured-browser failures can escalate to visual interpretation without bypassing action policy.
 

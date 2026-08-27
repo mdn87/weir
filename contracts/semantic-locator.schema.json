@@ -1,0 +1,66 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://lugos.local/weir/semantic-locator.schema.json",
+  "title": "SemanticLocator",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "contract_version",
+    "role",
+    "name",
+    "name_match",
+    "test_id",
+    "required_state",
+    "ordinal"
+  ],
+  "properties": {
+    "contract_version": {"const": "0.2"},
+    "role": {
+      "oneOf": [
+        {"type": "null"},
+        {"$ref": "#/$defs/role"}
+      ]
+    },
+    "name": {
+      "oneOf": [
+        {"type": "null"},
+        {"$ref": "#/$defs/nonEmptyText"}
+      ]
+    },
+    "name_match": {"enum": ["exact", "casefold"]},
+    "test_id": {
+      "oneOf": [
+        {"type": "null"},
+        {"$ref": "#/$defs/nonEmptyText"}
+      ]
+    },
+    "required_state": {
+      "oneOf": [
+        {"type": "null"},
+        {"$ref": "#/$defs/state"}
+      ]
+    },
+    "ordinal": {
+      "oneOf": [
+        {"type": "null"},
+        {"type": "integer", "minimum": 0}
+      ]
+    }
+  },
+  "anyOf": [
+    {"properties": {"role": {"type": "string"}}},
+    {"properties": {"name": {"type": "string"}}},
+    {"properties": {"test_id": {"type": "string"}}}
+  ],
+  "allOf": [
+    {
+      "if": {"properties": {"name": {"type": "null"}}, "required": ["name"]},
+      "then": {"properties": {"name_match": {"const": "exact"}}}
+    }
+  ],
+  "$defs": {
+    "role": {"type": "string", "pattern": "^[a-z][a-z0-9_-]{0,63}$"},
+    "state": {"type": "string", "pattern": "^[a-z][a-z0-9_-]{0,63}$"},
+    "nonEmptyText": {"type": "string", "minLength": 1, "pattern": ".*\\S.*"}
+  }
+}

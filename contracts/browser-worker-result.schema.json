@@ -1,0 +1,29 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://lugos.local/weir/browser-worker-result.schema.json",
+  "title": "BrowserWorkerResult",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["protocol_version", "command_id", "session_id", "status", "completed_at", "result_digest", "metadata", "failure_class", "detail"],
+  "properties": {
+    "protocol_version": {"const": "0.2"},
+    "command_id": {"type": "string", "minLength": 1},
+    "session_id": {"type": "string", "minLength": 1},
+    "status": {"enum": ["completed", "failed"]},
+    "completed_at": {"type": "string", "format": "date-time"},
+    "result_digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "metadata": {"type": "object"},
+    "failure_class": {"type": ["string", "null"], "enum": [null, "engine_unavailable", "engine_failure", "network_failure", "blocked_target", "cannot_read", "javascript_required", "auth_required", "challenge", "policy_blocked", "approval_required", "stale_reference", "session_lost", "controller_conflict", "profile_in_use", "ambiguous_target", "idempotency_conflict", "command_expired", "verification_failed", "unknown"]},
+    "detail": {"type": ["string", "null"]}
+  },
+  "allOf": [
+    {
+      "if": {"properties": {"status": {"const": "completed"}}},
+      "then": {"properties": {"failure_class": {"type": "null"}}}
+    },
+    {
+      "if": {"properties": {"status": {"const": "failed"}}},
+      "then": {"properties": {"failure_class": {"type": "string"}}}
+    }
+  ]
+}

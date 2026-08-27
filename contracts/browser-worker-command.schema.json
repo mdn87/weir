@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://lugos.local/weir/browser-worker-command.schema.json",
+  "title": "BrowserWorkerCommand",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["protocol_version", "command_id", "operation", "session_id", "worker_session_id", "owner_run_id", "expected_revision", "session_epoch", "lease_fence", "deadline_at", "request_digest"],
+  "properties": {
+    "protocol_version": {"const": "0.2"},
+    "command_id": {"type": "string", "minLength": 1},
+    "operation": {"enum": ["open", "attach", "navigate", "observe", "screenshot", "fence", "close"]},
+    "session_id": {"type": "string", "minLength": 1},
+    "worker_session_id": {"type": "string", "minLength": 1},
+    "owner_run_id": {"type": "string", "minLength": 1},
+    "expected_revision": {"type": "integer", "minimum": 0},
+    "session_epoch": {"type": "integer", "minimum": 1},
+    "lease_fence": {"type": "integer", "minimum": 1},
+    "deadline_at": {"type": "string", "format": "date-time"},
+    "request_digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"}
+  }
+}

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 import re
 import time
 import uuid
@@ -12,6 +13,7 @@ from typing import Any
 from weir.models import DataClass, RequestMode, WebCapture, WebRequest
 
 ARTIFACT_REF_PREFIX = "weir-artifact:sha256:"
+BLOB_REF_PREFIX = "weir-blob:sha256:"
 CAPTURE_REF_PREFIX = "weir-capture:"
 SAFE_CAPTURE_ID = re.compile(r"[A-Za-z0-9][A-Za-z0-9._-]*")
 SHA256_DIGEST = re.compile(r"[0-9a-f]{64}")
@@ -29,12 +31,54 @@ def _canonical_bytes(value: Any) -> bytes:
 
 def _write_immutable(path: Path, payload: bytes) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
+    temporary = path.with_name(f".{path.name}.{uuid.uuid4().hex}.tmp")
     try:
-        with path.open("xb") as stream:
+        with temporary.open("xb") as stream:
             stream.write(payload)
-    except FileExistsError:
-        if path.read_bytes() != payload:
-            raise OSError(f"immutable WEIR artifact collision at {path}")
+            stream.flush()
+            os.fsync(stream.fileno())
+        try:
+            _publish_immutable(temporary, path)
+        except FileExistsError:
+            if path.read_bytes() != payload:
+                raise OSError(f"immutable WEIR artifact collision at {path}")
+    finally:
+        try:
+            temporary.unlink()
+            if os.name != "nt":
+                _fsync_directory(path.parent)
+        except FileNotFoundError:
+            pass
+
+
+def _publish_immutable(temporary: Path, path: Path) -> None:
+    if os.name == "nt":
+        # MoveFileEx without REPLACE_EXISTING preserves immutable first-writer
+        # semantics. WRITE_THROUGH makes Windows flush the move before return.
+        import ctypes
+        from ctypes import wintypes
+
+        move_file = ctypes.WinDLL("kernel32", use_last_error=True).MoveFileExW
+        move_file.argtypes = [wintypes.LPCWSTR, wintypes.LPCWSTR, wintypes.DWORD]
+        move_file.restype = wintypes.BOOL
+        if move_file(str(temporary), str(path), 0x00000008):
+            return
+        error = ctypes.get_last_error()
+        if error in {80, 183}:  # ERROR_FILE_EXISTS / ERROR_ALREADY_EXISTS
+            raise FileExistsError(path)
+        raise ctypes.WinError(error)
+
+    # Hard-link publication is atomic and refuses to replace an immutable winner.
+    os.link(temporary, path)
+    _fsync_directory(path.parent)
+
+
+def _fsync_directory(path: Path) -> None:
+    descriptor = os.open(path, os.O_RDONLY | getattr(os, "O_DIRECTORY", 0))
+    try:
+        os.fsync(descriptor)
+    finally:
+        os.close(descriptor)
 
 
 def _replace_json(path: Path, value: Any) -> None:
@@ -149,6 +193,31 @@ class CaptureStore:
         if hashlib.sha256(payload).hexdigest() != digest:
             raise OSError(f"artifact {artifact_ref} failed its content-hash check")
         return json.loads(payload)
+
+    def persist_blob(self, payload: bytes, request: WebRequest) -> str | None:
+        """Persist binary evidence only when the request's retention policy allows it."""
+
+        if not isinstance(payload, bytes):
+            raise TypeError("binary evidence payload must be bytes")
+        decision = self.policy.decide(request)
+        if not decision.persist_content:
+            return None
+        digest = hashlib.sha256(payload).hexdigest()
+        path = self.root / "blobs" / "sha256" / digest[:2] / f"{digest}.bin"
+        _write_immutable(path, payload)
+        return BLOB_REF_PREFIX + digest
+
+    def load_blob(self, blob_ref: str) -> bytes:
+        if not blob_ref.startswith(BLOB_REF_PREFIX):
+            raise ValueError(f"unsupported blob reference {blob_ref!r}")
+        digest = blob_ref.removeprefix(BLOB_REF_PREFIX)
+        if not SHA256_DIGEST.fullmatch(digest):
+            raise ValueError(f"invalid blob digest {digest!r}")
+        path = self.root / "blobs" / "sha256" / digest[:2] / f"{digest}.bin"
+        payload = path.read_bytes()
+        if hashlib.sha256(payload).hexdigest() != digest:
+            raise OSError(f"blob {blob_ref} failed its content-hash check")
+        return payload
 
 
 def apply_capture_policy(capture: WebCapture, request: WebRequest) -> WebCapture:

@@ -26,9 +26,34 @@
     "preferred_engines": {"type": "array", "items": {"type": "string", "minLength": 1}, "minItems": 1, "uniqueItems": true},
     "auth_mode": {"enum": ["none", "optional", "dedicated_profile"]},
     "allowed_modes": {"type": "array", "items": {"enum": ["discover", "search", "read", "observe", "interact", "commit"]}, "minItems": 1, "uniqueItems": true},
-    "approval_risks": {"type": "array", "items": {"type": "string"}},
-    "known_failures": {"type": "object"},
-    "retention": {"type": "object"},
-    "notes": {"type": "array", "items": {"type": "string"}}
+    "approval_risks": {
+      "type": "array",
+      "items": {"enum": ["read_only", "reversible", "local_mutation", "external_upload", "external_submit", "message_send", "purchase", "account_change", "credential_change", "destructive", "unknown"]},
+      "uniqueItems": true
+    },
+    "known_failures": {
+      "type": "object",
+      "additionalProperties": {"type": "string", "minLength": 1}
+    },
+    "retention": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "public_content": {"enum": ["content_hash_and_capture", "metadata_only", "prohibited"]},
+        "screenshots": {"enum": ["full_evidence", "prohibited"]},
+        "har": {"enum": ["full_evidence", "metadata_only", "prohibited"]}
+      }
+    },
+    "browser_observation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["javascript", "network_methods", "credential_scope"],
+      "properties": {
+        "javascript": {"const": "disabled"},
+        "network_methods": {"const": "get_head_only"},
+        "credential_scope": {"const": "read_only"}
+      }
+    },
+    "notes": {"type": "array", "items": {"type": "string", "minLength": 1}}
   }
 }

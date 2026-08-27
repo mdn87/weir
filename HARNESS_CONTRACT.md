@@ -21,7 +21,9 @@ Callers must request capabilities through WEIR contracts rather than depend on e
 
 ## Inputs
 
-The canonical request is `WebRequest`.
+Acquisition uses `WebRequest`. Stateful browser calls additionally require a
+caller-authored, hash-bound `WorkContext`; WEIR never infers it from UI or desktop
+focus, cwd, browser state, or telemetry recency.
 
 Required intent fields include:
 
@@ -47,7 +49,10 @@ WEIR emits one or more typed artifacts:
 - engine/fallback diagnostics
 - evidence references
 
-A side-effectful action produces an `ExecutionReceipt` only after crossing the execution-authority boundary.
+A side-effectful action produces an `ExecutionReceipt` only after crossing the
+execution-authority boundary. A completed receipt carries exactly two distinct,
+ordered `capture_ids` (`before`, then `after`); verified results set
+`verified_capture_index=1` so the post-state reference is structurally addressable.
 
 ## Hard invariants
 
@@ -63,6 +68,16 @@ A side-effectful action produces an `ExecutionReceipt` only after crossing the e
 10. Evidence must record engine name/version, capture time, canonical URL, and content hash when content is retained.
 11. Raw HTML, screenshots, HAR bodies, cookies, and credentials are not ordinary telemetry dimensions.
 12. Engine failure must be represented explicitly rather than guessed around indefinitely.
+13. A worker command names the exact session, worker session, owner, epoch, expected
+    revision, lease generation, deadline, and payload digest.
+14. A command ID is idempotent only for the same canonical command binding; changed
+    content fails rather than replaying an unrelated result.
+15. UI selection and desktop foreground state never confer work or controller authority.
+16. Observation-only browser contexts disable JavaScript, block non-GET/HEAD network
+    methods, and require a site-profile assertion that credentials are read-only.
+17. Every worker OPEN is reserved before dispatch. An unmatched reservation or created
+    context keeps the worker-local credential profile quarantined until exact cleanup is
+    durably attested.
 
 ## Trust labels
 
@@ -110,19 +125,25 @@ applies target and site-profile policy before execution, keeps policy failures f
 falling through to a less constrained engine, and returns stable per-attempt failure
 classes. Optional persistence, cache, and trace sinks do not change the capture schema.
 
-A browser engine will additionally require:
+A browser observation worker may expose only declared capabilities:
 
 ```text
 open/attach session
 observe
 navigate
-propose interaction
-execute only when supplied an authorized action
-verify
+screenshot
+fence/drain prior worker effects
 close/release
 ```
 
 The engine adapter translates provider-specific output into WEIR objects. It must not leak arbitrary CLI stdout as the public contract.
+
+Proposal compilation, approval, execution, and post-state verification are separate
+layers. The current browser workers intentionally expose no DOM action or arbitrary
+JavaScript method. A future action worker must accept an authorization permit bound to
+the proposal hash and controller fence, never a raw proposal alone.
+Post-action verification must resolve each retained semantic locator against a newer
+same-session, same-epoch observation; engine-local element references are not reusable.
 
 ## Execution boundary
 
@@ -131,7 +152,7 @@ WEIR may create `ActionProposal` objects containing:
 - semantic target
 - requested operation
 - preconditions
-- expected postconditions
+- expected postconditions whose element targets retain a hash-bound semantic locator
 - risk category
 - evidence
 - approval requirement
@@ -189,6 +210,11 @@ policy_blocked
 approval_required
 stale_reference
 session_lost
+controller_conflict
+profile_in_use
+ambiguous_target
+idempotency_conflict
+command_expired
 verification_failed
 unknown
 ```

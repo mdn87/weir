@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://lugos.local/weir/controller-lease.schema.json",
+  "title": "ControllerLeaseView",
+  "description": "Public controller lease view. The runtime fencing token is never serialized.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "contract_version",
+    "session_id",
+    "lease_id",
+    "controller_id",
+    "kind",
+    "generation",
+    "expires_at"
+  ],
+  "properties": {
+    "contract_version": {"const": "0.2"},
+    "session_id": {"$ref": "#/$defs/id"},
+    "lease_id": {"$ref": "#/$defs/id"},
+    "controller_id": {"$ref": "#/$defs/id"},
+    "kind": {"enum": ["automation", "operator"]},
+    "generation": {"type": "integer", "minimum": 1},
+    "expires_at": {"$ref": "#/$defs/timestamp"}
+  },
+  "$defs": {
+    "id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,255}$"
+    },
+    "timestamp": {"type": "string", "format": "date-time"}
+  }
+}

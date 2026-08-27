@@ -6,10 +6,13 @@ import os
 import sys
 import uuid
 from dataclasses import asdict
+from importlib.resources import files
 from pathlib import Path
 
 from weir.bench import load_corpus, run_benchmark, summarize
 from weir.broker import AcquisitionBroker, AcquisitionFailed
+from weir.browser.agent_browser_observer import AgentBrowserObserverWorker
+from weir.browser.playwright_observer import PlaywrightObserverWorker
 from weir.engines.base import FailureClass, WeirEngineError
 from weir.engines.ebay_connector import is_ebay_item_url
 from weir.models import DataClass, RequestMode, WebRequest
@@ -43,6 +46,9 @@ def _parser() -> argparse.ArgumentParser:
     sub = parser.add_subparsers(dest="command", required=True)
 
     sub.add_parser("engines", help="show reader-engine availability")
+    sub.add_parser(
+        "browser-engines", help="show contained browser-worker availability and capabilities"
+    )
 
     read = sub.add_parser(
         "read", help="read one public URL; --engine auto routes via the classifier"
@@ -92,11 +98,21 @@ def _parser() -> argparse.ArgumentParser:
 
 def _profile_registry() -> SiteProfileRegistry:
     configured = os.environ.get("WEIR_PROFILE_DIR")
-    directory = Path(configured) if configured else Path(__file__).resolve().parents[2] / "profiles"
-    return (
-        SiteProfileRegistry.from_directory(directory)
-        if directory.is_dir()
-        else SiteProfileRegistry()
+    if configured:
+        directory = Path(configured)
+        if not directory.is_dir():
+            raise ValueError(f"WEIR_PROFILE_DIR is not a directory: {directory}")
+        return SiteProfileRegistry.from_directory(directory)
+    packaged = files("weir").joinpath("data", "profiles")
+    if packaged.is_dir():
+        return SiteProfileRegistry.from_resource_directory(packaged)
+    # Source checkouts keep the canonical files at repository root; wheels copy
+    # the same files under weir/data during build.
+    source_profiles = Path(__file__).resolve().parents[2] / "profiles"
+    if source_profiles.is_dir():
+        return SiteProfileRegistry.from_directory(source_profiles)
+    raise ValueError(
+        "WEIR has no packaged site profiles; configure an explicit WEIR_PROFILE_DIR"
     )
 
 
@@ -133,6 +149,25 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.command == "engines":
         probes = [asdict(engine.probe()) for engine in registry.all()]
+        print(json.dumps(probes, indent=2))
+        return 0
+
+    if args.command == "browser-engines":
+        workers = [AgentBrowserObserverWorker(), PlaywrightObserverWorker()]
+        probes = []
+        try:
+            for worker in workers:
+                probe = asdict(worker.probe())
+                probe["worker_id"] = worker.descriptor.worker_id
+                probe["capabilities"] = sorted(
+                    capability.value for capability in worker.descriptor.capabilities
+                )
+                probes.append(probe)
+        finally:
+            for worker in workers:
+                shutdown = getattr(worker, "shutdown", None)
+                if shutdown is not None:
+                    shutdown()
         print(json.dumps(probes, indent=2))
         return 0
 

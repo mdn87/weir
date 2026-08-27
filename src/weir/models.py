@@ -178,11 +178,18 @@ class WebCapture:
     contract_version: str = CONTRACT_VERSION
 
     @classmethod
-    def from_reader_result(cls, result: ReaderResult, request: WebRequest) -> WebCapture:
+    def from_reader_result(
+        cls,
+        result: ReaderResult,
+        request: WebRequest,
+        *,
+        capture_id: str | None = None,
+        captured_at: str | None = None,
+    ) -> WebCapture:
         return cls(
-            capture_id=f"webcap-{uuid.uuid4().hex}",
+            capture_id=capture_id or f"webcap-{uuid.uuid4().hex}",
             request_id=request.request_id,
-            captured_at=datetime.now(timezone.utc).isoformat(),
+            captured_at=captured_at or datetime.now(timezone.utc).isoformat(),
             engine=result.engine,
             engine_version=result.engine_version,
             requested_url=result.requested_url,

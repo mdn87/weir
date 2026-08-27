@@ -272,13 +272,13 @@ allowed_domains:
   approval: required
   ExecutionReceipt
   action_id: act_...
-  before_capture_id: cap_before
+  capture_ids: [cap_before, cap_after] # ordered before, after; entries must differ
   executed_by: fade
   result: completed
-  after_capture_id: cap_after
   verification:
   method: confirmation_id_present
   confidence: verified
+  verified_capture_index: 1
 
 The important point is that recipes must not persist @e4 or [17] as durable selectors. Those values belong to one snapshot. Recipes should retain semantic locators, relevant capture hashes, preconditions, verifier rules, and fallback logic.
 

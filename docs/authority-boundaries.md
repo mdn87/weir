@@ -79,3 +79,20 @@ Credential material belongs to a platform credential store or browser profile bo
 Manual takeover transfers the controller lease to the operator. Automated action execution pauses until the lease is explicitly returned or the session is closed.
 
 The handoff should be visible in HUD/event state and should not result in concurrent human and agent input.
+
+The session store now makes this concrete: takeover validates the active automation
+lease and expected session revision, rotates the fencing generation, grants an expiring
+operator lease, and moves `active` to `paused` in one transaction. Return control
+rotates the fence again before `paused` becomes `active`. An expired operator lease
+does not silently resume automation.
+Crash recovery also requires the exact durable transfer record for that command. A
+`paused` state or compatible controller kind alone is not proof of ownership, and
+generic lease acquisition cannot replace an expired handoff lease.
+
+## Selection is not authority
+
+HUD/Mission Control selection and desktop focus are operator-interface state. OGMI
+objective/run identity and Autowork assignment identity are durable work authority.
+WEIR accepts a caller-authored `WorkContext` and never promotes UI selection, active
+window state, browser tab state, cwd, or telemetry recency into authority. See
+`focus-and-interaction.md` for the cross-system mapping.

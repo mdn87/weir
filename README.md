@@ -110,14 +110,20 @@ WEIR defines stable objects independent of engine syntax:
 - `WebRequest`
 - `WebCapture`
 - `BrowserSession`
+- `ControllerLease`
 - `Observation`
+- `SemanticLocator`
 - `ActionProposal`
 - `ExecutionReceipt`
 - `SiteProfile`
+- `WorkContext`
 - `MarketplaceListing`
 - `MarketplaceSearchResult`
 
 Engine-local references such as `oc`'s `[17]` or browser snapshot `@e4` are ephemeral. Durable recipes and evidence must use semantic locators, capture hashes, preconditions, postconditions, and verifier rules.
+Element postconditions carry their locator and re-resolve it on the newer observation;
+generic click and input/change primitives remain `risk=unknown` until their effects are
+attested by a narrower action contract.
 
 ## Repository map
 
@@ -136,7 +142,8 @@ broader three-tier framing behind it.
 
 ## Current state
 
-**P1 public acquisition broker, read-only.**
+**P1 public acquisition is operational; P2 authenticated observation now has a
+durable session kernel.**
 
 The reusable `AcquisitionBroker` now owns route selection, site-profile policy,
 domain checks, bounded fallback, capture creation, optional immutable persistence,
@@ -149,9 +156,24 @@ evidence promotes direct HTTP for API-shaped resources and keeps `oc` then
 `agent-browser read` as the general compact-reader chain. More repeated fidelity
 evidence remains useful, but it no longer blocks callers from using the broker.
 
-The executable surface remains intentionally read-only. P2 browser sessions and P3
-action execution stay separate until profile isolation, controller leases, and the
-Fade/approval ownership boundary are implemented.
+The browser kernel adds explicit work-context identity, one-live reservation for each
+worker-local profile ID, SQLite-backed session revisions, durable command reservation,
+expiring fenced controller leases, same-owner recovery, fenced manual takeover/return,
+semantic observations, immutable evidence, and an append-only metadata event journal.
+Unacknowledged OPEN dispatches and unconfirmed worker cleanup quarantine the profile
+instead of freeing it for reuse. Structured observations and requested screenshots are
+captured as one document-generation-checked worker result, not as two independently
+timed reads. A direct Playwright worker passed an authenticated local smoke test in a fresh,
+nonpersistent, sandboxed, direct-network, DNS-pinned browser process with bounded and
+redacted resource telemetry. The contained `agent-browser` worker is an
+ephemeral protocol comparison only: its allowlist conflicts with profile/state restore,
+so the authenticated broker does not admit it.
+
+The executable surface still has no DOM action method. WEIR can compile a fresh
+observation into a risk-classified, hash-bound `ActionProposal`, but the built-in
+approval authority denies it and no executor is exposed. Fade/Operator approval,
+pre-execution reacquisition, and real post-action receipts remain P3 work. See
+`docs/focus-and-interaction.md` for the cross-system identity and controller model.
 
 ## Development
 
@@ -160,10 +182,24 @@ Requires Python 3.11+.
 ```bash
 python -m pip install -e ".[test]"
 weir engines
+weir browser-engines
 weir read https://example.com --engine auto
 weir search "Keychron C2 Pro" --source ebay --pages 2
 weir search "Keychron C2 Pro" --constraints '{"switch":"red","max_total_cost":40}'
 ```
+
+For the optional direct browser worker:
+
+```bash
+python -m pip install -e ".[test,browser]"
+python -m playwright install chromium
+WEIR_PLAYWRIGHT_SMOKE=1 python -m pytest -q tests/test_playwright_observer.py
+```
+
+Built wheels include the versioned JSON contracts and default YAML site profiles under
+`weir/data`. The CLI loads those packaged profiles by default; `WEIR_PROFILE_DIR`
+explicitly replaces them for a deployment, and a missing configured directory fails
+closed rather than silently falling back.
 
 The reader commands expect the selected external engine to already be installed. They return a WEIR-normalized JSON envelope rather than exposing the rest of Lugos to engine-specific output.
 
@@ -182,8 +218,8 @@ export WEIR_PROFILE_DIR=profiles
 export WEIR_TRACE_FILE=.weir/aitu-spans.jsonl
 ```
 
-`WEIR_STATE_DIR` stores immutable capture manifests, content-addressed public artifacts,
-and a short-lived file cache. Only unauthenticated `public` read/search requests qualify
+`WEIR_STATE_DIR` stores immutable capture manifests, content-addressed JSON and binary
+evidence, and a short-lived file cache. Only unauthenticated `public` read/search requests qualify
 for that shared cache; authenticated, personal, internal, and restricted evidence bypasses it. A cache
 hit returns the original immutable capture and names its capture ID in the envelope.
 

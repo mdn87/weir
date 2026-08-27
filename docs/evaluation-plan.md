@@ -16,6 +16,26 @@ Initial candidates:
 6. in-process extraction prototype if justified
 7. screenshot/vision fallback for tasks structured engines cannot represent
 
+## Current browser baseline
+
+The P2 implementation establishes a comparison harness without promoting a winner:
+
+- Playwright 1.61 passed the opt-in local authenticated fixture through the complete
+  broker path: opaque cookie state, fresh nonpersistent context, allowlisted navigation,
+  structured observation, content-addressed screenshot, immutable capture, and close.
+- The `agent-browser` adapter has deterministic command/normalization tests, but the
+  binary is not installed on this host. Its contained route is intentionally ephemeral
+  because upstream rejects domain allowlisting with profiles, restored/state sessions,
+  CDP, and auto-connect.
+- Neither adapter exposes DOM actions. Interaction comparisons wait for the
+  authorization-permit boundary rather than benchmarking an unsafe bypass.
+
+Run the local Playwright baseline with:
+
+```bash
+WEIR_PLAYWRIGHT_SMOKE=1 python -m pytest -q tests/test_playwright_observer.py
+```
+
 ## Task corpus
 
 ### Public acquisition

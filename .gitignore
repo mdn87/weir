@@ -5,6 +5,7 @@ __pycache__/
 venv/
 dist/
 build/
+.weir-wheel-test/
 .pytest_cache/
 .coverage
 .env

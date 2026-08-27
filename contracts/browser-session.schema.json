@@ -4,20 +4,91 @@
   "title": "BrowserSession",
   "type": "object",
   "additionalProperties": false,
-  "required": ["contract_version", "session_id", "owner_run_id", "engine", "worker_id", "profile_id", "data_class", "state", "allowed_domains"],
+  "required": [
+    "contract_version",
+    "session_id",
+    "owner_run_id",
+    "engine",
+    "worker_id",
+    "worker_session_id",
+    "profile_id",
+    "data_class",
+    "allowed_domains",
+    "state",
+    "revision",
+    "epoch",
+    "current_url",
+    "created_at",
+    "updated_at",
+    "expires_at",
+    "controller_lease"
+  ],
   "properties": {
-    "contract_version": {"const": "0.1"},
-    "session_id": {"type": "string"},
-    "owner_run_id": {"type": "string"},
-    "engine": {"type": "string"},
-    "worker_id": {"type": "string"},
-    "profile_id": {"type": "string"},
+    "contract_version": {"const": "0.2"},
+    "session_id": {"$ref": "#/$defs/id"},
+    "owner_run_id": {"$ref": "#/$defs/id"},
+    "engine": {"$ref": "#/$defs/id"},
+    "worker_id": {"$ref": "#/$defs/id"},
+    "worker_session_id": {"$ref": "#/$defs/id"},
+    "profile_id": {"$ref": "#/$defs/id"},
     "data_class": {"enum": ["public", "personal", "bwa_internal", "restricted"]},
-    "allowed_domains": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
-    "controller_lease": {"type": ["string", "null"]},
-    "current_url": {"type": ["string", "null"], "format": "uri"},
+    "allowed_domains": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/domain"},
+      "minItems": 1,
+      "uniqueItems": true
+    },
     "state": {"enum": ["opening", "active", "paused", "lost", "closed"]},
-    "created_at": {"type": ["string", "null"], "format": "date-time"},
-    "expires_at": {"type": ["string", "null"], "format": "date-time"}
+    "revision": {"type": "integer", "minimum": 0},
+    "epoch": {"type": "integer", "minimum": 1},
+    "current_url": {
+      "oneOf": [
+        {"type": "null"},
+        {"type": "string", "format": "uri", "pattern": "^https?://"}
+      ]
+    },
+    "created_at": {"$ref": "#/$defs/timestamp"},
+    "updated_at": {"$ref": "#/$defs/timestamp"},
+    "expires_at": {"$ref": "#/$defs/timestamp"},
+    "controller_lease": {
+      "oneOf": [
+        {"type": "null"},
+        {"$ref": "#/$defs/controllerLeaseView"}
+      ]
+    }
+  },
+  "$defs": {
+    "id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,255}$"
+    },
+    "timestamp": {"type": "string", "format": "date-time"},
+    "domain": {
+      "type": "string",
+      "maxLength": 253,
+      "pattern": "^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)(?:\\.(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?))*$"
+    },
+    "controllerLeaseView": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "contract_version",
+        "session_id",
+        "lease_id",
+        "controller_id",
+        "kind",
+        "generation",
+        "expires_at"
+      ],
+      "properties": {
+        "contract_version": {"const": "0.2"},
+        "session_id": {"$ref": "#/$defs/id"},
+        "lease_id": {"$ref": "#/$defs/id"},
+        "controller_id": {"$ref": "#/$defs/id"},
+        "kind": {"enum": ["automation", "operator"]},
+        "generation": {"type": "integer", "minimum": 1},
+        "expires_at": {"$ref": "#/$defs/timestamp"}
+      }
+    }
   }
 }

@@ -20,6 +20,11 @@ class FailureClass(StrEnum):
     APPROVAL_REQUIRED = "approval_required"
     STALE_REFERENCE = "stale_reference"
     SESSION_LOST = "session_lost"
+    CONTROLLER_CONFLICT = "controller_conflict"
+    PROFILE_IN_USE = "profile_in_use"
+    AMBIGUOUS_TARGET = "ambiguous_target"
+    IDEMPOTENCY_CONFLICT = "idempotency_conflict"
+    COMMAND_EXPIRED = "command_expired"
     VERIFICATION_FAILED = "verification_failed"
     UNKNOWN = "unknown"
 
@@ -50,6 +55,22 @@ class EnginePolicyBlocked(WeirEngineError):
     """Target rejected by policy (scheme, private address, domain constraint)."""
 
     default_failure_class = FailureClass.POLICY_BLOCKED
+
+
+class ControllerConflict(WeirEngineError):
+    default_failure_class = FailureClass.CONTROLLER_CONFLICT
+
+
+class ProfileInUse(WeirEngineError):
+    default_failure_class = FailureClass.PROFILE_IN_USE
+
+
+class IdempotencyConflict(WeirEngineError):
+    default_failure_class = FailureClass.IDEMPOTENCY_CONFLICT
+
+
+class CommandExpiredError(WeirEngineError):
+    default_failure_class = FailureClass.COMMAND_EXPIRED
 
 
 @dataclass(frozen=True, slots=True)

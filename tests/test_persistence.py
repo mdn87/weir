@@ -1,5 +1,6 @@
 import json
 import tempfile
+import threading
 import unittest
 from pathlib import Path
 
@@ -82,6 +83,45 @@ class CaptureStoreTests(unittest.TestCase):
             store = CaptureStore(Path(temp))
             with self.assertRaisesRegex(ValueError, "invalid capture id"):
                 store.load_capture("../../outside")
+
+    def test_binary_evidence_is_content_addressed_and_policy_gated(self):
+        with tempfile.TemporaryDirectory() as temp:
+            store = CaptureStore(Path(temp))
+            public = _request(capture_policy="full_evidence")
+            first = store.persist_blob(b"png-bytes", public)
+            second = store.persist_blob(b"png-bytes", public)
+            self.assertEqual(first, second)
+            self.assertEqual(store.load_blob(first or ""), b"png-bytes")
+
+            metadata_only = _request(capture_policy="metadata")
+            self.assertIsNone(store.persist_blob(b"not-retained", metadata_only))
+
+    def test_concurrent_immutable_writers_publish_one_complete_blob(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            store = CaptureStore(root)
+            request = _request(capture_policy="full_evidence")
+            payload = b"same-evidence" * 100_000
+            refs = []
+            failures = []
+
+            def persist():
+                try:
+                    refs.append(store.persist_blob(payload, request))
+                except Exception as exc:  # pragma: no cover - asserted below
+                    failures.append(exc)
+
+            writers = [threading.Thread(target=persist) for _ in range(8)]
+            for writer in writers:
+                writer.start()
+            for writer in writers:
+                writer.join(timeout=5)
+
+            self.assertTrue(all(not writer.is_alive() for writer in writers))
+            self.assertEqual(failures, [])
+            self.assertEqual(len(set(refs)), 1)
+            self.assertEqual(store.load_blob(refs[0] or ""), payload)
+            self.assertEqual(list(root.rglob("*.tmp")), [])
 
 
 class CachePolicyTests(unittest.TestCase):

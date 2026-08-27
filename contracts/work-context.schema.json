@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://lugos.local/weir/work-context.schema.json",
+  "title": "WorkContext",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["contract_version", "context_id", "objective_id", "run_id", "assignment_id", "correlation_id", "source", "evidence_refs", "created_at", "context_hash"],
+  "properties": {
+    "contract_version": {"const": "0.1"},
+    "context_id": {"type": "string", "minLength": 1},
+    "objective_id": {"type": ["string", "null"], "minLength": 1},
+    "run_id": {"type": "string", "minLength": 1},
+    "assignment_id": {"type": ["string", "null"], "minLength": 1},
+    "correlation_id": {"type": "string", "minLength": 1},
+    "source": {"enum": ["caller", "ogmi", "autowork", "lugos-mcp"]},
+    "evidence_refs": {"type": "array", "items": {"type": "string", "minLength": 1}, "uniqueItems": true},
+    "created_at": {"type": "string", "format": "date-time"},
+    "context_hash": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"}
+  },
+  "allOf": [
+    {
+      "if": {"properties": {"source": {"const": "ogmi"}}},
+      "then": {"properties": {"objective_id": {"type": "string", "minLength": 1}}}
+    },
+    {
+      "if": {"properties": {"source": {"const": "autowork"}}},
+      "then": {"properties": {"assignment_id": {"type": "string", "minLength": 1}}}
+    }
+  ]
+}

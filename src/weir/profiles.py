@@ -7,6 +7,7 @@ from typing import Any
 
 import yaml
 
+from weir.actions import Risk
 from weir.engines.base import EnginePolicyBlocked
 from weir.models import (
     CONTRACT_VERSION,
@@ -27,7 +28,13 @@ PROFILE_FIELDS = {
     "approval_risks",
     "known_failures",
     "retention",
+    "browser_observation",
     "notes",
+}
+RETENTION_POLICIES: dict[str, frozenset[str]] = {
+    "public_content": frozenset({"content_hash_and_capture", "metadata_only", "prohibited"}),
+    "screenshots": frozenset({"full_evidence", "prohibited"}),
+    "har": frozenset({"full_evidence", "metadata_only", "prohibited"}),
 }
 
 
@@ -41,6 +48,11 @@ class SiteProfile:
     preferred_engines: tuple[str, ...]
     auth_mode: str
     allowed_modes: frozenset[RequestMode]
+    approval_risks: frozenset[Risk]
+    known_failures: dict[str, str]
+    retention: dict[str, Any]
+    browser_observation: dict[str, str]
+    notes: tuple[str, ...]
     contract_version: str = CONTRACT_VERSION
 
     @classmethod
@@ -58,6 +70,11 @@ class SiteProfile:
         preferred = value.get("preferred_engines")
         allowed = value.get("allowed_modes")
         auth_mode = value.get("auth_mode")
+        approval_risks = value.get("approval_risks", [])
+        known_failures = value.get("known_failures", {})
+        retention = value.get("retention", {})
+        browser_observation = value.get("browser_observation", {})
+        notes = value.get("notes", [])
         if not isinstance(profile_id, str) or not profile_id:
             raise ValueError("site profile requires a non-empty id")
         if (
@@ -115,6 +132,56 @@ class SiteProfile:
             raise ValueError(f"site profile {profile_id!r} has an invalid allowed mode") from exc
         if auth_mode not in {"none", "optional", "dedicated_profile"}:
             raise ValueError(f"site profile {profile_id!r} has invalid auth_mode {auth_mode!r}")
+        if not isinstance(approval_risks, list) or len(set(approval_risks)) != len(
+            approval_risks
+        ):
+            raise ValueError(f"site profile {profile_id!r} has invalid approval_risks")
+        try:
+            parsed_risks = frozenset(Risk(item) for item in approval_risks)
+        except (TypeError, ValueError) as exc:
+            raise ValueError(
+                f"site profile {profile_id!r} has an invalid approval risk"
+            ) from exc
+        if not isinstance(known_failures, dict) or any(
+            not isinstance(key, str)
+            or not key
+            or not isinstance(remedy, str)
+            or not remedy
+            for key, remedy in known_failures.items()
+        ):
+            raise ValueError(
+                f"site profile {profile_id!r} known_failures must map names to remedies"
+            )
+        if not isinstance(retention, dict):
+            raise ValueError(f"site profile {profile_id!r} retention must be an object")
+        unknown_retention = sorted(set(retention) - set(RETENTION_POLICIES))
+        if unknown_retention:
+            raise ValueError(
+                f"site profile {profile_id!r} has unknown retention policies: "
+                f"{unknown_retention}"
+            )
+        for artifact, policy in retention.items():
+            if not isinstance(policy, str) or policy not in RETENTION_POLICIES[artifact]:
+                raise ValueError(
+                    f"site profile {profile_id!r} has invalid {artifact!r} "
+                    f"retention policy {policy!r}"
+                )
+        expected_observation_policy = {
+            "javascript": "disabled",
+            "network_methods": "get_head_only",
+            "credential_scope": "read_only",
+        }
+        if not isinstance(browser_observation, dict) or (
+            browser_observation and browser_observation != expected_observation_policy
+        ):
+            raise ValueError(
+                f"site profile {profile_id!r} browser_observation must be empty or "
+                f"exactly {expected_observation_policy!r}"
+            )
+        if not isinstance(notes, list) or any(
+            not isinstance(note, str) or not note for note in notes
+        ):
+            raise ValueError(f"site profile {profile_id!r} notes must be non-empty strings")
         return cls(
             id=profile_id,
             domains=normalized_domains,
@@ -122,6 +189,11 @@ class SiteProfile:
             preferred_engines=tuple(preferred),
             auth_mode=auth_mode,
             allowed_modes=allowed_modes,
+            approval_risks=parsed_risks,
+            known_failures=dict(known_failures),
+            retention=dict(retention),
+            browser_observation=dict(browser_observation),
+            notes=tuple(notes),
         )
 
     def matches_host(self, host: str) -> bool:
@@ -182,6 +254,33 @@ class SiteProfileRegistry:
             profiles.append(SiteProfile.from_dict(value))
         return cls(profiles)
 
+    @classmethod
+    def from_resource_directory(cls, directory: Any) -> SiteProfileRegistry:
+        """Load profiles from an importlib.resources Traversable directory."""
+
+        profiles: list[SiteProfile] = []
+        if not directory.is_dir():
+            raise ValueError("packaged WEIR profile directory is missing")
+        paths = sorted(
+            (
+                path
+                for path in directory.iterdir()
+                if path.is_file() and Path(path.name).suffix.lower() in {".yaml", ".yml"}
+            ),
+            key=lambda path: path.name,
+        )
+        for path in paths:
+            try:
+                value = yaml.safe_load(path.read_text(encoding="utf-8"))
+            except (OSError, yaml.YAMLError) as exc:
+                raise ValueError(f"cannot load packaged site profile {path.name}: {exc}") from exc
+            if not isinstance(value, dict):
+                raise ValueError(
+                    f"packaged site profile {path.name} must contain a YAML object"
+                )
+            profiles.append(SiteProfile.from_dict(value))
+        return cls(profiles)
+
     def resolve(self, request: WebRequest) -> SiteProfile | None:
         if request.source and request.source in self._sources:
             return self._sources[request.source]
@@ -219,3 +318,6 @@ class SiteProfileRegistry:
 
     def all(self) -> list[SiteProfile]:
         return list(self._profiles.values())
+
+    def get(self, profile_id: str) -> SiteProfile | None:
+        return self._profiles.get(profile_id)

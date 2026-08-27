@@ -3,8 +3,7 @@ id: example-authenticated-portal
 domains:
   - portal.example.com
 preferred_engines:
-  - agent_browser
-  - playwright
+  - playwright-observer
 auth_mode: dedicated_profile
 allowed_modes:
   - read
@@ -19,7 +18,11 @@ known_failures:
   login_expired: pause_for_reauthentication
   layout_changed: reacquire_observation
 retention:
-  screenshots: restricted
+  screenshots: prohibited
   har: metadata_only
+browser_observation:
+  javascript: disabled
+  network_methods: get_head_only
+  credential_scope: read_only
 notes:
   - Template only. Do not use this profile as an actual allowlist.
