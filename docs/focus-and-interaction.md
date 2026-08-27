@@ -145,7 +145,7 @@ WEIR:
 This is a review-driven learning loop. Telemetry can propose routing or policy changes,
 but it must not rewrite active behavior directly.
 
-On the inspected host, `C:\Users\Matt\.local\bin\apu-watch.exe` reports the
+On the inspected host, the user-local `apu-watch` installation reports the
 `primary-agent-autonomy-loss` watcher enabled but `background_service=false`. That is a
 review trigger, not durable execution authority. APU should run it through its owning
 service lifecycle and ingest explicit `WorkContext`/session identifiers; WEIR should not

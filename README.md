@@ -174,6 +174,8 @@ observation into a risk-classified, hash-bound `ActionProposal`, but the built-i
 approval authority denies it and no executor is exposed. Fade/Operator approval,
 pre-execution reacquisition, and real post-action receipts remain P3 work. See
 `docs/focus-and-interaction.md` for the cross-system identity and controller model.
+The implementation-ready cross-repository sequence and Fable review decisions are in
+`docs/sibling-integration-plan.md`.
 
 ## Development
 

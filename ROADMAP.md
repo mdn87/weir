@@ -78,7 +78,11 @@ so the full observe-and-interact gate is not yet met.
 
 ## P3 - Action authority integration
 
-- [ ] Resolve Fade/Operator execution ownership.
+Cross-repository sequence and proposed ownership decisions:
+`docs/sibling-integration-plan.md`.
+
+- [ ] Confirm Fade authorization/coordinator ownership and WEIR browser effect-driver
+  ownership; do not collapse both roles into one ambiguous "executor."
 - [x] Compile observations into hash-bound `ActionProposal` objects.
 - [x] Add a non-downclassifiable risk taxonomy.
 - [x] Add a default-deny approval authority interface.
