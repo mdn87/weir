@@ -400,6 +400,14 @@ needs a second review after the local canary to select an authenticated outbound
 and threat-model operator identity, replay, revocation, offline approval, queue
 retention, and compromised HUD behavior. Workstation action services remain loopback.
 
+Review status (2026-08-28): the separate pre-implementation review is recorded in
+[`docs/hardening/batch8-remote-relay/hardening.md`](hardening/batch8-remote-relay/hardening.md).
+It recommends a short-lived signed outbound pull relay and rejects a direct tunnel or
+generic message queue as the authority path. Because the operator requested reverse
+execution order, the review precedes rather than follows the local canary; implementation
+and enablement therefore remain gated on Batch 9 acceptance and a post-implementation
+security review.
+
 ## Dependency map
 
 ```text

@@ -1,0 +1,9 @@
+flowchart LR
+  Browser[Remote operator browser] -->|session plus step-up| MC[Mission Control]
+  MC -->|exact bound decision| Signer[Relay signer and durable queue]
+  Agent[Workstation relay agent] -->|outbound mTLS pull| Signer
+  Signer -->|signed short-lived capsule| Agent
+  Agent -->|verified human plus transport identity| Fade[Fade authority loopback]
+  Fade -->|existing permit path| WEIR[WEIR action loopback]
+  Agent -->|terminal acknowledgement| Signer
+

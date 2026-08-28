@@ -1,0 +1,8 @@
+flowchart LR
+  Browser[Remote operator browser] -->|MC session| MC[Mission Control]
+  MC -->|shared server bearer| HUD[HUD operator API]
+  HUD -->|no approved remote path| Gap[Remote decision gap]
+  Local[Local operator] -->|named local credential| Fade[Fade authority loopback]
+  Fade -->|named service credential| WEIR[WEIR action loopback]
+  Gap -. forbidden shortcut .-> Fade
+

@@ -1,0 +1,7 @@
+flowchart LR
+  Browser[Remote operator browser] -->|read-only projections| MC[Mission Control]
+  MC --> HUD[HUD operator API]
+  HUD -->|commands disabled| Stop[No remote approval]
+  Local[Local operator] -->|named local credential| Fade[Fade authority loopback]
+  Fade --> WEIR[WEIR action loopback]
+

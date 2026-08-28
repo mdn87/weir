@@ -1,0 +1,7 @@
+flowchart LR
+  Browser[Remote operator browser] -->|MC operator session| MC[Mission Control]
+  MC -->|shared server bearer| HUD[HUD operator API]
+  HUD -->|SSH or tailnet tunnel| Fade[Fade authority loopback]
+  Fade --> WEIR[WEIR action loopback]
+  TunnelKey[Tunnel and gateway credentials] --> HUD
+

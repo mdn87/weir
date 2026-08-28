@@ -1,0 +1,390 @@
+{
+  "documentType": "codex-security.hardening-analysis",
+  "schemaVersion": "1.0",
+  "analysisId": "batch8_remote_relay_20260828",
+  "sourceEvidence": {
+    "kind": "document_and_source_collection",
+    "label": "WEIR Batch 8 relay decisions and current sibling implementations",
+    "collectionSha256": "0adaa84674645b675db556bca854a32a5e44d0f34cf454b295e4f963f2b1bfa6",
+    "artifactCount": 13,
+    "sourceDrift": "present"
+  },
+  "assessment": {
+    "outcome": "opportunities_identified",
+    "summary": "Use a short-lived signed outbound pull relay after the local canary; do not expose Fade through a tunnel or reuse a generic message queue as authority."
+  },
+  "constraints": {
+    "profile": "security_first",
+    "changeHorizons": ["incremental", "medium_term"],
+    "nonNegotiables": [
+      "Fade and WEIR action services remain loopback-only.",
+      "The relay carries no action parameters, evidence bodies, credentials, or reusable permits.",
+      "Human operator identity and relay transport identity remain distinct.",
+      "Expired, revoked, replayed, and ambiguous decisions produce no second effect.",
+      "The local Batch 9 canary must pass before relay enablement."
+    ],
+    "assumptions": [
+      "No measured relay latency, memory, or queue-volume budget was supplied.",
+      "Mission Control remains the authenticated remote operator surface but not the WEIR permit authority.",
+      "The unrelated dirty files in the Lugos parent do not alter the inventoried source evidence."
+    ]
+  },
+  "opportunities": [
+    {
+      "opportunityId": "preserve-remote-decision-authority",
+      "title": "Preserve human authority across the remote decision boundary",
+      "summary": "Carry one exact human decision to local Fade without exposing Fade or converting a shared service credential into operator authority.",
+      "diagnosis": "Mission Control authenticates a human, but the current server-to-HUD hop forwards a shared credential and no human principal; existing receipt and transport mechanisms do not model expiry, claim, revocation, or workstation acknowledgement.",
+      "evidence": [
+        {
+          "claimType": "observed",
+          "sourceKind": "document",
+          "evidenceId": "E1",
+          "path": "docs/sibling-integration-plan.md",
+          "claim": "D12 requires same-host proof first and forbids solving remote approval by binding Fade or WEIR to a non-loopback address."
+        },
+        {
+          "claimType": "observed",
+          "sourceKind": "source",
+          "evidenceId": "E3",
+          "path": "fade/fade/weir_authority.py",
+          "claim": "Fade binds its authority service to loopback, authenticates distinct named clients, and records the transport principal as actor_id."
+        },
+        {
+          "claimType": "observed",
+          "sourceKind": "source",
+          "evidenceId": "E5",
+          "path": "lugos-hud/src/operatorApi/http.mjs",
+          "claim": "HUD command authorization returns a boolean and dispatches without an authenticated human context."
+        },
+        {
+          "claimType": "observed",
+          "sourceKind": "source",
+          "evidenceId": "E9",
+          "path": "mission-control/src/app/api/lugos/commands/route.ts",
+          "claim": "Mission Control checks the operator role but forwards only the parsed command object."
+        },
+        {
+          "claimType": "inferred",
+          "sourceKind": "source",
+          "evidenceId": "E10",
+          "path": "mission-control/src/integrations/lugos/operator-client.ts",
+          "claim": "Connecting the existing shared-bearer hop directly to Fade would make human attribution conventional rather than cryptographically bound."
+        }
+      ],
+      "desiredInvariants": [
+        "Every remote decision is signed and bound to one command_id, proposal_hash, action_id, and work_context_hash.",
+        "Fade records the human operator and relay transport principal separately.",
+        "The workstation initiates the network connection and local action services remain unreachable from the relay host.",
+        "Queue delivery, claim, acknowledgement, expiry, and revocation are durable and idempotent.",
+        "The capsule exact-set schema forbids parameters and reusable authority."
+      ],
+      "proposalPath": "proposals/remote-decision-capsules.md",
+      "options": [
+        {
+          "optionId": "local-only",
+          "title": "Keep approval local",
+          "kind": "baseline",
+          "summary": "Leave remote WEIR projections read-only and require workstation-local approval.",
+          "diagramPaths": {
+            "before": "diagrams/remote-decision-capsules-before.mmd",
+            "after": "diagrams/remote-decision-capsules-local-only-after.mmd"
+          },
+          "evidenceCoverage": [
+            {
+              "evidenceId": "E1",
+              "effect": "addresses",
+              "tacticalFixRequired": true,
+              "rationale": "It preserves the existing loopback boundary and keeps the remote command disabled."
+            },
+            {
+              "evidenceId": "E9",
+              "effect": "unaffected",
+              "tacticalFixRequired": false,
+              "rationale": "Human identity is still lost at the HUD hop, but that hop cannot reach action authority."
+            }
+          ],
+          "tradeoffs": [
+            {
+              "dimension": "security",
+              "direction": "neutral",
+              "confidence": "high",
+              "basis": "source-derived",
+              "assessment": "No new remote authority or network path appears.",
+              "validationPlan": "Verify WEIR decision command definitions remain absent and Fade remains loopback-only."
+            },
+            {
+              "dimension": "performance",
+              "direction": "neutral",
+              "confidence": "high",
+              "basis": "source-derived",
+              "assessment": "No new request path runs.",
+              "validationPlan": "No benchmark is required beyond existing projection checks."
+            },
+            {
+              "dimension": "memory",
+              "direction": "neutral",
+              "confidence": "high",
+              "basis": "source-derived",
+              "assessment": "No process, buffer, or queue is added.",
+              "validationPlan": "Confirm deployment process inventory is unchanged."
+            },
+            {
+              "dimension": "reliability",
+              "direction": "neutral",
+              "confidence": "high",
+              "basis": "source-derived",
+              "assessment": "The local path remains the only action path.",
+              "validationPlan": "Run the local action canary and verify remote commands stay disabled."
+            },
+            {
+              "dimension": "operability",
+              "direction": "neutral",
+              "confidence": "high",
+              "basis": "source-derived",
+              "assessment": "No new key, service, or alert is owned.",
+              "validationPlan": "Check deployed service and credential inventory."
+            },
+            {
+              "dimension": "migration",
+              "direction": "neutral",
+              "confidence": "high",
+              "basis": "source-derived",
+              "assessment": "No schema or deployment migration occurs.",
+              "validationPlan": "Keep the relay feature flag absent or false."
+            }
+          ],
+          "residualRisks": [
+            "A remote operator cannot resolve a time-sensitive proposal."
+          ],
+          "implementationReadiness": {
+            "affectedComponents": [],
+            "workPackages": ["Keep WEIR decisions disabled in remote command registries."],
+            "acceptanceCriteria": ["No remote route can reach Fade decision write scope."],
+            "migrationNotes": [],
+            "rollback": "Already the current behavior."
+          }
+        },
+        {
+          "optionId": "authenticated-tunnel",
+          "title": "Tunnel HUD to Fade",
+          "kind": "incremental",
+          "summary": "Use SSH or a tailnet route to make the workstation loopback service reachable from the HUD host.",
+          "diagramPaths": {
+            "before": "diagrams/remote-decision-capsules-before.mmd",
+            "after": "diagrams/remote-decision-capsules-tunnel-after.mmd"
+          },
+          "evidenceCoverage": [
+            {
+              "evidenceId": "E1",
+              "effect": "mitigates",
+              "tacticalFixRequired": true,
+              "rationale": "The process still binds loopback, but the tunnel creates effective remote reachability."
+            },
+            {
+              "evidenceId": "E9",
+              "effect": "unaffected",
+              "tacticalFixRequired": true,
+              "rationale": "The human principal remains absent from the forwarded command."
+            },
+            {
+              "evidenceId": "E13",
+              "effect": "mitigates",
+              "tacticalFixRequired": true,
+              "rationale": "A private carrier narrows exposure but is not application authority."
+            }
+          ],
+          "tradeoffs": [
+            {
+              "dimension": "security",
+              "direction": "regresses",
+              "confidence": "high",
+              "basis": "source-derived",
+              "assessment": "A long-lived path and shared gateway credential can reach Fade without preserving the human principal.",
+              "validationPlan": "Threat-test host compromise, credential theft, tunnel misbinding, and operator attribution."
+            },
+            {
+              "dimension": "performance",
+              "direction": "improves",
+              "confidence": "medium",
+              "basis": "analogous",
+              "assessment": "A live tunnel adds only transport latency and no polling interval.",
+              "validationPlan": "Measure request latency across the selected tunnel carrier."
+            },
+            {
+              "dimension": "memory",
+              "direction": "neutral",
+              "confidence": "medium",
+              "basis": "analogous",
+              "assessment": "Only a bounded tunnel process and connection buffers are added.",
+              "validationPlan": "Measure tunnel process RSS and connection-buffer limits."
+            },
+            {
+              "dimension": "reliability",
+              "direction": "regresses",
+              "confidence": "medium",
+              "basis": "source-derived",
+              "assessment": "Availability couples to a persistent connection without explicit offline decision semantics.",
+              "validationPlan": "Drop the tunnel before and after dispatch and inspect retry behavior."
+            },
+            {
+              "dimension": "operability",
+              "direction": "regresses",
+              "confidence": "medium",
+              "basis": "analogous",
+              "assessment": "Tunnel lifecycle, ACLs, and gateway credentials require supervision and rotation.",
+              "validationPlan": "Exercise restart, credential rotation, and tunnel teardown runbooks."
+            },
+            {
+              "dimension": "migration",
+              "direction": "improves",
+              "confidence": "medium",
+              "basis": "source-derived",
+              "assessment": "It needs less application code than a queue but expands authority before identity is fixed.",
+              "validationPlan": "Inventory every new route, credential, and bind after a disabled diagnostic."
+            }
+          ],
+          "residualRisks": [
+            "Human identity collapse.",
+            "No durable offline expiry or revocation model.",
+            "Host compromise gains a direct Fade path."
+          ],
+          "implementationReadiness": {
+            "affectedComponents": ["lugos-hud", "fade", "lugos-link"],
+            "workPackages": ["Diagnostic read-only tunnel only; do not grant decision scope."],
+            "acceptanceCriteria": ["The tunnel cannot submit a WEIR decision."],
+            "migrationNotes": ["Do not treat tailnet membership as application authentication."],
+            "rollback": "Stop the tunnel, revoke its credentials, and verify Fade has no non-loopback listener."
+          }
+        },
+        {
+          "optionId": "signed-outbound-pull-relay",
+          "title": "Signed outbound pull relay",
+          "kind": "structural",
+          "summary": "Queue signed, short-lived, parameter-free human decisions and let a per-device workstation agent retrieve them over an outbound authenticated connection.",
+          "diagramPaths": {
+            "before": "diagrams/remote-decision-capsules-before.mmd",
+            "after": "diagrams/remote-decision-capsules-pull-relay-after.mmd"
+          },
+          "evidenceCoverage": [
+            {
+              "evidenceId": "E1",
+              "effect": "addresses",
+              "tacticalFixRequired": true,
+              "rationale": "The workstation initiates transport and Fade remains loopback-only."
+            },
+            {
+              "evidenceId": "E3",
+              "effect": "addresses",
+              "tacticalFixRequired": true,
+              "rationale": "Fade can verify and record separate human and transport identities before its existing coordinator."
+            },
+            {
+              "evidenceId": "E5",
+              "effect": "mitigates",
+              "tacticalFixRequired": true,
+              "rationale": "A signed capsule replaces boolean/shared-bearer identity at the authority transfer."
+            },
+            {
+              "evidenceId": "E9",
+              "effect": "addresses",
+              "tacticalFixRequired": true,
+              "rationale": "The authenticated Mission Control operator becomes an explicit signed subject."
+            },
+            {
+              "evidenceId": "E13",
+              "effect": "mitigates",
+              "tacticalFixRequired": true,
+              "rationale": "Tailscale can protect transport while mTLS and signatures retain application identity."
+            }
+          ],
+          "tradeoffs": [
+            {
+              "dimension": "security",
+              "direction": "improves",
+              "confidence": "high",
+              "basis": "source-derived",
+              "assessment": "Exact signed bindings, separate identities, expiry, revocation, and outbound-only connectivity narrow the new authority boundary.",
+              "validationPlan": "Run signature, identity, replay, expiry, revocation, compromised-HUD, and ambiguity tests."
+            },
+            {
+              "dimension": "performance",
+              "direction": "regresses",
+              "confidence": "low",
+              "basis": "hypothetical",
+              "assessment": "Polling, signatures, and acknowledgement add hops; provisional p95 delivery must remain below two seconds.",
+              "validationPlan": "Measure 1,000 synthetic decisions on normal and degraded links against the two-second p95 target."
+            },
+            {
+              "dimension": "memory",
+              "direction": "regresses",
+              "confidence": "medium",
+              "basis": "hypothetical",
+              "assessment": "A bounded agent and queue retain capsule metadata; live entries are capped at 1,024 and capsules at 8 KiB.",
+              "validationPlan": "Measure peak RSS and database size at the hard queue and capsule bounds."
+            },
+            {
+              "dimension": "reliability",
+              "direction": "improves",
+              "confidence": "medium",
+              "basis": "source-derived",
+              "assessment": "Durable claim and acknowledgement make restart and offline behavior explicit, at the cost of more components.",
+              "validationPlan": "Crash the issuer, queue, poller, Fade, and each network response boundary and prove no duplicate effect."
+            },
+            {
+              "dimension": "operability",
+              "direction": "regresses",
+              "confidence": "high",
+              "basis": "source-derived",
+              "assessment": "Operators must own signer keys, per-device credentials, clocks, queue health, agent lifecycle, and incident response.",
+              "validationPlan": "Exercise key rotation, credential revocation, clock failure, backup/restore, and rollback runbooks."
+            },
+            {
+              "dimension": "migration",
+              "direction": "regresses",
+              "confidence": "high",
+              "basis": "source-derived",
+              "assessment": "A versioned capsule, queue protocol, step-up flow, poller, and Fade verifier must land disabled across several repositories.",
+              "validationPlan": "Use frozen cross-repository fixtures and deploy consumer tolerance before producers."
+            }
+          ],
+          "residualRisks": [
+            "Compromise of the relay signer host.",
+            "Coercion or compromise of a legitimate operator endpoint.",
+            "Denial of service against queue or poller.",
+            "Revocation cannot undo an effect after Fade crosses its dispatch marker."
+          ],
+          "implementationReadiness": {
+            "affectedComponents": ["mission-control", "lugos-hud or a separate relay service", "fade", "weir deployment integration"],
+            "workPackages": [
+              "Freeze capsule, queue, acknowledgement, and audit fixtures.",
+              "Add Mission Control exact proposal reload and operator step-up.",
+              "Add the least-privilege signer and bounded durable queue.",
+              "Add the outbound workstation agent and Fade capsule verifier.",
+              "Run cross-repository negative, restart, and remote synthetic canaries."
+            ],
+            "acceptanceCriteria": [
+              "No network listener exposes Fade or WEIR beyond loopback.",
+              "Every accepted capsule carries a distinct human actor and transport principal.",
+              "Expired, revoked, replayed, malformed, and ambiguous cases produce no second effect.",
+              "The relay never stores or transmits action parameters or reusable permits."
+            ],
+            "migrationNotes": [
+              "Keep decision write scope disabled until the local Batch 9 canary and a post-implementation security review pass.",
+              "Deploy consumers and verification keys before allowing capsule issuance."
+            ],
+            "rollback": "Disable issuance and polling, revoke the device credential, preserve audit state, and continue local approval."
+          }
+        }
+      ],
+      "recommendedOptionId": "signed-outbound-pull-relay",
+      "recommendation": "Select the signed outbound pull relay only after local Batch 9 acceptance; otherwise retain local-only approval."
+    }
+  ],
+  "openQuestions": [
+    "Which deployed operator identity provider will own WebAuthn/passkey enrollment and recovery?",
+    "Will the signer and queue be a separate least-privilege service or share the HUD host process boundary?",
+    "What existing audit-retention period should apply to redacted capsule metadata?",
+    "Which hostname, CA, and network carrier will provide workstation-to-relay mTLS?"
+  ]
+}
