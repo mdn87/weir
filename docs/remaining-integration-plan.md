@@ -425,6 +425,14 @@ Frozen D1–D12 + A1–A9 + C1–C6
 Local Batch 9 success -> separate Batch 8 remote-relay review
 ```
 
+Local/source acceptance status (2026-08-28): the real Playwright Fade-to-WEIR canary
+and cross-repository contract gates passed. The evidence and exact correlation-chain
+hash are recorded in
+[`docs/acceptance/batch9-local-acceptance-20260828.md`](acceptance/batch9-local-acceptance-20260828.md).
+Because this work was requested in reverse order, deployed Mission Control/HUD and
+installed APU readback remain attached to their later rollout steps rather than being
+misreported as part of this local result.
+
 WEIR 2D, APU 1B, Dias 1C, and the disabled Mission Control tolerance work are the first
 independent source units. Autowork follows MCP context plumbing. HUD registration
 follows the Mission Control deployment. The local action canary follows both Fade and

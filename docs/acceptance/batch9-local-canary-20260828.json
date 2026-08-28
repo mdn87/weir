@@ -1,0 +1,81 @@
+{
+  "assertions": {
+    "conflicting_replay_rejected": true,
+    "effect_count": 1,
+    "fade_http_boundary": true,
+    "operator_actor": "local-operator",
+    "post_restart_replay_stable": true,
+    "public_parameter_leak": false,
+    "real_playwright_effect": true,
+    "same_process_replay_stable": true,
+    "session_state": "active",
+    "transport_response_loss_reconciled": true,
+    "weir_http_boundary": true,
+    "worker_apply_calls": 1
+  },
+  "bindings": {
+    "command_id": "fade-command-9fc09d6aa76cc387",
+    "proposal_hash": "sha256:037cdd72115a6f9a061778194b3727baabbbf2c46bf19b70f498c5dda90612a9",
+    "receipt_hash": "sha256:5670e2943ebbfaf8eee426c7a4f9862657bac42670dd74fe9cd90ad2bb46a7ad",
+    "receipt_id": "receipt-30c336f31fab2eb13705c021d407ccb627cbf420",
+    "work_context_hash": "sha256:616a1cf2bd585394faaa287a50fb1febdd1cf48d4eecbe8c681f7b2f51067dff"
+  },
+  "event_types": [
+    "fade.weir.approval.recorded",
+    "fade.weir.permit.issued",
+    "fade.weir.run.recorded"
+  ],
+  "finished_at": "2026-08-28T10:00:48.032167+00:00",
+  "public_action_event": {
+    "action_id": "action-9fc09d6aa76cc387",
+    "action_type": "fill",
+    "event_type": "weir.action.completed",
+    "evidence_ref_count": 1,
+    "header": {
+      "assignment_id": "assignment-9fc09d6aa76cc387",
+      "correlation_id": "correlation-9fc09d6aa76cc387",
+      "event_id": "weir-action-completed-9fc09d6aa76cc387",
+      "occurred_at": "2026-08-28T10:00:48.032167+00:00",
+      "producer": "weir",
+      "run_id": "batch9-canary-9fc09d6aa76cc387",
+      "schema_version": 1,
+      "work_context_hash": "sha256:616a1cf2bd585394faaa287a50fb1febdd1cf48d4eecbe8c681f7b2f51067dff"
+    },
+    "parameter_data_class": "public",
+    "permit_hash": "sha256:f11556f4e80638d8b11362fd6d9ac47e100fb889c613250ef1e01973d5a71179",
+    "proposal_hash": "sha256:037cdd72115a6f9a061778194b3727baabbbf2c46bf19b70f498c5dda90612a9",
+    "reason_code": null,
+    "receipt_id": "receipt-30c336f31fab2eb13705c021d407ccb627cbf420",
+    "risk": "unknown",
+    "schema_version": 1,
+    "session_id": "session-9fc09d6aa76cc387",
+    "state": "completed"
+  },
+  "raw_artifacts": "artifacts/batch9-local/20260828-03",
+  "report_sha256": "sha256:6e1c1bc50e565e78b8f53fdb503f32014bacfede070f6af5cc8c2198033b6131",
+  "result": "passed",
+  "run_id": "batch9-canary-9fc09d6aa76cc387",
+  "schema": "weir-fade-local-action-canary/v1",
+  "scope": {
+    "action_type": "fill",
+    "data_class": "public",
+    "origin_class": "http_loopback_ip",
+    "production_account": false,
+    "risk": "unknown"
+  },
+  "started_at": "2026-08-28T10:00:45.180589+00:00",
+  "work_context": {
+    "assignment_id": "assignment-9fc09d6aa76cc387",
+    "context_hash": "sha256:616a1cf2bd585394faaa287a50fb1febdd1cf48d4eecbe8c681f7b2f51067dff",
+    "context_id": "context-9fc09d6aa76cc387",
+    "contract_version": "0.1",
+    "correlation_id": "correlation-9fc09d6aa76cc387",
+    "created_at": "2026-08-28T10:00:45.180589+00:00",
+    "evidence_refs": [
+      "weir-evidence:batch9-synthetic-input"
+    ],
+    "objective_id": null,
+    "run_id": "batch9-canary-9fc09d6aa76cc387",
+    "source": "autowork"
+  }
+}

@@ -196,9 +196,13 @@ receipt. A dispatch with no terminal receipt becomes
 `outcome_unknown` and quarantines the session; it is never replayed automatically.
 Only an explicitly injected synthetic-fixture worker can use this path, and its policy
 allows public `fill`, `select`, `check`, and `uncheck` effects on one HTTP loopback IP
-origin. No production effect adapter, service deployment, credential provisioning, or
-live canary is included. See `docs/focus-and-interaction.md` for the cross-system
-identity and controller model.
+origin. The first approved local canary now passes through real Playwright plus the
+Fade and WEIR HTTP boundaries, including response-loss reconciliation, conflicting
+replay rejection, and restart replay with exactly one DOM effect. Its runner and
+redacted evidence are in `scripts/run_fade_weir_action_canary.py` and
+`docs/acceptance/batch9-local-acceptance-20260828.md`. This does not add a production
+effect adapter, service deployment, or production credential. See
+`docs/focus-and-interaction.md` for the cross-system identity and controller model.
 The implementation-ready cross-repository sequence and Fable review decisions are in
 `docs/sibling-integration-plan.md`; the focused post-freeze delivery plan for the
 remaining sibling work is in `docs/remaining-integration-plan.md`. The accepted Batch
