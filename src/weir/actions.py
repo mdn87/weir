@@ -951,7 +951,7 @@ class PostconditionVerifier:
                 evidence,
             )
         if not all(
-            self._condition_holds(condition, after_observation)
+            self.condition_holds(condition, after_observation)
             for condition in proposal.expected_postconditions
         ):
             return Verification(
@@ -967,7 +967,7 @@ class PostconditionVerifier:
         )
 
     @staticmethod
-    def _condition_holds(
+    def condition_holds(
         condition: ActionCondition,
         observation: Observation,
     ) -> bool:

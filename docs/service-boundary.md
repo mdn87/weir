@@ -3,8 +3,10 @@
 Batch 2A adds the acquisition half of the persistent WEIR boundary. Batch 2B adds
 observation-bound proposal registration and separates full-authority proposal reads
 from pre-redacted projection reads. Batch 2D adds the authenticated dead-worker
-retirement route and schema-v2 durability foundation. None of these source slices
-starts, installs, or configures a service, and none enables browser effects.
+retirement route and schema-v2 durability foundation. Batch 7 adds a source-only,
+disabled-by-default action boundary for exact Fade permits and a deliberately narrow
+synthetic-fixture driver. None of these source slices starts, installs, or configures a
+service. No production browser-effect adapter is registered.
 
 ## One typed client contract
 
@@ -39,12 +41,21 @@ Every route requires `Authorization: Bearer ...`, `X-Weir-Client-Id`, and an RFC
 | `GET /v1/proposals/{hash}` | `proposal:read:full` | full-authority `ActionProposal` |
 | `GET /v1/proposals/{hash}/projection` | `proposal:read:redacted` | prebuilt public-safe `WeirActionEvent` |
 | `POST /v1/browser/profile-retirements` | `profile:retire` | exact audited dead-worker reservation retirement |
+| `POST /v1/actions/execute` | `action:execute` | permit-bound action status; disabled unless a driver is injected |
+| `GET /v1/actions/commands/{id}` | `action:status` | durable action status or typed not-found |
 
 Each named client has a unique credential, scopes, and allowed `DataClass` values.
 Shared credentials are rejected at registry construction. Authentication compares all
 registered identities with constant-time comparisons, and the handler suppresses the
 standard request log. Command status returns a result when completed and an
 `error_present` marker when failed; it never returns stored adapter error text.
+
+The two action routes additionally require the exact client identity
+`fade-weir-authority`; possession of an action scope under another client identity is
+insufficient. The execute body is an exact-set versioned contract containing only the
+command ID, request digest, immutable proposal, and permit. Full parameters remain in
+the authority channel and bounded private worker command. Action status and all public
+events omit those parameters.
 
 Full proposal registration and reads enforce both the browser session's `DataClass`
 and the proposal parameter `DataClass`. A redacted read does not open the full proposal
@@ -80,6 +91,20 @@ that evidence. It binds the expected session epoch, worker ID and instance,
 `credential_binding_id`, attestation hash, recognized disposition, and an audited
 operator reference. The authenticated client identity supplies the disposition actor.
 
+Action execution first reserves the permit, action, proposal, and command, rotates the
+automation fence, and moves the session from `active` to the exclusive `paused` state in
+one transaction. That nonterminal reservation prevents navigation, controller release,
+session loss/close, worker cleanup attestation, and credential retirement from
+interleaving. After WEIR reacquires and verifies an immutable pre-observation and
+re-resolves the locator, the dispatch transaction rechecks both proposal and permit
+expiry, the fence, and the exact `worker_id` + `worker_instance_id` that holds the
+credential before committing `web.action.execution.dispatching`. A restart before that
+marker closes the unused reservation as `cancelled` and returns the session to `active`;
+a restart after it records `outcome_unknown`, creates durable operator-cleared
+quarantine, and never replays the effect. The reservation table retains its coarse
+schema-v2 terminal state; the immutable receipt is authoritative for `completed`,
+`failed`, `blocked`, `cancelled`, or `outcome_unknown` API status.
+
 ## Disabled-by-default deployment
 
 There is deliberately no `weir serve` command, generated credential, Windows service,
@@ -96,14 +121,21 @@ terminates the full tree on timeout or parent death, and emits a hash-bound deat
 attestation. The current server has no browser route or production worker configuration,
 so this capability is not deployed implicitly.
 
-## Remaining Batch 2 work
+`BrowserActionDriver` is likewise constructor-injected and absent from the default
+application. The only supplied policy accepts reversible form-state changes against one
+configured synthetic HTTP loopback IP origin, requires `DataClass.PUBLIC`, and keeps
+generic proposal risk at `unknown`. It does not enable click, submit, upload, external
+origins, or any existing Playwright recipe path.
 
-Batch 2 is not complete until WEIR also has:
+## Remaining production work
 
-- disabled effect routes that later accept only Fade's exact permit/proposal binding;
+The source contracts remain disabled until deployment work provides:
+
 - production browser admission that requires the process transport and adds OS memory
   and network-egress limits;
-- deployment lifecycle configuration with externally provisioned credentials.
+- restricted service identities, externally provisioned per-caller credentials, and
+  lifecycle supervision;
+- an independently reviewed production effect adapter and explicit local canary.
 
 Those additions must preserve per-client scope separation. In particular,
 `lugos-mcp` may acquire and read evidence but cannot read command/action authority;
@@ -115,7 +147,7 @@ client's credential.
 Run the focused gate:
 
 ```bash
-python -m pytest -q tests/test_client_service.py tests/test_proposals.py tests/test_process_worker.py
+python -m pytest -q tests/test_client_service.py tests/test_proposals.py tests/test_process_worker.py tests/test_effect_driver.py
 ```
 
 The repository gate remains `python -m pytest -q`. The service tests exercise both

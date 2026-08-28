@@ -7,6 +7,29 @@
 - Scope: unfinished work in WEIR, APU, Dias, `lugos-mcp`, Autowork, Mission
   Control, HUD, and Fade
 
+## Implementation status — 2026-08-28
+
+The approved source-only work is now present for WEIR Batch 2D and Batch 7, APU Batch
+1B, Dias Batch 1C, disabled `lugos-mcp` Batch 3 plumbing, Autowork Batch 4, Mission
+Control's disabled Batch 5 tolerance, HUD's dormant Batch 5 projection, and Fade Batch
+6. Each repository keeps its runtime feature disabled unless the batch explicitly
+describes a source-only synthetic test.
+
+The remaining work requires the named runtime or design decision; source completion is
+not permission to perform it:
+
+- Choose and implement the first trusted `DispatchContext` provider (RF7) before
+  enabling the `lugos-mcp` → Autowork evidence path.
+- Obtain operator approval before replacing or invoking the installed APU watcher,
+  creating or migrating the Dias receipt database, deploying Mission Control and then
+  registering HUD's `weir` projection, or running the Fade/WEIR synthetic action canary.
+- Complete WEIR 7P production admission: process isolation, resource limits, restricted
+  identities, per-caller credential protection, lifecycle supervision, and OS egress
+  policy.
+- Run Batch 9 whole-system synthetic acceptance only after those local rollout gates.
+- Keep Batch 8 remote approval relay outside this verdict until its separate post-canary
+  review.
+
 This packet starts after the contract freeze recorded in
 `docs/sibling-integration-plan.md`. Fable already accepted decisions D1–D12,
 amendments A1–A9, and corrections C1–C6. This review must not reopen those decisions

@@ -273,6 +273,66 @@ class ActionProposalStore:
             session_data_class=session_data_class,
         )
 
+    def verify_observation_evidence(
+        self,
+        observation: Observation,
+        *,
+        proposal: ActionProposal,
+    ) -> DataClass:
+        """Verify a worker-returned observation against retained controller evidence."""
+
+        proposal.validate()
+        observation.validate()
+        try:
+            capture = self.capture_store.load_capture(observation.capture_id)
+            self.capture_store.verify_capture(capture)
+            session = self.session_store.get_session(observation.session_id)
+            session_context = self.session_store.work_context(observation.session_id)
+        except (FileNotFoundError, KeyError, TypeError, ValueError) as exc:
+            raise ContractViolation(
+                "action_observation_not_durable",
+                "action observation is not present in durable WEIR evidence",
+            ) from exc
+        content = capture.content
+        if (
+            capture.capture_id != observation.capture_id
+            or not isinstance(content, dict)
+            or content.get("kind") != "browser_observation"
+            or content.get("observation") != observation.to_dict()
+            or not isinstance(content.get("work_context"), dict)
+        ):
+            raise ContractViolation(
+                "action_observation_mismatch",
+                "action observation does not match its retained capture",
+            )
+        try:
+            captured_context = WorkContext.from_dict(content["work_context"])
+            for artifact_ref in observation.artifact_refs:
+                self.capture_store.load_blob(artifact_ref)
+        except (FileNotFoundError, TypeError, ValueError) as exc:
+            raise ContractViolation(
+                "action_observation_mismatch",
+                "action observation supporting evidence failed verification",
+            ) from exc
+        if (
+            captured_context.to_dict() != session_context.to_dict()
+            or observation.session_id != proposal.session_id
+            or observation.session_epoch != proposal.session_epoch
+            or session.epoch != proposal.session_epoch
+            or session.owner_run_id != proposal.owner_run_id
+            or session_context.context_hash != proposal.work_context_hash
+            or session_context.run_id != proposal.owner_run_id
+            or session_context.correlation_id != proposal.correlation_id
+            or session_context.assignment_id != proposal.assignment_id
+            or capture.screenshot_artifact_ref
+            != (observation.artifact_refs[0] if observation.artifact_refs else None)
+        ):
+            raise ContractViolation(
+                "action_observation_context_mismatch",
+                "action observation does not match the approved session context",
+            )
+        return session.data_class
+
     def _verify_observation_binding(
         self, proposal: ActionProposal, *, require_current: bool
     ) -> tuple[Observation, DataClass]:

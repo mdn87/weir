@@ -18,7 +18,7 @@ from weir.actions import (
 from weir.browser.models import BrowserSession, ControllerKind, SessionState
 from weir.browser.store import SQLiteSessionStore
 from weir.contract import canonical_digest
-from weir.engines.base import FailureClass, IdempotencyConflict
+from weir.engines.base import ControllerConflict, FailureClass, IdempotencyConflict
 from weir.models import DataClass
 from weir.work_context import WorkContext
 
@@ -94,6 +94,8 @@ class ActionStoreTests(unittest.TestCase):
             self.proposal,
             request_digest=request_digest or canonical_digest({"effect": "fixture"}),
             command_id="command-action-1",
+            worker_id="worker-action-1",
+            worker_instance_id="worker-instance-action-1",
             required_lease=self.lease,
         )
 
@@ -105,6 +107,7 @@ class ActionStoreTests(unittest.TestCase):
         quarantine_ref: str | None = None,
     ) -> ExecutionReceipt:
         unknown = result is ReceiptResult.OUTCOME_UNKNOWN
+        reservation = self.store.action_reservation(self.permit.permit_id)
         return ExecutionReceipt.create(
             receipt_id="receipt-action-1",
             action_id=self.proposal.action_id,
@@ -115,7 +118,11 @@ class ActionStoreTests(unittest.TestCase):
             reservation_ref=reservation_ref,
             session_id=self.proposal.session_id,
             session_epoch=self.proposal.session_epoch,
-            lease_generation=self.lease.generation,
+            lease_generation=(
+                self.lease.generation
+                if reservation is None
+                else reservation.controller_generation
+            ),
             executed_by="weir-worker-action-1",
             executed_at=self.now.isoformat(),
             result=result,
@@ -149,6 +156,44 @@ class ActionStoreTests(unittest.TestCase):
         )
         with self.assertRaisesRegex(IdempotencyConflict, "different action request"):
             self._reserve(request_digest="sha256:" + "f" * 64)
+
+    def test_open_action_holds_exclusive_session_and_blocks_release_paths(self):
+        start = self._reserve()
+        session = self.store.get_session(self.proposal.session_id)
+        self.assertEqual(session.state, SessionState.PAUSED)
+        self.assertIsNotNone(start.lease)
+        self.assertEqual(
+            start.lease.generation,
+            start.reservation.controller_generation,
+        )
+        self.assertGreater(start.lease.generation, self.lease.generation)
+
+        with self.assertRaisesRegex(ControllerConflict, "nonterminal"):
+            self.store.release_lease(start.lease)
+        with self.assertRaisesRegex(ControllerConflict, "nonterminal"):
+            self.store.mark_lost(
+                session.session_id,
+                session.revision,
+            )
+        close = self.store.begin_command(
+            "command-close-during-action",
+            "close",
+            canonical_digest({"close": session.session_id}),
+        )
+        with self.assertRaisesRegex(ControllerConflict, "nonterminal"):
+            self.store.begin_close(
+                session.session_id,
+                session.owner_run_id,
+                expected_revision=session.revision,
+                expected_epoch=session.epoch,
+                command_id="command-close-during-action",
+                command_attempt_token=close.attempt_token,
+                ttl=timedelta(seconds=30),
+            )
+        self.assertEqual(
+            self.store.profile_reservation(session.session_id).state,
+            "active",
+        )
 
     def test_reservation_insert_failure_rolls_back_event_and_authority(self):
         self.store.database.execute(
@@ -187,6 +232,8 @@ class ActionStoreTests(unittest.TestCase):
                 self.proposal,
                 request_digest=canonical_digest({"effect": "fixture-alternate"}),
                 command_id="command-action-alternate",
+                worker_id="worker-action-1",
+                worker_instance_id="worker-instance-action-1",
                 required_lease=self.lease,
             )
         self.assertEqual(
@@ -313,7 +360,7 @@ class ActionStoreTests(unittest.TestCase):
         )
         self.assertEqual(
             self.store.get_session(self.proposal.session_id).state,
-            SessionState.ACTIVE,
+            SessionState.PAUSED,
         )
         self.assertEqual(
             self.store.profile_reservation(self.proposal.session_id).state,

@@ -14,10 +14,17 @@ from threading import Thread
 from typing import Any, Callable, Mapping
 from urllib.parse import unquote, urlsplit
 
-from weir.actions import ActionProposal
+from weir.actions import ActionProposal, ExecutionPermit
 from weir.broker import AcquisitionFailed
+from weir.browser.effect_driver import (
+    FADE_AUTHORITY_ID,
+    ActionExecutionStatus,
+    BrowserActionDriver,
+)
 from weir.browser.store import (
     DEAD_WORKER_RETIREMENT_DISPOSITION,
+    SessionNotFound,
+    SessionRevisionConflict,
     SQLiteSessionStore,
 )
 from weir.client import (
@@ -35,7 +42,12 @@ from weir.contract import (
     is_sha256,
     parse_timestamp,
 )
-from weir.engines.base import ControllerConflict, EnginePolicyBlocked, WeirEngineError
+from weir.engines.base import (
+    ControllerConflict,
+    EnginePolicyBlocked,
+    IdempotencyConflict,
+    WeirEngineError,
+)
 from weir.evidence import AcquisitionEnvelope
 from weir.models import DataClass
 from weir.persistence import CacheIntegrityError
@@ -48,6 +60,8 @@ PROPOSAL_WRITE_SCOPE = "proposal:write"
 PROPOSAL_READ_FULL_SCOPE = "proposal:read:full"
 PROPOSAL_READ_REDACTED_SCOPE = "proposal:read:redacted"
 PROFILE_RETIRE_SCOPE = "profile:retire"
+ACTION_EXECUTE_SCOPE = "action:execute"
+ACTION_STATUS_SCOPE = "action:status"
 SERVICE_SCOPES = frozenset(
     {
         ACQUISITION_READ_SCOPE,
@@ -57,6 +71,8 @@ SERVICE_SCOPES = frozenset(
         PROPOSAL_READ_FULL_SCOPE,
         PROPOSAL_READ_REDACTED_SCOPE,
         PROFILE_RETIRE_SCOPE,
+        ACTION_EXECUTE_SCOPE,
+        ACTION_STATUS_SCOPE,
     }
 )
 MAX_SERVICE_DEADLINE = timedelta(seconds=30)
@@ -196,6 +212,7 @@ class WeirServiceApplication:
         *,
         proposal_store: ActionProposalStore | None = None,
         session_store: SQLiteSessionStore | None = None,
+        action_driver: BrowserActionDriver | None = None,
         clock: Callable[[], datetime] | None = None,
         max_response_bytes: int = MAX_SERVICE_RESPONSE_BYTES,
     ) -> None:
@@ -205,6 +222,7 @@ class WeirServiceApplication:
         self.clients = clients
         self.proposal_store = proposal_store
         self.session_store = session_store
+        self.action_driver = action_driver
         self.clock = clock or (lambda: datetime.now(timezone.utc))
         self.max_response_bytes = max_response_bytes
 
@@ -338,6 +356,49 @@ class WeirServiceApplication:
                     "reservation_state": reservation.state,
                 }
             )
+        elif route == "action_execute":
+            self._require_fade_action_principal(principal, ACTION_EXECUTE_SCOPE)
+            request = self._parse_action_execution(body)
+            for data_class in self._backend_call(
+                self._proposals().required_data_classes,
+                request["proposal"].proposal_hash,
+            ):
+                principal.require_data_class(data_class)
+            status = self._backend_call(
+                self._actions().execute,
+                command_id=request["command_id"],
+                request_digest=request["request_digest"],
+                submitted_proposal=request["proposal"],
+                permit=request["permit"],
+            )
+            if not isinstance(status, ActionExecutionStatus):
+                raise ServiceRequestError(
+                    HTTPStatus.INTERNAL_SERVER_ERROR,
+                    "invalid_action_status",
+                    "WEIR action driver returned an invalid status",
+                )
+            result = self._json(status.to_dict())
+        elif route == "action_status":
+            self._require_fade_action_principal(principal, ACTION_STATUS_SCOPE)
+            action_driver = self._actions()
+            try:
+                data_classes = action_driver.required_data_classes(identifier)
+            except KeyError as exc:
+                raise ServiceRequestError(
+                    HTTPStatus.NOT_FOUND,
+                    "action_command_not_found",
+                    "WEIR action command was not found",
+                ) from exc
+            for data_class in data_classes:
+                principal.require_data_class(data_class)
+            status = self._backend_call(action_driver.status, identifier)
+            if status is None:
+                raise ServiceRequestError(
+                    HTTPStatus.NOT_FOUND,
+                    "action_command_not_found",
+                    "WEIR action command was not found",
+                )
+            result = self._json(status.to_dict())
         else:  # pragma: no cover - _route is exhaustive
             raise AssertionError(route)
 
@@ -376,6 +437,8 @@ class WeirServiceApplication:
             return "proposal_register", ""
         if method == "POST" and path == "/v1/browser/profile-retirements":
             return "profile_retirement", ""
+        if method == "POST" and path == "/v1/actions/execute":
+            return "action_execute", ""
         segments = path.strip("/").split("/")
         if method == "GET" and len(segments) in {3, 4} and segments[:2] == [
             "v1",
@@ -408,6 +471,14 @@ class WeirServiceApplication:
                 return "proposal", identifier
             if segments[3] == "projection":
                 return "proposal_projection", identifier
+        if method == "GET" and len(segments) == 4 and segments[:3] == [
+            "v1",
+            "actions",
+            "commands",
+        ]:
+            return "action_status", self._identifier(
+                segments[3], "action command", max_length=128
+            )
         raise ServiceRequestError(
             HTTPStatus.NOT_FOUND, "route_not_found", "WEIR route was not found"
         )
@@ -546,6 +617,48 @@ class WeirServiceApplication:
                 "WEIR profile retirement was rejected",
             ) from exc
 
+    @staticmethod
+    def _parse_action_execution(body: bytes | None) -> dict[str, Any]:
+        if body is None:
+            raise ServiceRequestError(
+                HTTPStatus.BAD_REQUEST,
+                "request_body_required",
+                "action execution body is required",
+            )
+        try:
+            value = json.loads(body)
+            if not isinstance(value, dict) or set(value) != {
+                "schema_version",
+                "command_id",
+                "request_digest",
+                "proposal",
+                "permit",
+            }:
+                raise ValueError("action execution has missing or unknown fields")
+            if type(value["schema_version"]) is not int or value["schema_version"] != 1:
+                raise ValueError("action execution schema_version must be 1")
+            command_id = value["command_id"]
+            if (
+                not isinstance(command_id, str)
+                or len(command_id) > 128
+                or _ROUTE_IDENTIFIER.fullmatch(command_id) is None
+            ):
+                raise ValueError("action command_id is invalid")
+            if not is_sha256(value["request_digest"]):
+                raise ValueError("action request_digest is invalid")
+            return {
+                "command_id": command_id,
+                "request_digest": value["request_digest"],
+                "proposal": ActionProposal.from_dict(value["proposal"]),
+                "permit": ExecutionPermit.from_dict(value["permit"]),
+            }
+        except (TypeError, ValueError, json.JSONDecodeError) as exc:
+            raise ServiceRequestError(
+                HTTPStatus.BAD_REQUEST,
+                getattr(exc, "reason_code", "invalid_action_execution"),
+                "WEIR action execution request was rejected",
+            ) from exc
+
     def _proposals(self) -> ActionProposalStore:
         if self.proposal_store is None:
             raise ServiceRequestError(
@@ -563,6 +676,28 @@ class WeirServiceApplication:
                 "WEIR browser-session storage is not configured",
             )
         return self.session_store
+
+    def _actions(self) -> BrowserActionDriver:
+        if self.action_driver is None:
+            raise ServiceRequestError(
+                HTTPStatus.NOT_IMPLEMENTED,
+                "action_driver_unavailable",
+                "WEIR action execution is disabled",
+            )
+        return self.action_driver
+
+    @staticmethod
+    def _require_fade_action_principal(
+        principal: ClientPrincipal,
+        scope: str,
+    ) -> None:
+        if principal.client_id != FADE_AUTHORITY_ID:
+            raise ServiceRequestError(
+                HTTPStatus.FORBIDDEN,
+                "action_identity_denied",
+                "only Fade's authority identity may use WEIR action routes",
+            )
+        principal.require_scope(scope)
 
     def _backend_call(
         self, operation: Callable[..., Any], *args: Any, **kwargs: Any
@@ -596,6 +731,24 @@ class WeirServiceApplication:
                 HTTPStatus.CONFLICT,
                 "reservation_conflict",
                 "WEIR credential reservation rejected the request",
+            ) from exc
+        except IdempotencyConflict as exc:
+            raise ServiceRequestError(
+                HTTPStatus.CONFLICT,
+                exc.failure_class.value,
+                "WEIR action idempotency binding rejected the request",
+            ) from exc
+        except SessionRevisionConflict as exc:
+            raise ServiceRequestError(
+                HTTPStatus.CONFLICT,
+                "stale_reference",
+                "WEIR action proposal is stale",
+            ) from exc
+        except SessionNotFound as exc:
+            raise ServiceRequestError(
+                HTTPStatus.NOT_FOUND,
+                "browser_session_not_found",
+                "WEIR browser session was not found",
             ) from exc
         except AcquisitionFailed as exc:
             raise ServiceRequestError(
@@ -831,6 +984,8 @@ class WeirService(AbstractContextManager["WeirService"]):
 
 __all__ = [
     "ACQUISITION_READ_SCOPE",
+    "ACTION_EXECUTE_SCOPE",
+    "ACTION_STATUS_SCOPE",
     "COMMAND_READ_SCOPE",
     "EVIDENCE_READ_SCOPE",
     "MAX_SERVICE_DEADLINE",

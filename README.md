@@ -186,11 +186,19 @@ exact live reservation holder or an authenticated, exact operator retirement can
 release a quarantined credential. Existing schema-v1 stores require the separately
 approved offline procedure in `docs/browser-store-v2.md`; no migration runs at startup.
 
-The executable surface still has no DOM action method. WEIR can compile a fresh
-observation into a risk-classified, hash-bound `ActionProposal`, but the built-in
-approval authority denies it and no executor is exposed. Fade/Operator approval,
-pre-execution reacquisition, and real post-action receipts remain P3 work. See
-`docs/focus-and-interaction.md` for the cross-system identity and controller model.
+WEIR now has a disabled-by-default Batch 7 action boundary for Fade-issued permits.
+The source implementation verifies the immutable proposal and exact request digest,
+atomically pauses the session under a rotated controller fence, reacquires durable
+pre-state, re-resolves the semantic target, and rechecks proposal/permit expiry plus the
+exact credential-holding worker instance at the durable dispatch marker. It then sends
+one bounded private effect command and verifies durable post-state before publishing a
+receipt. A dispatch with no terminal receipt becomes
+`outcome_unknown` and quarantines the session; it is never replayed automatically.
+Only an explicitly injected synthetic-fixture worker can use this path, and its policy
+allows public `fill`, `select`, `check`, and `uncheck` effects on one HTTP loopback IP
+origin. No production effect adapter, service deployment, credential provisioning, or
+live canary is included. See `docs/focus-and-interaction.md` for the cross-system
+identity and controller model.
 The implementation-ready cross-repository sequence and Fable review decisions are in
 `docs/sibling-integration-plan.md`; the focused post-freeze delivery plan for the
 remaining sibling work is in `docs/remaining-integration-plan.md`. The accepted Batch
