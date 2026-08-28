@@ -10,7 +10,7 @@ from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from datetime import datetime
 from importlib.metadata import PackageNotFoundError, version
-from typing import Any, Protocol
+from typing import Any
 from urllib.parse import urlsplit
 
 from weir.browser.models import ObservedElement
@@ -18,6 +18,13 @@ from weir.browser.policy import (
     check_browser_resource_policy,
     check_browser_target_policy,
     resolve_browser_host,
+)
+from weir.browser.profile_registry import (
+    EmptyProfileStateProvider,
+    ProfileStateProvider,
+    StaticProfileStateRegistry,
+    VerifiedProfileBinding,
+    VerifiedProfileState,
 )
 from weir.browser.protocol import (
     BrowserWorker,
@@ -36,42 +43,6 @@ from weir.engines.base import (
     EngineProbe,
     EngineUnavailable,
 )
-
-
-class ProfileStateProvider(Protocol):
-    """Resolve opaque profile IDs inside the worker's private trust boundary."""
-
-    def state_for(self, profile_id: str) -> VerifiedProfileState | None: ...
-
-
-@dataclass(frozen=True, slots=True)
-class VerifiedProfileState:
-    """Worker-private credential state with registry-attested policy metadata."""
-
-    profile_id: str
-    site_profile_id: str
-    credential_scope: str
-    storage_state: dict[str, Any]
-
-    def validate_for(self, spec: SessionSpec) -> dict[str, Any]:
-        if self.profile_id != spec.profile_id:
-            raise EnginePolicyBlocked("profile provider returned a different profile ID")
-        if self.site_profile_id != spec.site_profile_id:
-            raise EnginePolicyBlocked(
-                "browser credential is not registered for the selected site profile"
-            )
-        if self.credential_scope != spec.credential_scope or (
-            self.credential_scope != "read_only"
-        ):
-            raise EnginePolicyBlocked(
-                "browser credential registry does not attest read-only scope"
-            )
-        return _copy_storage_state(self.storage_state)
-
-
-class EmptyProfileStateProvider:
-    def state_for(self, profile_id: str) -> VerifiedProfileState | None:
-        return None
 
 
 @dataclass(slots=True)
@@ -793,16 +764,6 @@ def _close_browser_context(context: Any, browser: Any) -> None:
         raise EngineFailure("Playwright browser cleanup could not be confirmed") from exc
 
 
-def _copy_storage_state(value: dict[str, Any]) -> dict[str, Any]:
-    try:
-        copied = json.loads(json.dumps(value, allow_nan=False))
-    except (TypeError, ValueError) as exc:
-        raise ValueError("profile state must be a JSON-compatible object") from exc
-    if not isinstance(copied, dict):
-        raise ValueError("profile state must be an object")
-    return copied
-
-
 def _parse_snapshot_line(line: str, fallback_role: str) -> tuple[str, str | None, str | None]:
     match = _SNAPSHOT_LINE.match(line)
     if not match:
@@ -837,5 +798,7 @@ __all__ = [
     "EmptyProfileStateProvider",
     "PlaywrightObserverWorker",
     "ProfileStateProvider",
+    "StaticProfileStateRegistry",
+    "VerifiedProfileBinding",
     "VerifiedProfileState",
 ]

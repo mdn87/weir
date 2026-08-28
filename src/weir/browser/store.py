@@ -11,7 +11,13 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, Callable
 
 if TYPE_CHECKING:
-    from weir.actions import ExecutionReceipt
+    from weir.actions import (
+        ActionProposal,
+        ExecutionPermit,
+        ExecutionReceipt,
+        QuarantineRecord,
+    )
+    from weir.browser.process_worker import WorkerDeathAttestation
 
 from weir.browser.models import (
     BrowserSession,
@@ -20,11 +26,13 @@ from weir.browser.models import (
     SessionState,
 )
 from weir.browser.state import require_transition
+from weir.contract import is_sha256, validate_identifier
 from weir.engines.base import ControllerConflict, IdempotencyConflict, ProfileInUse
 from weir.models import DataClass
 from weir.work_context import WorkContext
 
-STORE_SCHEMA_VERSION = 1
+STORE_SCHEMA_VERSION = 2
+DEAD_WORKER_RETIREMENT_DISPOSITION = "release_after_confirmed_worker_death"
 ACTIVE_STATES = (
     SessionState.OPENING.value,
     SessionState.ACTIVE.value,
@@ -138,6 +146,47 @@ class SessionProfileBinding:
     site_profile_id: str
     credential_scope: str
     policy_digest: str
+    credential_binding_id: str
+
+
+@dataclass(frozen=True, slots=True)
+class ProfileReservation:
+    reservation_id: str
+    credential_binding_id: str
+    session_id: str
+    worker_id: str
+    worker_instance_id: str
+    state: str
+    created_at: str
+    updated_at: str
+    release_kind: str | None
+    release_actor_id: str | None
+    release_ref: str | None
+
+
+@dataclass(frozen=True, slots=True)
+class ActionExecutionReservation:
+    reservation_ref: str
+    permit_id: str
+    permit_hash: str
+    action_id: str
+    request_digest: str
+    proposal_hash: str
+    work_context_hash: str
+    command_id: str
+    session_id: str
+    session_epoch: int
+    controller_generation: int
+    status: str
+    receipt_id: str | None
+    created_at: str
+    updated_at: str
+
+
+@dataclass(frozen=True, slots=True)
+class ActionReservationStart:
+    reservation: ActionExecutionReservation
+    replay: bool
 
 
 class SQLiteSessionStore:
@@ -155,7 +204,11 @@ class SQLiteSessionStore:
         self._lock = threading.RLock()
         self.database.execute("PRAGMA foreign_keys = ON")
         self.database.execute("PRAGMA busy_timeout = 5000")
-        self._initialize()
+        try:
+            self._initialize()
+        except Exception:
+            self.database.close()
+            raise
 
     def close(self) -> None:
         self.database.close()
@@ -168,6 +221,10 @@ class SQLiteSessionStore:
 
     def _initialize(self) -> None:
         version = int(self.database.execute("PRAGMA user_version").fetchone()[0])
+        if version == 1:
+            raise RuntimeError(
+                "WEIR browser-store schema 1 requires the offline v1-to-v2 migration"
+            )
         if version not in {0, STORE_SCHEMA_VERSION}:
             raise RuntimeError(
                 f"unsupported WEIR browser-store schema {version}; expected {STORE_SCHEMA_VERSION}"
@@ -197,6 +254,47 @@ class SQLiteSessionStore:
                 CREATE UNIQUE INDEX one_live_browser_profile
                     ON browser_sessions(worker_id, profile_id)
                     WHERE state != 'closed';
+
+                CREATE TABLE browser_profile_reservations (
+                    reservation_id TEXT PRIMARY KEY,
+                    credential_binding_id TEXT NOT NULL,
+                    session_id TEXT NOT NULL UNIQUE REFERENCES browser_sessions(session_id),
+                    worker_id TEXT NOT NULL,
+                    worker_instance_id TEXT NOT NULL,
+                    state TEXT NOT NULL CHECK(state IN ('active', 'quarantined', 'released')),
+                    created_at TEXT NOT NULL,
+                    updated_at TEXT NOT NULL,
+                    release_kind TEXT,
+                    release_actor_id TEXT,
+                    release_ref TEXT
+                );
+                CREATE UNIQUE INDEX one_reserved_credential_binding
+                    ON browser_profile_reservations(credential_binding_id)
+                    WHERE state IN ('active', 'quarantined');
+
+                CREATE TABLE browser_worker_death_attestations (
+                    attestation_hash TEXT PRIMARY KEY,
+                    worker_id TEXT NOT NULL,
+                    worker_instance_id TEXT NOT NULL,
+                    observed_at TEXT NOT NULL,
+                    attestation_json TEXT NOT NULL,
+                    recorded_at TEXT NOT NULL
+                );
+
+                CREATE TABLE browser_profile_retirements (
+                    retirement_id TEXT PRIMARY KEY,
+                    session_id TEXT NOT NULL REFERENCES browser_sessions(session_id),
+                    session_epoch INTEGER NOT NULL,
+                    credential_binding_id TEXT NOT NULL,
+                    worker_id TEXT NOT NULL,
+                    worker_instance_id TEXT NOT NULL,
+                    attestation_hash TEXT NOT NULL REFERENCES
+                        browser_worker_death_attestations(attestation_hash),
+                    disposition TEXT NOT NULL,
+                    disposition_actor_id TEXT NOT NULL,
+                    disposition_ref TEXT NOT NULL,
+                    recorded_at TEXT NOT NULL
+                );
 
                 CREATE TABLE controller_leases (
                     session_id TEXT PRIMARY KEY REFERENCES browser_sessions(session_id),
@@ -243,6 +341,41 @@ class SQLiteSessionStore:
                     receipt_json TEXT NOT NULL,
                     created_at TEXT NOT NULL
                 );
+
+                CREATE TABLE action_execution_reservations (
+                    reservation_ref TEXT PRIMARY KEY,
+                    permit_id TEXT NOT NULL UNIQUE,
+                    permit_hash TEXT NOT NULL,
+                    action_id TEXT NOT NULL UNIQUE,
+                    request_digest TEXT NOT NULL,
+                    proposal_hash TEXT NOT NULL UNIQUE,
+                    work_context_hash TEXT NOT NULL,
+                    command_id TEXT NOT NULL UNIQUE,
+                    session_id TEXT NOT NULL REFERENCES browser_sessions(session_id),
+                    session_epoch INTEGER NOT NULL,
+                    controller_generation INTEGER NOT NULL,
+                    status TEXT NOT NULL CHECK(
+                        status IN ('reserved', 'completed', 'outcome_unknown')
+                    ),
+                    receipt_id TEXT,
+                    created_at TEXT NOT NULL,
+                    updated_at TEXT NOT NULL
+                );
+
+                CREATE TABLE action_quarantine_records (
+                    record_hash TEXT PRIMARY KEY,
+                    quarantine_id TEXT NOT NULL,
+                    state TEXT NOT NULL CHECK(state IN ('active', 'cleared')),
+                    supersedes_hash TEXT,
+                    record_json TEXT NOT NULL,
+                    recorded_at TEXT NOT NULL
+                );
+                CREATE UNIQUE INDEX one_active_action_quarantine
+                    ON action_quarantine_records(quarantine_id)
+                    WHERE state = 'active';
+                CREATE UNIQUE INDEX one_action_quarantine_successor
+                    ON action_quarantine_records(supersedes_hash)
+                    WHERE supersedes_hash IS NOT NULL;
                 """
             )
             self.database.execute(f"PRAGMA user_version = {STORE_SCHEMA_VERSION}")
@@ -255,6 +388,8 @@ class SQLiteSessionStore:
         site_profile_id: str | None = None,
         credential_scope: str | None = None,
         profile_policy_digest: str | None = None,
+        credential_binding_id: str | None = None,
+        worker_instance_id: str | None = None,
         opening_operation_id: str | None = None,
     ) -> BrowserSession:
         session.validate()
@@ -262,11 +397,15 @@ class SQLiteSessionStore:
             site_profile_id,
             credential_scope,
             profile_policy_digest,
+            credential_binding_id,
+            worker_instance_id,
         )
-        if any(value is not None for value in binding_values) and not all(
-            isinstance(value, str) and value for value in binding_values
-        ):
-            raise ValueError("session profile binding must be complete and non-empty")
+        if not all(isinstance(value, str) and value for value in binding_values):
+            raise ValueError(
+                "session profile and credential binding must be complete and non-empty"
+            )
+        validate_identifier(credential_binding_id, "credential_binding_id")
+        validate_identifier(worker_instance_id, "worker_instance_id")
         if opening_operation_id is not None and not opening_operation_id:
             raise ValueError("opening_operation_id cannot be empty")
         if work_context is not None:
@@ -307,6 +446,33 @@ class SQLiteSessionStore:
                     raise ProfileInUse(
                         f"profile {session.profile_id!r} already has a live session on "
                         f"worker {session.worker_id!r}"
+                    ) from exc
+                raise
+            try:
+                now = _utc(self.clock())
+                self.database.execute(
+                    """INSERT INTO browser_profile_reservations
+                       (reservation_id, credential_binding_id, session_id, worker_id,
+                        worker_instance_id, state, created_at, updated_at,
+                        release_kind, release_actor_id, release_ref)
+                       VALUES (?, ?, ?, ?, ?, 'active', ?, ?, NULL, NULL, NULL)""",
+                    (
+                        f"profile-reservation-{uuid.uuid4().hex}",
+                        credential_binding_id,
+                        session.session_id,
+                        session.worker_id,
+                        worker_instance_id,
+                        now,
+                        now,
+                    ),
+                )
+            except sqlite3.IntegrityError as exc:
+                if (
+                    "browser_profile_reservations.credential_binding_id" in str(exc)
+                    or "one_reserved_credential_binding" in str(exc)
+                ):
+                    raise ProfileInUse(
+                        "credential binding already has an active or quarantined session"
                     ) from exc
                 raise
             if work_context is not None:
@@ -364,9 +530,13 @@ class SQLiteSessionStore:
 
         with self._lock:
             row = self.database.execute(
-                """SELECT attributes_json FROM browser_events
-                   WHERE session_id = ? AND event_type = 'web.browser.session.created'
-                   ORDER BY sequence LIMIT 1""",
+                """SELECT e.attributes_json, r.credential_binding_id
+                   FROM browser_events AS e
+                   JOIN browser_profile_reservations AS r
+                     ON r.session_id = e.session_id
+                   WHERE e.session_id = ?
+                     AND e.event_type = 'web.browser.session.created'
+                   ORDER BY e.sequence LIMIT 1""",
                 (session_id,),
             ).fetchone()
         if row is None:
@@ -376,12 +546,56 @@ class SQLiteSessionStore:
             attributes.get("site_profile_id"),
             attributes.get("credential_scope"),
             attributes.get("profile_policy_digest"),
+            row["credential_binding_id"],
         )
         if not all(isinstance(value, str) and value for value in values):
             raise ControllerConflict(
                 f"session {session_id!r} has no durable site-profile policy binding"
             )
         return SessionProfileBinding(*values)
+
+    def profile_reservation(self, session_id: str) -> ProfileReservation:
+        with self._lock:
+            row = self.database.execute(
+                "SELECT * FROM browser_profile_reservations WHERE session_id = ?",
+                (session_id,),
+            ).fetchone()
+        if row is None:
+            raise SessionNotFound(
+                f"session {session_id!r} has no credential reservation"
+            )
+        return _profile_reservation_from_row(row)
+
+    def assert_live_profile_reservation_holder(
+        self,
+        session_id: str,
+        *,
+        worker_id: str,
+        worker_instance_id: str,
+    ) -> None:
+        """Require the exact live worker that owns a credential reservation."""
+
+        validate_identifier(worker_id, "worker_id")
+        validate_identifier(worker_instance_id, "worker_instance_id")
+        with self._lock:
+            reservation = self._required_profile_reservation_row(session_id)
+            if (
+                reservation["worker_id"] != worker_id
+                or reservation["worker_instance_id"] != worker_instance_id
+                or reservation["state"] not in {"active", "quarantined"}
+            ):
+                raise ControllerConflict(
+                    "browser worker does not hold the credential reservation"
+                )
+            death = self.database.execute(
+                """SELECT 1 FROM browser_worker_death_attestations
+                   WHERE worker_id = ? AND worker_instance_id = ? LIMIT 1""",
+                (worker_id, worker_instance_id),
+            ).fetchone()
+            if death is not None:
+                raise ControllerConflict(
+                    "a dead worker instance cannot reuse its credential reservation"
+                )
 
     def work_context(self, session_id: str) -> WorkContext:
         with self._lock:
@@ -502,6 +716,8 @@ class SQLiteSessionStore:
         *,
         worker_instance_id: str,
         worker_session_id: str,
+        worker_id: str,
+        credential_binding_id: str,
         command_id: str,
     ) -> None:
         """Record an exact close and retire this worker's unacknowledged opens.
@@ -512,12 +728,39 @@ class SQLiteSessionStore:
         dispatches no longer retain authority.
         """
 
-        if not worker_instance_id or not worker_session_id or not command_id:
+        if not all(
+            (
+                worker_id,
+                worker_instance_id,
+                worker_session_id,
+                credential_binding_id,
+                command_id,
+            )
+        ):
             raise ValueError("worker cleanup attestation fields cannot be empty")
         with self._lock:
             self.database.execute("BEGIN IMMEDIATE")
             try:
                 session = self._required_session_row(session_id)
+                reservation = self._required_profile_reservation_row(session_id)
+                if (
+                    reservation["worker_id"] != worker_id
+                    or reservation["worker_instance_id"] != worker_instance_id
+                    or reservation["credential_binding_id"] != credential_binding_id
+                    or reservation["state"] not in {"active", "quarantined"}
+                ):
+                    raise ControllerConflict(
+                        "worker cleanup does not match the held credential reservation"
+                    )
+                death = self.database.execute(
+                    """SELECT 1 FROM browser_worker_death_attestations
+                       WHERE worker_id = ? AND worker_instance_id = ? LIMIT 1""",
+                    (worker_id, worker_instance_id),
+                ).fetchone()
+                if death is not None:
+                    raise ControllerConflict(
+                        "a dead worker instance cannot attest live cleanup"
+                    )
                 identity = (worker_instance_id, worker_session_id)
                 open_contexts = self._open_worker_contexts(session_id)
                 closed_contexts = self._closed_worker_contexts(session_id)
@@ -558,6 +801,17 @@ class SQLiteSessionStore:
                             "close_command_id": command_id,
                         },
                     )
+                self._insert_event(
+                    "web.browser.worker.cleanup.attested",
+                    session_id,
+                    session["owner_run_id"],
+                    {
+                        "worker_id": worker_id,
+                        "worker_instance_id": worker_instance_id,
+                        "worker_session_id": worker_session_id,
+                        "command_id": command_id,
+                    },
+                )
                 self.database.commit()
             except Exception:
                 self.database.rollback()
@@ -579,6 +833,220 @@ class SQLiteSessionStore:
                 or self._unresolved_worker_open_reservations(session_id)
             )
 
+    def record_worker_death_attestation(
+        self, attestation: WorkerDeathAttestation
+    ) -> None:
+        """Persist process-tree death evidence without releasing any reservation."""
+
+        from weir.browser.process_worker import WorkerDeathAttestation
+
+        if not isinstance(attestation, WorkerDeathAttestation):
+            raise TypeError("attestation must be a WorkerDeathAttestation")
+        attestation.validate()
+        serialized = _json(attestation.to_dict())
+        with self._lock, self.database:
+            existing = self.database.execute(
+                """SELECT attestation_json FROM browser_worker_death_attestations
+                   WHERE attestation_hash = ?""",
+                (attestation.attestation_hash,),
+            ).fetchone()
+            if existing is not None:
+                if existing["attestation_json"] != serialized:
+                    raise IdempotencyConflict(
+                        "worker death attestation hash has different content"
+                    )
+                return
+            self.database.execute(
+                """INSERT INTO browser_worker_death_attestations
+                   (attestation_hash, worker_id, worker_instance_id, observed_at,
+                    attestation_json, recorded_at)
+                   VALUES (?, ?, ?, ?, ?, ?)""",
+                (
+                    attestation.attestation_hash,
+                    attestation.worker_id,
+                    attestation.worker_instance_id,
+                    attestation.observed_at,
+                    serialized,
+                    _utc(self.clock()),
+                ),
+            )
+
+    def retire_dead_worker_reservation(
+        self,
+        session_id: str,
+        *,
+        retirement_id: str,
+        expected_session_epoch: int,
+        expected_worker_id: str,
+        expected_worker_instance_id: str,
+        expected_credential_binding_id: str,
+        attestation_hash: str,
+        disposition: str,
+        disposition_actor_id: str,
+        disposition_ref: str,
+    ) -> BrowserSession:
+        """Close one lost session after an authenticated operator disposition.
+
+        Authentication belongs to the service boundary. This transaction rechecks the
+        exact reservation and independently persisted process-tree death evidence.
+        """
+
+        for name, value in (
+            ("retirement_id", retirement_id),
+            ("expected_worker_id", expected_worker_id),
+            ("expected_worker_instance_id", expected_worker_instance_id),
+            (
+                "expected_credential_binding_id",
+                expected_credential_binding_id,
+            ),
+            ("attestation_hash", attestation_hash),
+            ("disposition_actor_id", disposition_actor_id),
+            ("disposition_ref", disposition_ref),
+        ):
+            validate_identifier(value, name)
+        if type(expected_session_epoch) is not int or expected_session_epoch < 1:
+            raise ValueError("expected_session_epoch must be a positive integer")
+        if not is_sha256(attestation_hash):
+            raise ValueError("attestation_hash must be a sha256 digest")
+        if disposition != DEAD_WORKER_RETIREMENT_DISPOSITION:
+            raise ValueError("dead-worker retirement disposition is not recognized")
+        with self._lock:
+            self.database.execute("BEGIN IMMEDIATE")
+            try:
+                session = self._required_session_row(session_id)
+                reservation = self._required_profile_reservation_row(session_id)
+                existing = self.database.execute(
+                    """SELECT session_id, session_epoch, credential_binding_id,
+                              worker_id, worker_instance_id, attestation_hash,
+                              disposition, disposition_actor_id, disposition_ref
+                       FROM browser_profile_retirements WHERE retirement_id = ?""",
+                    (retirement_id,),
+                ).fetchone()
+                if existing is not None:
+                    expected = (
+                        session_id,
+                        expected_session_epoch,
+                        expected_credential_binding_id,
+                        expected_worker_id,
+                        expected_worker_instance_id,
+                        attestation_hash,
+                        disposition,
+                        disposition_actor_id,
+                        disposition_ref,
+                    )
+                    if tuple(existing) != expected:
+                        raise IdempotencyConflict(
+                            "retirement ID is bound to a different disposition"
+                        )
+                    self.database.commit()
+                    return self.get_session(session_id)
+                if int(session["epoch"]) != expected_session_epoch:
+                    raise ControllerConflict(
+                        "operator retirement belongs to a stale browser-session epoch"
+                    )
+                if (
+                    reservation["worker_id"] != expected_worker_id
+                    or reservation["worker_instance_id"]
+                    != expected_worker_instance_id
+                    or reservation["credential_binding_id"]
+                    != expected_credential_binding_id
+                ):
+                    raise ControllerConflict(
+                        "operator retirement does not match the held credential reservation"
+                    )
+                if SessionState(session["state"]) is not SessionState.LOST:
+                    raise ControllerConflict(
+                        "operator retirement requires a lost browser session"
+                    )
+                if reservation["state"] != "quarantined":
+                    raise ControllerConflict(
+                        "operator retirement requires a quarantined credential reservation"
+                    )
+                death = self.database.execute(
+                    """SELECT * FROM browser_worker_death_attestations
+                       WHERE attestation_hash = ?""",
+                    (attestation_hash,),
+                ).fetchone()
+                if death is None:
+                    raise ControllerConflict(
+                        "operator retirement requires persisted worker-death evidence"
+                    )
+                attestation_value = json.loads(death["attestation_json"])
+                if (
+                    death["worker_id"] != reservation["worker_id"]
+                    or death["worker_instance_id"]
+                    != reservation["worker_instance_id"]
+                    or attestation_value.get("process_tree_confirmed_dead") is not True
+                ):
+                    raise ControllerConflict(
+                        "worker-death evidence does not match the held reservation"
+                    )
+                if _parse(death["observed_at"]) < _parse(reservation["created_at"]):
+                    raise ControllerConflict(
+                        "worker-death evidence predates the held credential reservation"
+                    )
+                now = _utc(self.clock())
+                self.database.execute(
+                    """INSERT INTO browser_profile_retirements
+                       (retirement_id, session_id, session_epoch,
+                        credential_binding_id, worker_id, worker_instance_id,
+                        attestation_hash, disposition, disposition_actor_id,
+                        disposition_ref, recorded_at)
+                       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                    (
+                        retirement_id,
+                        session_id,
+                        expected_session_epoch,
+                        reservation["credential_binding_id"],
+                        reservation["worker_id"],
+                        reservation["worker_instance_id"],
+                        attestation_hash,
+                        disposition,
+                        disposition_actor_id,
+                        disposition_ref,
+                        now,
+                    ),
+                )
+                self.database.execute(
+                    """UPDATE browser_sessions
+                       SET state = 'closed', revision = revision + 1, updated_at = ?
+                       WHERE session_id = ? AND state = 'lost'""",
+                    (now, session_id),
+                )
+                self.database.execute(
+                    """UPDATE controller_leases
+                       SET active = 0, lease_id = NULL, controller_id = NULL,
+                           controller_kind = NULL, fencing_token = NULL,
+                           expires_at = NULL, updated_at = ?
+                       WHERE session_id = ?""",
+                    (now, session_id),
+                )
+                self.database.execute(
+                    """UPDATE browser_profile_reservations
+                       SET state = 'released', updated_at = ?,
+                           release_kind = 'operator_dead_worker_retirement',
+                           release_actor_id = ?, release_ref = ?
+                       WHERE session_id = ? AND state = 'quarantined'""",
+                    (now, disposition_actor_id, disposition_ref, session_id),
+                )
+                self._insert_event(
+                    "web.browser.profile.reservation.retired",
+                    session_id,
+                    session["owner_run_id"],
+                    {
+                        "retirement_id": retirement_id,
+                        "attestation_hash": attestation_hash,
+                        "disposition": disposition,
+                        "disposition_actor_id": disposition_actor_id,
+                        "disposition_ref": disposition_ref,
+                    },
+                )
+                self.database.commit()
+            except Exception:
+                self.database.rollback()
+                raise
+        return self.get_session(session_id)
+
     def reserve_worker_open(
         self,
         session_id: str,
@@ -598,6 +1066,11 @@ class SQLiteSessionStore:
             self.database.execute("BEGIN IMMEDIATE")
             try:
                 session = self._required_session_row(session_id)
+                self.assert_live_profile_reservation_holder(
+                    session_id,
+                    worker_id=session["worker_id"],
+                    worker_instance_id=worker_instance_id,
+                )
                 self._require_current_command_attempt(command_id, attempt_token)
                 if SessionState(session["state"]) is not SessionState.OPENING:
                     raise ControllerConflict(
@@ -715,6 +1188,11 @@ class SQLiteSessionStore:
             self.database.execute("BEGIN IMMEDIATE")
             try:
                 row = self._required_session_row(session_id)
+                self.assert_live_profile_reservation_holder(
+                    session_id,
+                    worker_id=row["worker_id"],
+                    worker_instance_id=worker_instance_id,
+                )
                 if required_lease.session_id != session_id:
                     raise ControllerConflict(
                         "required controller lease belongs to another session"
@@ -781,6 +1259,12 @@ class SQLiteSessionStore:
                     raise SessionRevisionConflict(
                         f"session {session_id!r} changed before opening activation"
                     )
+                self.database.execute(
+                    """UPDATE browser_profile_reservations
+                       SET state = 'active', updated_at = ?
+                       WHERE session_id = ? AND state IN ('active', 'quarantined')""",
+                    (updated_at, session_id),
+                )
                 event_attributes = {
                     "from_state": current.value,
                     "to_state": SessionState.ACTIVE.value,
@@ -851,6 +1335,12 @@ class SQLiteSessionStore:
                            controller_kind = NULL, fencing_token = NULL,
                            expires_at = NULL, updated_at = ?
                        WHERE session_id = ?""",
+                    (now, session_id),
+                )
+                self.database.execute(
+                    """UPDATE browser_profile_reservations
+                       SET state = 'quarantined', updated_at = ?
+                       WHERE session_id = ? AND state = 'active'""",
                     (now, session_id),
                 )
                 self._insert_event(
@@ -1699,6 +2189,27 @@ class SQLiteSessionStore:
                     raise ControllerConflict(
                         "worker cleanup is not durably attested; profile remains quarantined"
                     )
+                reservation = self._required_profile_reservation_row(session_id)
+                if reservation["state"] not in {"active", "quarantined"}:
+                    raise ControllerConflict(
+                        "credential reservation is not held by the closing session"
+                    )
+                worker_was_dispatched = self.database.execute(
+                    """SELECT 1 FROM browser_events
+                       WHERE session_id = ?
+                         AND event_type = 'web.browser.worker.open.reserved'
+                       LIMIT 1""",
+                    (session_id,),
+                ).fetchone()
+                if worker_was_dispatched is not None and not self._cleanup_matches(
+                    session_id,
+                    command_id=command_id,
+                    worker_id=reservation["worker_id"],
+                    worker_instance_id=reservation["worker_instance_id"],
+                ):
+                    raise ControllerConflict(
+                        "terminal close requires cleanup attested by the reservation holder"
+                    )
                 revision = expected_revision + 1
                 self.database.execute(
                     """UPDATE browser_sessions SET state = 'closed', revision = ?, updated_at = ?
@@ -1712,6 +2223,24 @@ class SQLiteSessionStore:
                            expires_at = NULL, updated_at = ?
                        WHERE session_id = ? AND active = 1 AND generation = ?""",
                     (_utc(now), session_id, lease.generation),
+                )
+                release_kind = (
+                    "live_worker_cleanup"
+                    if worker_was_dispatched is not None
+                    else "never_dispatched"
+                )
+                self.database.execute(
+                    """UPDATE browser_profile_reservations
+                       SET state = 'released', updated_at = ?, release_kind = ?,
+                           release_actor_id = ?, release_ref = ?
+                       WHERE session_id = ? AND state IN ('active', 'quarantined')""",
+                    (
+                        _utc(now),
+                        release_kind,
+                        reservation["worker_instance_id"],
+                        command_id,
+                        session_id,
+                    ),
                 )
                 self._insert_event(
                     "web.browser.session.closed",
@@ -1983,15 +2512,421 @@ class SQLiteSessionStore:
             for row in rows
         ]
 
-    def save_receipt(
+    def reserve_action_execution(
+        self,
+        permit: ExecutionPermit,
+        proposal: ActionProposal,
+        *,
+        request_digest: str,
+        command_id: str,
+        required_lease: ControllerLease,
+    ) -> ActionReservationStart:
+        """Reserve one exact permit and fence before any browser effect."""
+
+        from weir.actions import ActionProposal, ExecutionPermit
+
+        if not isinstance(permit, ExecutionPermit):
+            raise TypeError("permit must be an ExecutionPermit")
+        if not isinstance(proposal, ActionProposal):
+            raise TypeError("proposal must be an ActionProposal")
+        permit.validate()
+        proposal.validate()
+        permit_bindings = {
+            "proposal_hash": proposal.proposal_hash,
+            "work_context_hash": proposal.work_context_hash,
+            "owner_run_id": proposal.owner_run_id,
+            "session_id": proposal.session_id,
+            "session_epoch": proposal.session_epoch,
+            "action_type": proposal.action_type,
+            "risk": proposal.risk,
+        }
+        if any(
+            getattr(permit, name) != expected
+            for name, expected in permit_bindings.items()
+        ):
+            raise ControllerConflict(
+                "execution permit does not match the action proposal"
+            )
+        if not is_sha256(request_digest):
+            raise ValueError("action request_digest must be a sha256 digest")
+        validate_identifier(command_id, "command_id")
+        with self._lock:
+            self.database.execute("BEGIN IMMEDIATE")
+            try:
+                existing = self.database.execute(
+                    """SELECT * FROM action_execution_reservations
+                       WHERE permit_id = ?""",
+                    (permit.permit_id,),
+                ).fetchone()
+                expected = {
+                    "permit_hash": permit.permit_hash,
+                    "action_id": proposal.action_id,
+                    "request_digest": request_digest,
+                    "proposal_hash": proposal.proposal_hash,
+                    "work_context_hash": proposal.work_context_hash,
+                    "command_id": command_id,
+                    "session_id": proposal.session_id,
+                    "session_epoch": proposal.session_epoch,
+                }
+                if existing is not None:
+                    if any(existing[key] != value for key, value in expected.items()):
+                        raise IdempotencyConflict(
+                            "execution permit is bound to a different action request"
+                        )
+                    reservation = _action_reservation_from_row(existing)
+                    self.database.commit()
+                    return ActionReservationStart(reservation, replay=True)
+
+                permit.validate_at(self.clock())
+                existing_receipt = self.database.execute(
+                    "SELECT 1 FROM execution_receipts WHERE action_id = ?",
+                    (proposal.action_id,),
+                ).fetchone()
+                if existing_receipt is not None:
+                    raise IdempotencyConflict(
+                        "action already has a terminal execution receipt"
+                    )
+                session = self._required_session_row(proposal.session_id)
+                if SessionState(session["state"]) is not SessionState.ACTIVE:
+                    raise ControllerConflict(
+                        "action execution requires an active browser session"
+                    )
+                if int(session["epoch"]) != proposal.session_epoch:
+                    raise SessionRevisionConflict(
+                        "action proposal belongs to a stale browser-session epoch"
+                    )
+                context = self.work_context(proposal.session_id)
+                if context.context_hash != proposal.work_context_hash:
+                    raise ControllerConflict(
+                        "action proposal belongs to a different work context"
+                    )
+                if required_lease.session_id != proposal.session_id:
+                    raise ControllerConflict("action lease belongs to another session")
+                self._require_valid_lease(required_lease, self.clock())
+                if (
+                    required_lease.kind is not ControllerKind.AUTOMATION
+                    or required_lease.controller_id != proposal.owner_run_id
+                ):
+                    raise ControllerConflict(
+                        "action execution requires the owning automation lease"
+                    )
+                now = _utc(self.clock())
+                reservation_ref = f"reservation-{uuid.uuid4().hex}"
+                self.database.execute(
+                    """INSERT INTO action_execution_reservations
+                       (reservation_ref, permit_id, permit_hash, action_id,
+                        request_digest, proposal_hash, work_context_hash, command_id,
+                        session_id, session_epoch, controller_generation, status,
+                        receipt_id, created_at, updated_at)
+                       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'reserved', NULL, ?, ?)""",
+                    (
+                        reservation_ref,
+                        permit.permit_id,
+                        permit.permit_hash,
+                        proposal.action_id,
+                        request_digest,
+                        proposal.proposal_hash,
+                        proposal.work_context_hash,
+                        command_id,
+                        proposal.session_id,
+                        proposal.session_epoch,
+                        required_lease.generation,
+                        now,
+                        now,
+                    ),
+                )
+                self._insert_event(
+                    "web.action.execution.reserved",
+                    proposal.session_id,
+                    proposal.owner_run_id,
+                    {
+                        "reservation_ref": reservation_ref,
+                        "permit_id": permit.permit_id,
+                        "proposal_hash": proposal.proposal_hash,
+                        "command_id": command_id,
+                        "session_epoch": proposal.session_epoch,
+                        "controller_generation": required_lease.generation,
+                    },
+                )
+                row = self.database.execute(
+                    """SELECT * FROM action_execution_reservations
+                       WHERE reservation_ref = ?""",
+                    (reservation_ref,),
+                ).fetchone()
+                self.database.commit()
+            except sqlite3.IntegrityError as exc:
+                self.database.rollback()
+                raise IdempotencyConflict(
+                    "permit, action, proposal, or command is already reserved"
+                ) from exc
+            except Exception:
+                self.database.rollback()
+                raise
+        assert row is not None
+        return ActionReservationStart(_action_reservation_from_row(row), replay=False)
+
+    def action_reservation(self, permit_id: str) -> ActionExecutionReservation | None:
+        validate_identifier(permit_id, "permit_id")
+        with self._lock:
+            row = self.database.execute(
+                """SELECT * FROM action_execution_reservations
+                   WHERE permit_id = ?""",
+                (permit_id,),
+            ).fetchone()
+        return None if row is None else _action_reservation_from_row(row)
+
+    def finalize_action_execution(
         self,
         receipt: ExecutionReceipt,
+        *,
+        quarantine: QuarantineRecord | None = None,
     ) -> None:
-        from weir.actions import ExecutionReceipt
+        """Commit a terminal receipt and any unknown-outcome quarantine atomically."""
+
+        from weir.actions import (
+            ExecutionReceipt,
+            QuarantineRecord,
+            QuarantineState,
+            ReceiptResult,
+        )
 
         if not isinstance(receipt, ExecutionReceipt):
             raise TypeError("receipt must be an ExecutionReceipt")
         receipt.validate()
+        if quarantine is not None:
+            if not isinstance(quarantine, QuarantineRecord):
+                raise TypeError("quarantine must be a QuarantineRecord or null")
+            quarantine.validate()
+        if receipt.result is ReceiptResult.OUTCOME_UNKNOWN:
+            if quarantine is None or quarantine.state is not QuarantineState.ACTIVE:
+                raise ValueError("outcome_unknown requires an active quarantine record")
+            if (
+                receipt.quarantine_ref
+                != f"weir-quarantine:{quarantine.quarantine_id}"
+                or quarantine.session_id != receipt.session_id
+                or quarantine.session_epoch != receipt.session_epoch
+                or quarantine.work_context_hash != receipt.work_context_hash
+                or quarantine.permit_id != receipt.permit_id
+                or quarantine.command_id != receipt.command_id
+                or quarantine.receipt_id != receipt.receipt_id
+            ):
+                raise ValueError("receipt and quarantine bindings do not match")
+        elif quarantine is not None:
+            raise ValueError("only outcome_unknown may create a quarantine record")
+
+        serialized_receipt = _json(receipt.to_dict())
+        with self._lock:
+            self.database.execute("BEGIN IMMEDIATE")
+            try:
+                reservation = self.database.execute(
+                    """SELECT * FROM action_execution_reservations
+                       WHERE reservation_ref = ?""",
+                    (receipt.reservation_ref,),
+                ).fetchone()
+                if reservation is None:
+                    raise ControllerConflict(
+                        "execution receipt has no durable action reservation"
+                    )
+                expected = {
+                    "permit_id": receipt.permit_id,
+                    "proposal_hash": receipt.proposal_hash,
+                    "work_context_hash": receipt.work_context_hash,
+                    "command_id": receipt.command_id,
+                    "session_id": receipt.session_id,
+                    "session_epoch": receipt.session_epoch,
+                    "controller_generation": receipt.lease_generation,
+                }
+                if any(reservation[key] != value for key, value in expected.items()):
+                    raise ControllerConflict(
+                        "execution receipt does not match its durable reservation"
+                    )
+                existing = self.database.execute(
+                    """SELECT receipt_json FROM execution_receipts
+                       WHERE action_id = ?""",
+                    (receipt.action_id,),
+                ).fetchone()
+                if existing is not None:
+                    if existing["receipt_json"] != serialized_receipt:
+                        raise IdempotencyConflict(
+                            "action already has a different execution receipt"
+                        )
+                    self.database.commit()
+                    return
+                if reservation["status"] != "reserved":
+                    raise IdempotencyConflict(
+                        "action reservation is already terminal without this receipt"
+                    )
+                now = _utc(self.clock())
+                self.database.execute(
+                    """INSERT INTO execution_receipts
+                       (action_id, proposal_hash, receipt_json, created_at)
+                       VALUES (?, ?, ?, ?)""",
+                    (
+                        receipt.action_id,
+                        receipt.proposal_hash,
+                        serialized_receipt,
+                        now,
+                    ),
+                )
+                status = "completed"
+                if receipt.result is ReceiptResult.OUTCOME_UNKNOWN:
+                    assert quarantine is not None
+                    self.database.execute(
+                        """INSERT INTO action_quarantine_records
+                           (record_hash, quarantine_id, state, supersedes_hash,
+                            record_json, recorded_at)
+                           VALUES (?, ?, 'active', NULL, ?, ?)""",
+                        (
+                            quarantine.record_hash,
+                            quarantine.quarantine_id,
+                            _json(quarantine.to_dict()),
+                            quarantine.recorded_at,
+                        ),
+                    )
+                    session = self._required_session_row(receipt.session_id)
+                    current = SessionState(session["state"])
+                    if current is SessionState.CLOSED:
+                        raise ControllerConflict(
+                            "a closed session cannot acquire an action quarantine"
+                        )
+                    if current is not SessionState.LOST:
+                        require_transition(current, SessionState.LOST)
+                        self.database.execute(
+                            """UPDATE browser_sessions
+                               SET state = 'lost', revision = revision + 1,
+                                   updated_at = ? WHERE session_id = ?""",
+                            (now, receipt.session_id),
+                        )
+                    self.database.execute(
+                        """UPDATE controller_leases
+                           SET active = 0, lease_id = NULL, controller_id = NULL,
+                               controller_kind = NULL, fencing_token = NULL,
+                               expires_at = NULL, updated_at = ?
+                           WHERE session_id = ?""",
+                        (now, receipt.session_id),
+                    )
+                    profile_reservation = self._required_profile_reservation_row(
+                        receipt.session_id
+                    )
+                    if profile_reservation["state"] == "released":
+                        raise ControllerConflict(
+                            "an unknown outcome cannot quarantine a released credential"
+                        )
+                    self.database.execute(
+                        """UPDATE browser_profile_reservations
+                           SET state = 'quarantined', updated_at = ?
+                           WHERE session_id = ? AND state = 'active'""",
+                        (now, receipt.session_id),
+                    )
+                    status = "outcome_unknown"
+                self.database.execute(
+                    """UPDATE action_execution_reservations
+                       SET status = ?, receipt_id = ?, updated_at = ?
+                       WHERE reservation_ref = ? AND status = 'reserved'""",
+                    (
+                        status,
+                        receipt.receipt_id,
+                        now,
+                        receipt.reservation_ref,
+                    ),
+                )
+                self._insert_event(
+                    "web.action.execution.recorded",
+                    receipt.session_id,
+                    self.work_context(receipt.session_id).run_id,
+                    {
+                        "reservation_ref": receipt.reservation_ref,
+                        "permit_id": receipt.permit_id,
+                        "proposal_hash": receipt.proposal_hash,
+                        "command_id": receipt.command_id,
+                        "receipt_id": receipt.receipt_id,
+                        "result": receipt.result.value,
+                        "quarantine_ref": receipt.quarantine_ref,
+                    },
+                )
+                self.database.commit()
+            except Exception:
+                self.database.rollback()
+                raise
+
+    def clear_action_quarantine(self, successor: QuarantineRecord) -> None:
+        """Append an operator-authored successor; never rewrite the active record."""
+
+        from weir.actions import QuarantineRecord, QuarantineState
+
+        if not isinstance(successor, QuarantineRecord):
+            raise TypeError("successor must be a QuarantineRecord")
+        successor.validate()
+        if successor.state is not QuarantineState.CLEARED:
+            raise ValueError("quarantine successor must have state=cleared")
+        with self._lock:
+            self.database.execute("BEGIN IMMEDIATE")
+            try:
+                prior = self.database.execute(
+                    """SELECT record_json FROM action_quarantine_records
+                       WHERE record_hash = ? AND quarantine_id = ? AND state = 'active'""",
+                    (successor.supersedes_hash, successor.quarantine_id),
+                ).fetchone()
+                if prior is None:
+                    raise ControllerConflict(
+                        "quarantine successor does not reference an active record"
+                    )
+                serialized = _json(successor.to_dict())
+                prior_successor = self.database.execute(
+                    """SELECT record_json FROM action_quarantine_records
+                       WHERE supersedes_hash = ?""",
+                    (successor.supersedes_hash,),
+                ).fetchone()
+                if prior_successor is not None:
+                    if prior_successor["record_json"] != serialized:
+                        raise IdempotencyConflict(
+                            "active quarantine already has a different successor"
+                        )
+                    self.database.commit()
+                    return
+                existing = self.database.execute(
+                    """SELECT record_json FROM action_quarantine_records
+                       WHERE record_hash = ?""",
+                    (successor.record_hash,),
+                ).fetchone()
+                if existing is not None:
+                    if existing["record_json"] != serialized:
+                        raise IdempotencyConflict(
+                            "quarantine record hash has different content"
+                        )
+                    self.database.commit()
+                    return
+                self.database.execute(
+                    """INSERT INTO action_quarantine_records
+                       (record_hash, quarantine_id, state, supersedes_hash,
+                        record_json, recorded_at)
+                       VALUES (?, ?, 'cleared', ?, ?, ?)""",
+                    (
+                        successor.record_hash,
+                        successor.quarantine_id,
+                        successor.supersedes_hash,
+                        serialized,
+                        successor.recorded_at,
+                    ),
+                )
+                self.database.commit()
+            except Exception:
+                self.database.rollback()
+                raise
+
+    def save_receipt(
+        self,
+        receipt: ExecutionReceipt,
+    ) -> None:
+        from weir.actions import ExecutionReceipt, ReceiptResult
+
+        if not isinstance(receipt, ExecutionReceipt):
+            raise TypeError("receipt must be an ExecutionReceipt")
+        receipt.validate()
+        if receipt.result is ReceiptResult.OUTCOME_UNKNOWN:
+            raise ValueError(
+                "outcome_unknown must use finalize_action_execution with quarantine"
+            )
         action_id = receipt.action_id
         proposal_hash = receipt.proposal_hash
         serialized = _json(receipt.to_dict())
@@ -2009,6 +2944,15 @@ class SQLiteSessionStore:
                         f"action id {action_id!r} already has a different receipt"
                     )
                 return
+            reservation = self.database.execute(
+                """SELECT 1 FROM action_execution_reservations
+                   WHERE proposal_hash = ? LIMIT 1""",
+                (proposal_hash,),
+            ).fetchone()
+            if reservation is not None:
+                raise ValueError(
+                    "permit-reserved actions must use finalize_action_execution"
+                )
             self.database.execute(
                 """INSERT INTO execution_receipts
                    (action_id, proposal_hash, receipt_json, created_at)
@@ -2031,6 +2975,42 @@ class SQLiteSessionStore:
         if row is None:
             raise SessionNotFound(session_id)
         return row
+
+    def _required_profile_reservation_row(self, session_id: str) -> sqlite3.Row:
+        row = self.database.execute(
+            "SELECT * FROM browser_profile_reservations WHERE session_id = ?",
+            (session_id,),
+        ).fetchone()
+        if row is None:
+            raise SessionNotFound(
+                f"session {session_id!r} has no credential reservation"
+            )
+        return row
+
+    def _cleanup_matches(
+        self,
+        session_id: str,
+        *,
+        command_id: str,
+        worker_id: str,
+        worker_instance_id: str,
+    ) -> bool:
+        rows = self.database.execute(
+            """SELECT attributes_json FROM browser_events
+               WHERE session_id = ?
+                 AND event_type = 'web.browser.worker.cleanup.attested'
+               ORDER BY sequence DESC""",
+            (session_id,),
+        ).fetchall()
+        for row in rows:
+            attributes = json.loads(row["attributes_json"])
+            if attributes.get("command_id") != command_id:
+                continue
+            return bool(
+                attributes.get("worker_id") == worker_id
+                and attributes.get("worker_instance_id") == worker_instance_id
+            )
+        return False
 
     def _worker_context_sets(
         self, session_id: str
@@ -2408,3 +3388,39 @@ def _parse(value: str) -> datetime:
     if parsed.tzinfo is None:
         raise ValueError("stored timestamp has no timezone")
     return parsed.astimezone(timezone.utc)
+
+
+def _profile_reservation_from_row(row: sqlite3.Row) -> ProfileReservation:
+    return ProfileReservation(
+        reservation_id=row["reservation_id"],
+        credential_binding_id=row["credential_binding_id"],
+        session_id=row["session_id"],
+        worker_id=row["worker_id"],
+        worker_instance_id=row["worker_instance_id"],
+        state=row["state"],
+        created_at=row["created_at"],
+        updated_at=row["updated_at"],
+        release_kind=row["release_kind"],
+        release_actor_id=row["release_actor_id"],
+        release_ref=row["release_ref"],
+    )
+
+
+def _action_reservation_from_row(row: sqlite3.Row) -> ActionExecutionReservation:
+    return ActionExecutionReservation(
+        reservation_ref=row["reservation_ref"],
+        permit_id=row["permit_id"],
+        permit_hash=row["permit_hash"],
+        action_id=row["action_id"],
+        request_digest=row["request_digest"],
+        proposal_hash=row["proposal_hash"],
+        work_context_hash=row["work_context_hash"],
+        command_id=row["command_id"],
+        session_id=row["session_id"],
+        session_epoch=int(row["session_epoch"]),
+        controller_generation=int(row["controller_generation"]),
+        status=row["status"],
+        receipt_id=row["receipt_id"],
+        created_at=row["created_at"],
+        updated_at=row["updated_at"],
+    )

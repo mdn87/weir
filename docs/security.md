@@ -123,10 +123,18 @@ are rejected by this worker.
 Worker OPEN intent is journaled before dispatch, and exact context creation and closure
 are journaled separately from session state. An unacknowledged OPEN dispatch therefore
 counts as possibly live. If the same worker cannot attest cleanup, the session remains
-nonterminal and its worker-local profile reservation stays quarantined. WEIR does not
-yet provide an authorized dead-worker retirement API; direct database edits are not a
-supported recovery mechanism. A `WorkerDeathAttestation` proves only the observed
-process-tree outcome and cannot by itself authorize reservation release.
+nonterminal and its host-global credential reservation stays quarantined. The
+reservation uses an opaque deployment-provisioned `credential_binding_id`, so aliases
+and different worker namespaces cannot use the same real credential concurrently.
+
+The only normal release is cleanup attested by the exact worker protocol identity and
+instance that holds the reservation. A context-closed event alone is insufficient, and
+persisted death evidence prevents that instance from claiming cleanup or recovery.
+The separate `profile:retire` service operation requires an authenticated operator and
+atomically checks the current session epoch, worker, instance, binding, already-stored
+attestation hash, and recognized disposition before appending a retirement record and
+releasing. A `WorkerDeathAttestation` proves only the observed process-tree outcome and
+cannot release anything by itself. Direct database edits remain unsupported.
 
 The OPEN reservation itself is compare-and-swap fenced by the exact `opening` revision,
 epoch, current command attempt, and owning automation lease. Observation screenshots
@@ -180,10 +188,12 @@ host-local external-tools manifest, outside this repo.
 A browser profile can represent broad ambient authority even before a click occurs. Profile eligibility must therefore be part of policy and worker placement, not a convenience option exposed to arbitrary seats.
 
 The Playwright observer accepts storage state only through an in-process provider keyed
-by an opaque, worker-local profile ID. `VerifiedProfileState` must bind that ID to the
-exact site-profile ID and `read_only` credential scope selected when the session opens;
-the registry metadata is verified, while the actual server-side privilege remains an
-operator/deployment assertion. The worker requires nonempty cookie/origin state and
+by an opaque profile ID. `StaticProfileStateRegistry` is host-owned and populated from
+an ACL-protected deployment source. `VerifiedProfileState` binds the profile ID,
+deployment-provisioned `credential_binding_id`, exact site-profile ID, and `read_only`
+credential scope selected when the session opens. The registry never derives identity
+from cookie bytes or persists credential material; the actual server-side privilege
+remains an operator/deployment assertion. The worker requires nonempty cookie/origin state and
 creates a nonpersistent context. The contained `agent-browser` adapter is ephemeral by design:
 it never passes profile, state, restore, session-name, CDP, auto-connect, or raw
 startup-argument flags because those modes are incompatible with upstream domain

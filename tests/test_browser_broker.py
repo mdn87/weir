@@ -1,6 +1,7 @@
 import tempfile
 import threading
 import unittest
+from dataclasses import replace
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from unittest.mock import patch
@@ -8,6 +9,11 @@ from unittest.mock import patch
 from tests.browser_fakes import ScriptedBrowserWorker
 from weir.browser.broker import BrowserSessionBroker, SessionOwnershipError
 from weir.browser.models import ControllerKind, SessionState
+from weir.browser.process_worker import WorkerDeathAttestation
+from weir.browser.profile_registry import (
+    StaticProfileStateRegistry,
+    VerifiedProfileState,
+)
 from weir.browser.protocol import StaleWorkerCommand
 from weir.browser.store import (
     CommandAttemptSuperseded,
@@ -63,11 +69,23 @@ class BrowserBrokerTests(unittest.TestCase):
                 "notes": ["Local authenticated test fixture."],
             }
         )
+        self.profile_bindings = StaticProfileStateRegistry(
+            [
+                VerifiedProfileState(
+                    profile_id="profile-1",
+                    credential_binding_id="credential-binding-1",
+                    site_profile_id="test-portal",
+                    credential_scope="read_only",
+                    storage_state={},
+                )
+            ]
+        )
         self.broker = BrowserSessionBroker(
             [self.worker],
             store=self.store,
             capture_store=CaptureStore(root / "evidence"),
             profiles=SiteProfileRegistry([profile]),
+            profile_bindings=self.profile_bindings,
             clock=lambda: self.now,
             id_factory=Ids(),
             controller_ttl=timedelta(minutes=5),
@@ -190,6 +208,7 @@ class BrowserBrokerTests(unittest.TestCase):
             store=self.store,
             capture_store=self.broker.capture_store,
             profiles=self.broker.profiles,
+            profile_bindings=self.profile_bindings,
             clock=lambda: self.now,
             id_factory=Ids(),
             controller_ttl=timedelta(minutes=5),
@@ -297,6 +316,7 @@ class BrowserBrokerTests(unittest.TestCase):
             store=self.store,
             capture_store=self.broker.capture_store,
             profiles=self.broker.profiles,
+            profile_bindings=self.profile_bindings,
             clock=lambda: self.now,
             id_factory=Ids(),
             controller_ttl=timedelta(minutes=5),
@@ -560,6 +580,7 @@ class BrowserBrokerTests(unittest.TestCase):
             store=self.store,
             capture_store=self.broker.capture_store,
             profiles=self.broker.profiles,
+            profile_bindings=self.profile_bindings,
             clock=lambda: self.now,
             id_factory=Ids(),
             controller_ttl=timedelta(minutes=5),
@@ -645,6 +666,67 @@ class BrowserBrokerTests(unittest.TestCase):
         )
         self.assertEqual(replay.epoch, recovered.epoch)
 
+    def test_recovery_rejects_a_replacement_worker_instance(self):
+        session = self._open()
+        lost = self.broker.mark_lost(
+            session.session_id,
+            self.context,
+            expected_revision=session.revision,
+            detail="worker identity changed",
+        )
+        replacement = ScriptedBrowserWorker(
+            worker_id=self.worker.descriptor.worker_id,
+        )
+        replacement._descriptor = replace(
+            replacement.descriptor,
+            instance_id="fake-instance-replacement",
+        )
+        self.broker.workers[self.worker.descriptor.worker_id] = replacement
+        with self.assertRaisesRegex(ControllerConflict, "does not hold"):
+            self.broker.recover(
+                session.session_id,
+                self.context,
+                expected_revision=lost.revision,
+                expected_epoch=lost.epoch,
+                operation_id="recover-replacement-worker",
+            )
+        self.assertEqual(replacement.calls, [])
+        self.assertEqual(
+            self.store.profile_reservation(session.session_id).state,
+            "quarantined",
+        )
+
+    def test_recovery_rejects_a_worker_with_persisted_death_evidence(self):
+        session = self._open()
+        lost = self.broker.mark_lost(
+            session.session_id,
+            self.context,
+            expected_revision=session.revision,
+            detail="worker process died",
+        )
+        attestation = WorkerDeathAttestation.create(
+            worker_id=self.worker.descriptor.worker_id,
+            worker_instance_id=self.worker.descriptor.instance_id or "",
+            process_id=4321,
+            exit_code=1,
+            reason="worker_exited",
+            worker_exited_gracefully=False,
+            process_tree_confirmed_dead=True,
+        )
+        self.store.record_worker_death_attestation(attestation)
+        with self.assertRaisesRegex(ControllerConflict, "dead worker"):
+            self.broker.recover(
+                session.session_id,
+                self.context,
+                expected_revision=lost.revision,
+                expected_epoch=lost.epoch,
+                operation_id="recover-dead-worker",
+            )
+        self.assertEqual(
+            self.store.profile_reservation(session.session_id).state,
+            "quarantined",
+        )
+
     def test_close_is_terminal_and_releases_profile_reservation(self):
         session = self._open()
         closed = self.broker.close(
@@ -728,6 +810,15 @@ class BrowserBrokerTests(unittest.TestCase):
             detail="worker health unknown",
         )
         self.worker.fail_close = True
+        self.worker.death_attestation = WorkerDeathAttestation.create(
+            worker_id=self.worker.descriptor.worker_id,
+            worker_instance_id=self.worker.descriptor.instance_id or "",
+            process_id=4321,
+            exit_code=1,
+            reason="worker_exited",
+            worker_exited_gracefully=False,
+            process_tree_confirmed_dead=True,
+        )
         with self.assertRaisesRegex(EngineFailure, "quarantined"):
             self.broker.close(
                 session.session_id,
@@ -738,6 +829,18 @@ class BrowserBrokerTests(unittest.TestCase):
             )
         quarantined = self.store.get_session(session.session_id)
         self.assertNotEqual(quarantined.state, SessionState.CLOSED)
+        persisted_death = self.store.database.execute(
+            """SELECT attestation_hash FROM browser_worker_death_attestations
+               WHERE worker_id = ? AND worker_instance_id = ?""",
+            (
+                self.worker.descriptor.worker_id,
+                self.worker.descriptor.instance_id,
+            ),
+        ).fetchone()
+        self.assertEqual(
+            persisted_death["attestation_hash"],
+            self.worker.death_attestation.attestation_hash,
+        )
         self.request.request_id = "request-while-quarantined"
         replacement_context = WorkContext.create(
             context_id="context-while-quarantined",
@@ -772,6 +875,7 @@ class BrowserBrokerTests(unittest.TestCase):
             store=self.store,
             capture_store=self.broker.capture_store,
             profiles=self.broker.profiles,
+            profile_bindings=self.profile_bindings,
             clock=lambda: self.now,
             id_factory=Ids(),
             controller_ttl=timedelta(minutes=5),

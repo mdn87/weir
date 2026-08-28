@@ -200,6 +200,16 @@ repositories. Their migrations and deployments are still separately approval-gat
 Exit: no code path can reuse a credential until cleanup or authorized retirement is
 durably proven. Do not run the migration as part of the source-code batch.
 
+Implementation status (2026-08-28): the Batch 2D source and deterministic tests are
+complete. Fresh stores create at v2; v1 startup refuses; the offline tool provides
+strict binding-map dry-run, verified backup, exclusive transactional migration, and
+read-only backup comparison. `StaticProfileStateRegistry` owns the trusted binding
+seam. The global partial unique constraint, exact live-holder cleanup, separately
+persisted death evidence, exact authenticated operator retirement, permit reservation,
+and atomic `outcome_unknown` quarantine paths are implemented and restart-tested. No
+operator database was migrated, no service was deployed, and no action route or live
+effect was enabled.
+
 #### Batch 1B — APU strict attribution
 
 1. Add failing negative tests for explicit-ID/cwd mismatch, cross-project recency,

@@ -42,6 +42,7 @@ def _spec(profile_id="ephemeral:test"):
         worker_session_id="pending-1",
         owner_run_id="run-1",
         profile_id=profile_id,
+        credential_binding_id="credential-binding-1",
         site_profile_id="ephemeral-test",
         credential_scope="ephemeral",
         data_class=DataClass.BWA_INTERNAL,

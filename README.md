@@ -162,8 +162,9 @@ evidence promotes direct HTTP for API-shaped resources and keeps `oc` then
 `agent-browser read` as the general compact-reader chain. More repeated fidelity
 evidence remains useful, but it no longer blocks callers from using the broker.
 
-The browser kernel adds explicit work-context identity, one-live reservation for each
-worker-local profile ID, SQLite-backed session revisions, durable command reservation,
+The browser kernel adds explicit work-context identity, a host-global reservation for
+each trusted credential binding (plus the worker-local profile constraint),
+SQLite-backed session revisions, durable command reservation,
 expiring fenced controller leases, same-owner recovery, fenced manual takeover/return,
 semantic observations, immutable evidence, and an append-only metadata event journal.
 Unacknowledged OPEN dispatches and unconfirmed worker cleanup quarantine the profile
@@ -180,8 +181,10 @@ an OS process tree before constructing the worker, kills that tree when a comman
 deadline expires, its parent disappears, or its wrapper is abandoned, exchanges only a
 strict size-bounded JSON operation/result union, and emits hash-bound death evidence.
 Production configuration does not yet require this transport or impose OS
-memory/network-egress limits, and death evidence never authorizes a quarantined profile
-to be reused.
+memory/network-egress limits. Death evidence never grants reuse: only cleanup from the
+exact live reservation holder or an authenticated, exact operator retirement can
+release a quarantined credential. Existing schema-v1 stores require the separately
+approved offline procedure in `docs/browser-store-v2.md`; no migration runs at startup.
 
 The executable surface still has no DOM action method. WEIR can compile a fresh
 observation into a risk-classified, hash-bound `ActionProposal`, but the built-in
@@ -195,8 +198,10 @@ remaining sibling work is in `docs/remaining-integration-plan.md`. The accepted 
 `docs/contract-freeze.md` and `contracts/fixtures/batch-0-v1.json`.
 The implemented Batch 1A caller, cache, persistence, and telemetry invariants are in
 `docs/context-bound-acquisition.md`.
-The disabled-by-default Batch 2 authenticated acquisition/proposal service slices and
-their remaining Batch 2 work are described in `docs/service-boundary.md`.
+The disabled-by-default Batch 2 authenticated acquisition/proposal/retirement service
+slices and their remaining Batch 2 work are described in `docs/service-boundary.md`.
+The schema-v2 trust model and offline backup/migration/readback procedure are in
+`docs/browser-store-v2.md`.
 
 ## Development
 

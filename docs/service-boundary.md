@@ -2,8 +2,9 @@
 
 Batch 2A adds the acquisition half of the persistent WEIR boundary. Batch 2B adds
 observation-bound proposal registration and separates full-authority proposal reads
-from pre-redacted projection reads. Neither slice starts, installs, or configures a
-service, and neither enables browser effects.
+from pre-redacted projection reads. Batch 2D adds the authenticated dead-worker
+retirement route and schema-v2 durability foundation. None of these source slices
+starts, installs, or configures a service, and none enables browser effects.
 
 ## One typed client contract
 
@@ -37,6 +38,7 @@ Every route requires `Authorization: Bearer ...`, `X-Weir-Client-Id`, and an RFC
 | `POST /v1/proposals` | `proposal:write` | observation-verified `ActionProposal` |
 | `GET /v1/proposals/{hash}` | `proposal:read:full` | full-authority `ActionProposal` |
 | `GET /v1/proposals/{hash}/projection` | `proposal:read:redacted` | prebuilt public-safe `WeirActionEvent` |
+| `POST /v1/browser/profile-retirements` | `profile:retire` | exact audited dead-worker reservation retirement |
 
 Each named client has a unique credential, scopes, and allowed `DataClass` values.
 Shared credentials are rejected at registry construction. Authentication compares all
@@ -59,15 +61,24 @@ Adapter-specific cancellation remains part of the later worker supervisor.
 ## Durable sources
 
 The service uses the Batch 1A immutable `CaptureStore` for captures, artifacts, and
-evidence references. Command lookup reads the existing SQLite browser command table;
+evidence references. Command lookup reads the SQLite browser command table;
 proposal registration verifies its named capture against the immutable observation,
 the SQLite session and `WorkContext`, the resolved semantic target, and the current
 session revision. Full proposals, redacted projections, action indexes, and final
 registration markers are then published immutably under a separate proposal root.
-This slice makes no database schema change. Tests close and reopen both durable stores
-and confirm evidence, proposals, projections, and settled command status remain
-readable. Corruption remains a typed integrity failure and never becomes a network
-retry.
+
+Schema v2 adds the host-global credential reservation, worker-death evidence,
+operator-retirement, action-reservation, and unknown-outcome quarantine tables. Fresh
+stores start directly at v2; existing v1 stores are rejected until the separately
+approved offline backup/migration/readback procedure in `docs/browser-store-v2.md` is
+run. Tests close and reopen the durable stores and confirm reservations, quarantine,
+evidence, proposals, projections, and settled command status remain readable.
+Corruption remains a typed integrity failure and never becomes a network retry.
+
+The retirement request references already-persisted death evidence; it cannot create
+that evidence. It binds the expected session epoch, worker ID and instance,
+`credential_binding_id`, attestation hash, recognized disposition, and an audited
+operator reference. The authenticated client identity supplies the disposition actor.
 
 ## Disabled-by-default deployment
 
@@ -92,8 +103,6 @@ Batch 2 is not complete until WEIR also has:
 - disabled effect routes that later accept only Fade's exact permit/proposal binding;
 - production browser admission that requires the process transport and adds OS memory
   and network-egress limits;
-- host-global profile reservations and explicit cleanup attestations;
-- authorized dead-worker retirement that never silently frees a profile; and
 - deployment lifecycle configuration with externally provisioned credentials.
 
 Those additions must preserve per-client scope separation. In particular,

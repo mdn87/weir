@@ -16,6 +16,10 @@ from urllib.parse import unquote, urlsplit
 
 from weir.actions import ActionProposal
 from weir.broker import AcquisitionFailed
+from weir.browser.store import (
+    DEAD_WORKER_RETIREMENT_DISPOSITION,
+    SQLiteSessionStore,
+)
 from weir.client import (
     MAX_EVIDENCE_ROUTE_IDENTIFIER,
     MAX_SERVICE_REQUEST_BYTES,
@@ -25,8 +29,13 @@ from weir.client import (
     WeirClient,
     WeirClientError,
 )
-from weir.contract import ContractViolation, canonical_json_bytes, parse_timestamp
-from weir.engines.base import EnginePolicyBlocked, WeirEngineError
+from weir.contract import (
+    ContractViolation,
+    canonical_json_bytes,
+    is_sha256,
+    parse_timestamp,
+)
+from weir.engines.base import ControllerConflict, EnginePolicyBlocked, WeirEngineError
 from weir.evidence import AcquisitionEnvelope
 from weir.models import DataClass
 from weir.persistence import CacheIntegrityError
@@ -38,6 +47,7 @@ COMMAND_READ_SCOPE = "command:read"
 PROPOSAL_WRITE_SCOPE = "proposal:write"
 PROPOSAL_READ_FULL_SCOPE = "proposal:read:full"
 PROPOSAL_READ_REDACTED_SCOPE = "proposal:read:redacted"
+PROFILE_RETIRE_SCOPE = "profile:retire"
 SERVICE_SCOPES = frozenset(
     {
         ACQUISITION_READ_SCOPE,
@@ -46,6 +56,7 @@ SERVICE_SCOPES = frozenset(
         PROPOSAL_WRITE_SCOPE,
         PROPOSAL_READ_FULL_SCOPE,
         PROPOSAL_READ_REDACTED_SCOPE,
+        PROFILE_RETIRE_SCOPE,
     }
 )
 MAX_SERVICE_DEADLINE = timedelta(seconds=30)
@@ -184,6 +195,7 @@ class WeirServiceApplication:
         clients: ClientRegistry,
         *,
         proposal_store: ActionProposalStore | None = None,
+        session_store: SQLiteSessionStore | None = None,
         clock: Callable[[], datetime] | None = None,
         max_response_bytes: int = MAX_SERVICE_RESPONSE_BYTES,
     ) -> None:
@@ -192,6 +204,7 @@ class WeirServiceApplication:
         self.backend = backend
         self.clients = clients
         self.proposal_store = proposal_store
+        self.session_store = session_store
         self.clock = clock or (lambda: datetime.now(timezone.utc))
         self.max_response_bytes = max_response_bytes
 
@@ -288,6 +301,43 @@ class WeirServiceApplication:
                 self._proposals().load_projection, identifier
             )
             result = self._json(projection.to_dict())
+        elif route == "profile_retirement":
+            principal.require_scope(PROFILE_RETIRE_SCOPE)
+            request = self._parse_profile_retirement(body)
+            session = self._backend_call(
+                self._sessions().get_session, request["session_id"]
+            )
+            principal.require_data_class(session.data_class)
+            closed = self._backend_call(
+                self._sessions().retire_dead_worker_reservation,
+                request["session_id"],
+                retirement_id=request["retirement_id"],
+                expected_session_epoch=request["expected_session_epoch"],
+                expected_worker_id=request["expected_worker_id"],
+                expected_worker_instance_id=request[
+                    "expected_worker_instance_id"
+                ],
+                expected_credential_binding_id=request[
+                    "expected_credential_binding_id"
+                ],
+                attestation_hash=request["attestation_hash"],
+                disposition=request["disposition"],
+                disposition_actor_id=principal.client_id,
+                disposition_ref=request["disposition_ref"],
+            )
+            reservation = self._backend_call(
+                self._sessions().profile_reservation,
+                request["session_id"],
+            )
+            result = self._json(
+                {
+                    "retirement_id": request["retirement_id"],
+                    "session_id": closed.session_id,
+                    "session_state": closed.state.value,
+                    "session_revision": closed.revision,
+                    "reservation_state": reservation.state,
+                }
+            )
         else:  # pragma: no cover - _route is exhaustive
             raise AssertionError(route)
 
@@ -324,6 +374,8 @@ class WeirServiceApplication:
             return route, ""
         if method == "POST" and path == "/v1/proposals":
             return "proposal_register", ""
+        if method == "POST" and path == "/v1/browser/profile-retirements":
+            return "profile_retirement", ""
         segments = path.strip("/").split("/")
         if method == "GET" and len(segments) in {3, 4} and segments[:2] == [
             "v1",
@@ -435,6 +487,65 @@ class WeirServiceApplication:
                 "WEIR action proposal was rejected",
             ) from exc
 
+    @staticmethod
+    def _parse_profile_retirement(body: bytes | None) -> dict[str, Any]:
+        if body is None:
+            raise ServiceRequestError(
+                HTTPStatus.BAD_REQUEST,
+                "request_body_required",
+                "profile retirement body is required",
+            )
+        try:
+            value = json.loads(body)
+            if not isinstance(value, dict) or set(value) != {
+                "session_id",
+                "retirement_id",
+                "expected_session_epoch",
+                "expected_worker_id",
+                "expected_worker_instance_id",
+                "expected_credential_binding_id",
+                "attestation_hash",
+                "disposition",
+                "disposition_ref",
+            }:
+                raise ValueError(
+                    "profile retirement has missing or unknown fields"
+                )
+            for name in (
+                "session_id",
+                "retirement_id",
+                "expected_worker_id",
+                "expected_worker_instance_id",
+                "expected_credential_binding_id",
+                "attestation_hash",
+                "disposition_ref",
+            ):
+                item = value[name]
+                if (
+                    not isinstance(item, str)
+                    or not item
+                    or len(item) > 128
+                ):
+                    raise ValueError(f"profile retirement {name} is invalid")
+            if (
+                type(value["expected_session_epoch"]) is not int
+                or value["expected_session_epoch"] < 1
+            ):
+                raise ValueError(
+                    "profile retirement expected_session_epoch is invalid"
+                )
+            if not is_sha256(value["attestation_hash"]):
+                raise ValueError("profile retirement attestation_hash is invalid")
+            if value["disposition"] != DEAD_WORKER_RETIREMENT_DISPOSITION:
+                raise ValueError("profile retirement disposition is invalid")
+            return value
+        except (TypeError, ValueError, json.JSONDecodeError) as exc:
+            raise ServiceRequestError(
+                HTTPStatus.BAD_REQUEST,
+                "invalid_profile_retirement",
+                "WEIR profile retirement was rejected",
+            ) from exc
+
     def _proposals(self) -> ActionProposalStore:
         if self.proposal_store is None:
             raise ServiceRequestError(
@@ -444,9 +555,20 @@ class WeirServiceApplication:
             )
         return self.proposal_store
 
-    def _backend_call(self, operation: Callable[..., Any], *args: Any) -> Any:
+    def _sessions(self) -> SQLiteSessionStore:
+        if self.session_store is None:
+            raise ServiceRequestError(
+                HTTPStatus.NOT_IMPLEMENTED,
+                "session_store_unavailable",
+                "WEIR browser-session storage is not configured",
+            )
+        return self.session_store
+
+    def _backend_call(
+        self, operation: Callable[..., Any], *args: Any, **kwargs: Any
+    ) -> Any:
         try:
-            return operation(*args)
+            return operation(*args, **kwargs)
         except ServiceRequestError:
             raise
         except WeirClientError as exc:
@@ -468,6 +590,12 @@ class WeirServiceApplication:
                 HTTPStatus.FORBIDDEN,
                 exc.failure_class.value,
                 "WEIR acquisition policy rejected the request",
+            ) from exc
+        except ControllerConflict as exc:
+            raise ServiceRequestError(
+                HTTPStatus.CONFLICT,
+                "reservation_conflict",
+                "WEIR credential reservation rejected the request",
             ) from exc
         except AcquisitionFailed as exc:
             raise ServiceRequestError(
@@ -709,6 +837,7 @@ __all__ = [
     "PROPOSAL_READ_FULL_SCOPE",
     "PROPOSAL_READ_REDACTED_SCOPE",
     "PROPOSAL_WRITE_SCOPE",
+    "PROFILE_RETIRE_SCOPE",
     "SERVICE_SCOPES",
     "ClientCredential",
     "ClientPrincipal",

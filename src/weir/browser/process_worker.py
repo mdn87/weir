@@ -149,6 +149,27 @@ class WorkerDeathAttestation:
         self.validate()
         return {**self._hash_basis(), "attestation_hash": self.attestation_hash}
 
+    @classmethod
+    def from_dict(cls, value: dict[str, Any]) -> WorkerDeathAttestation:
+        required = {
+            "worker_id",
+            "worker_instance_id",
+            "process_id",
+            "exit_code",
+            "reason",
+            "observed_at",
+            "worker_exited_gracefully",
+            "process_tree_confirmed_dead",
+            "attestation_hash",
+        }
+        if not isinstance(value, dict) or set(value) != required:
+            raise ValueError(
+                "WorkerDeathAttestation has missing or unknown fields"
+            )
+        attestation = cls(**value)
+        attestation.validate()
+        return attestation
+
 
 class ProcessBrowserWorker(AbstractContextManager["ProcessBrowserWorker"]):
     """Run one stateful BrowserWorker in a deadline-killable process tree."""
@@ -1251,6 +1272,7 @@ def _session_spec_from_wire(value: Any) -> SessionSpec:
             "worker_session_id",
             "owner_run_id",
             "profile_id",
+            "credential_binding_id",
             "site_profile_id",
             "credential_scope",
             "data_class",
@@ -1276,6 +1298,10 @@ def _session_spec_from_wire(value: Any) -> SessionSpec:
         ),
         owner_run_id=_require_nonempty_string(fields["owner_run_id"], "owner_run_id"),
         profile_id=_require_nonempty_string(fields["profile_id"], "profile_id"),
+        credential_binding_id=_require_nonempty_string(
+            fields["credential_binding_id"],
+            "credential_binding_id",
+        ),
         site_profile_id=_require_nonempty_string(
             fields["site_profile_id"],
             "site_profile_id",

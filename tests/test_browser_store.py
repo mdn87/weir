@@ -1,5 +1,8 @@
 import tempfile
+import threading
 import unittest
+from concurrent.futures import ThreadPoolExecutor
+from dataclasses import replace
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
@@ -10,14 +13,17 @@ from weir.actions import (
     VerificationConfidence,
 )
 from weir.browser.models import BrowserSession, ControllerKind, SessionState
+from weir.browser.process_worker import WorkerDeathAttestation
 from weir.browser.state import ALLOWED_TRANSITIONS, InvalidSessionTransition, require_transition
 from weir.browser.store import (
+    DEAD_WORKER_RETIREMENT_DISPOSITION,
     CommandAttemptSuperseded,
     CommandInDoubt,
     PreviousCommandFailed,
     SessionRevisionConflict,
     SQLiteSessionStore,
 )
+from weir.contract import canonical_digest
 from weir.engines.base import (
     ControllerConflict,
     FailureClass,
@@ -56,6 +62,25 @@ def _session(clock: Clock, session_id: str = "session-1") -> BrowserSession:
         created_at=now,
         updated_at=now,
         expires_at=(clock() + timedelta(hours=1)).isoformat(),
+    )
+
+
+def _create_session(
+    store: SQLiteSessionStore,
+    session: BrowserSession,
+    *,
+    credential_binding_id: str | None = None,
+    worker_instance_id: str = "worker-instance-1",
+) -> BrowserSession:
+    return store.create_session(
+        session,
+        site_profile_id="test-portal",
+        credential_scope="read_only",
+        profile_policy_digest="sha256:" + "a" * 64,
+        credential_binding_id=(
+            credential_binding_id or f"credential-binding-{session.profile_id}"
+        ),
+        worker_instance_id=worker_instance_id,
     )
 
 
@@ -124,9 +149,9 @@ class BrowserStoreTests(unittest.TestCase):
         self.temporary.cleanup()
 
     def test_profile_reservation_is_unique_until_session_closes(self):
-        first = self.store.create_session(_session(self.clock))
+        first = _create_session(self.store, _session(self.clock))
         with self.assertRaises(ProfileInUse):
-            self.store.create_session(_session(self.clock, "session-2"))
+            _create_session(self.store, _session(self.clock, "session-2"))
 
         close_start = self.store.begin_command(
             "close-1", "close", "sha256:close-session-1"
@@ -151,11 +176,290 @@ class BrowserStoreTests(unittest.TestCase):
                 "revision": reserved.revision + 1,
             },
         )
-        second = self.store.create_session(_session(self.clock, "session-2"))
+        second = _create_session(self.store, _session(self.clock, "session-2"))
         self.assertEqual(second.session_id, "session-2")
 
+    def test_credential_reservation_is_global_across_worker_namespaces(self):
+        first = _create_session(
+            self.store,
+            _session(self.clock),
+            credential_binding_id="shared-credential-binding",
+            worker_instance_id="worker-instance-1",
+        )
+        other_worker = replace(
+            _session(self.clock, "session-2"),
+            worker_id="worker-2",
+            profile_id="unrelated-local-label",
+        )
+        with self.assertRaisesRegex(ProfileInUse, "credential binding"):
+            _create_session(
+                self.store,
+                other_worker,
+                credential_binding_id="shared-credential-binding",
+                worker_instance_id="worker-instance-2",
+            )
+        self.assertEqual(
+            self.store.profile_reservation(first.session_id).state,
+            "active",
+        )
+
+    def test_two_store_connections_race_for_one_credential_binding(self):
+        second_store = SQLiteSessionStore(
+            Path(self.temporary.name) / "sessions.sqlite3",
+            clock=self.clock,
+        )
+        barrier = threading.Barrier(2)
+
+        def attempt(
+            store: SQLiteSessionStore,
+            session: BrowserSession,
+            worker_instance_id: str,
+        ) -> str:
+            barrier.wait()
+            try:
+                _create_session(
+                    store,
+                    session,
+                    credential_binding_id="credential-binding-race",
+                    worker_instance_id=worker_instance_id,
+                )
+                return "created"
+            except ProfileInUse:
+                return "in_use"
+
+        try:
+            first = replace(
+                _session(self.clock, "session-race-1"),
+                profile_id="profile-race-1",
+                worker_id="worker-race-1",
+            )
+            second = replace(
+                _session(self.clock, "session-race-2"),
+                profile_id="profile-race-2",
+                worker_id="worker-race-2",
+            )
+            with ThreadPoolExecutor(max_workers=2) as executor:
+                first_result = executor.submit(
+                    attempt,
+                    self.store,
+                    first,
+                    "worker-instance-race-1",
+                )
+                second_result = executor.submit(
+                    attempt,
+                    second_store,
+                    second,
+                    "worker-instance-race-2",
+                )
+                results = [first_result.result(), second_result.result()]
+            self.assertCountEqual(results, ["created", "in_use"])
+            reservations = self.store.database.execute(
+                """SELECT credential_binding_id FROM browser_profile_reservations
+                   WHERE state IN ('active', 'quarantined')"""
+            ).fetchall()
+            self.assertEqual(
+                [row["credential_binding_id"] for row in reservations],
+                ["credential-binding-race"],
+            )
+        finally:
+            second_store.close()
+
+    def test_cleanup_attestation_is_bound_to_reservation_holder(self):
+        start = self.store.begin_command("open-holder", "open", "sha256:holder")
+        _create_session(
+            self.store,
+            _session(self.clock),
+            credential_binding_id="credential-binding-holder",
+        )
+        lease = self.store.acquire_lease(
+            "session-1",
+            "run-1",
+            ControllerKind.AUTOMATION,
+            ttl=timedelta(minutes=5),
+        )
+        self.store.reserve_worker_open(
+            "session-1",
+            command_id="open-holder",
+            attempt_token=start.attempt_token or "",
+            worker_instance_id="worker-instance-1",
+            expected_revision=0,
+            expected_epoch=1,
+            required_lease=lease,
+        )
+        with self.assertRaisesRegex(ControllerConflict, "held credential"):
+            self.store.record_worker_cleanup_attested(
+                "session-1",
+                worker_id="worker-2",
+                worker_instance_id="worker-instance-1",
+                worker_session_id="pending-session-1",
+                credential_binding_id="credential-binding-holder",
+                command_id="close-wrong-worker",
+            )
+        with self.assertRaisesRegex(ControllerConflict, "held credential"):
+            self.store.record_worker_cleanup_attested(
+                "session-1",
+                worker_id="worker-1",
+                worker_instance_id="worker-instance-2",
+                worker_session_id="pending-session-1",
+                credential_binding_id="credential-binding-holder",
+                command_id="close-wrong-instance",
+            )
+        with self.assertRaisesRegex(ControllerConflict, "held credential"):
+            self.store.record_worker_cleanup_attested(
+                "session-1",
+                worker_id="worker-1",
+                worker_instance_id="worker-instance-1",
+                worker_session_id="pending-session-1",
+                credential_binding_id="other-binding",
+                command_id="close-wrong-binding",
+            )
+
+    def test_dead_worker_cannot_claim_live_cleanup_and_operator_must_retire(self):
+        _create_session(
+            self.store,
+            _session(self.clock),
+            credential_binding_id="credential-binding-dead",
+        )
+        lost = self.store.mark_lost("session-1", 0)
+        attestation = WorkerDeathAttestation.create(
+            worker_id="worker-1",
+            worker_instance_id="worker-instance-1",
+            process_id=1234,
+            exit_code=1,
+            reason="worker_exited",
+            worker_exited_gracefully=False,
+            process_tree_confirmed_dead=True,
+        )
+        self.store.record_worker_death_attestation(attestation)
+        with self.assertRaisesRegex(ControllerConflict, "dead worker"):
+            self.store.record_worker_cleanup_attested(
+                lost.session_id,
+                worker_id="worker-1",
+                worker_instance_id="worker-instance-1",
+                worker_session_id=lost.worker_session_id,
+                credential_binding_id="credential-binding-dead",
+                command_id="close-after-death",
+            )
+        closed = self.store.retire_dead_worker_reservation(
+            lost.session_id,
+            retirement_id="retirement-1",
+            expected_session_epoch=lost.epoch,
+            expected_worker_id="worker-1",
+            expected_worker_instance_id="worker-instance-1",
+            expected_credential_binding_id="credential-binding-dead",
+            attestation_hash=attestation.attestation_hash,
+            disposition=DEAD_WORKER_RETIREMENT_DISPOSITION,
+            disposition_actor_id="operator-1",
+            disposition_ref="disposition-1",
+        )
+        self.assertEqual(closed.state, SessionState.CLOSED)
+        reservation = self.store.profile_reservation(lost.session_id)
+        self.assertEqual(reservation.state, "released")
+        self.assertEqual(
+            reservation.release_kind,
+            "operator_dead_worker_retirement",
+        )
+
+    def test_retirement_rejects_stale_epoch_binding_evidence_and_disposition(self):
+        _create_session(
+            self.store,
+            _session(self.clock),
+            credential_binding_id="credential-binding-retirement-checks",
+        )
+        lost = self.store.mark_lost("session-1", 0)
+        stale = WorkerDeathAttestation(
+            worker_id="worker-1",
+            worker_instance_id="worker-instance-1",
+            process_id=1234,
+            exit_code=1,
+            reason="worker_exited",
+            observed_at="2026-08-26T12:00:00+00:00",
+            worker_exited_gracefully=False,
+            process_tree_confirmed_dead=True,
+        )
+        stale = replace(
+            stale,
+            attestation_hash=canonical_digest(stale._hash_basis()),
+        )
+        self.store.record_worker_death_attestation(stale)
+        common = {
+            "retirement_id": "retirement-rejected",
+            "expected_session_epoch": lost.epoch,
+            "expected_worker_id": "worker-1",
+            "expected_worker_instance_id": "worker-instance-1",
+            "expected_credential_binding_id": (
+                "credential-binding-retirement-checks"
+            ),
+            "attestation_hash": stale.attestation_hash,
+            "disposition": DEAD_WORKER_RETIREMENT_DISPOSITION,
+            "disposition_actor_id": "operator-1",
+            "disposition_ref": "disposition-rejected",
+        }
+        with self.assertRaisesRegex(ControllerConflict, "stale browser-session epoch"):
+            self.store.retire_dead_worker_reservation(
+                lost.session_id,
+                **{**common, "expected_session_epoch": lost.epoch + 1},
+            )
+        with self.assertRaisesRegex(ControllerConflict, "held credential reservation"):
+            self.store.retire_dead_worker_reservation(
+                lost.session_id,
+                **{
+                    **common,
+                    "expected_credential_binding_id": "credential-binding-other",
+                },
+            )
+        with self.assertRaisesRegex(ControllerConflict, "predates"):
+            self.store.retire_dead_worker_reservation(
+                lost.session_id,
+                **common,
+            )
+        with self.assertRaisesRegex(ValueError, "not recognized"):
+            self.store.retire_dead_worker_reservation(
+                lost.session_id,
+                **{**common, "disposition": "release_without_proof"},
+            )
+        self.assertEqual(
+            self.store.profile_reservation(lost.session_id).state,
+            "quarantined",
+        )
+        retirement_count = self.store.database.execute(
+            "SELECT COUNT(*) FROM browser_profile_retirements"
+        ).fetchone()[0]
+        self.assertEqual(retirement_count, 0)
+
+    def test_context_closed_event_alone_cannot_release_dispatched_credential(self):
+        _create_session(self.store, _session(self.clock))
+        active, _ = _activate_session(self.store)
+        self.store.record_worker_context_closed(
+            active.session_id,
+            worker_instance_id="worker-instance-1",
+            worker_session_id=active.worker_session_id,
+            command_id="untrusted-close-only",
+        )
+        close_start = self.store.begin_command(
+            "close-without-attestation", "close", "sha256:close"
+        )
+        reserved, lease = self.store.begin_close(
+            active.session_id,
+            active.owner_run_id,
+            expected_revision=active.revision,
+            expected_epoch=active.epoch,
+            command_id="close-without-attestation",
+            command_attempt_token=close_start.attempt_token or "",
+            ttl=timedelta(minutes=5),
+        )
+        with self.assertRaisesRegex(ControllerConflict, "cleanup attested"):
+            self.store.close_with_lease(
+                active.session_id,
+                reserved.revision,
+                lease,
+                command_id="close-without-attestation",
+                command_attempt_token=close_start.attempt_token or "",
+                command_result={"session_id": active.session_id},
+            )
+
     def test_compare_and_swap_rejects_stale_session_revision(self):
-        self.store.create_session(_session(self.clock))
+        _create_session(self.store, _session(self.clock))
         active, lease = _activate_session(self.store)
         self.assertEqual(active.revision, 1)
         start = self.store.begin_command("cmd-stale", "navigate", "sha256:stale")
@@ -171,7 +475,7 @@ class BrowserStoreTests(unittest.TestCase):
             )
 
     def test_opening_cannot_activate_after_its_controller_lease_expires(self):
-        self.store.create_session(_session(self.clock))
+        _create_session(self.store, _session(self.clock))
         start = self.store.begin_command("open-expired", "open", "sha256:open")
         lease = self.store.acquire_lease(
             "session-1",
@@ -215,7 +519,7 @@ class BrowserStoreTests(unittest.TestCase):
 
     def test_stale_open_cannot_reserve_after_terminal_close_rotates_fence(self):
         open_start = self.store.begin_command("open-stale", "open", "sha256:open")
-        session = self.store.create_session(_session(self.clock))
+        session = _create_session(self.store, _session(self.clock))
         stale_lease = self.store.acquire_lease(
             session.session_id,
             "run-1",
@@ -266,7 +570,7 @@ class BrowserStoreTests(unittest.TestCase):
         )
 
     def test_lease_expiry_and_reacquisition_rotate_the_fence(self):
-        self.store.create_session(_session(self.clock))
+        _create_session(self.store, _session(self.clock))
         first = self.store.acquire_lease(
             "session-1", "run-1", ControllerKind.AUTOMATION, ttl=timedelta(seconds=10)
         )
@@ -288,7 +592,7 @@ class BrowserStoreTests(unittest.TestCase):
             self.store.release_lease(first)
 
     def test_takeover_rotates_fence_and_pauses_atomically(self):
-        self.store.create_session(_session(self.clock))
+        _create_session(self.store, _session(self.clock))
         active, lease = _activate_session(self.store)
         takeover_start = self.store.begin_command(
             "takeover-1", "takeover", "sha256:takeover"
@@ -342,7 +646,7 @@ class BrowserStoreTests(unittest.TestCase):
         self.assertEqual(automation.generation, operator.generation + 1)
 
     def test_transfer_recovery_requires_the_exact_durable_event(self):
-        self.store.create_session(_session(self.clock))
+        _create_session(self.store, _session(self.clock))
         active, lease = _activate_session(self.store)
         intended = self.store.begin_command(
             "takeover-intended", "takeover", "sha256:intended"
@@ -377,7 +681,7 @@ class BrowserStoreTests(unittest.TestCase):
             )
 
     def test_transfer_recovery_accepts_the_exact_live_transfer_after_attempt_rotation(self):
-        self.store.create_session(_session(self.clock))
+        _create_session(self.store, _session(self.clock))
         active, lease = _activate_session(self.store)
         first = self.store.begin_command(
             "takeover-recover", "takeover", "sha256:recover"
@@ -417,7 +721,7 @@ class BrowserStoreTests(unittest.TestCase):
         self.assertEqual(recovered_lease, operator)
 
     def test_reserved_command_rejects_valid_lease_from_another_session(self):
-        self.store.create_session(_session(self.clock))
+        _create_session(self.store, _session(self.clock))
         active, lease = _activate_session(self.store)
         start = self.store.begin_command("observe-1", "observe", "sha256:observe")
         paused, _ = self.store.reserve_automation_command(
@@ -431,7 +735,7 @@ class BrowserStoreTests(unittest.TestCase):
         )
         other = _session(self.clock, "session-2")
         other.profile_id = "profile-2"
-        self.store.create_session(other)
+        _create_session(self.store, other)
         other_lease = self.store.acquire_lease(
             other.session_id,
             other.owner_run_id,
@@ -454,7 +758,7 @@ class BrowserStoreTests(unittest.TestCase):
         )
 
     def test_paused_command_rejects_generic_lease_reacquisition(self):
-        self.store.create_session(_session(self.clock))
+        _create_session(self.store, _session(self.clock))
         active, lease = _activate_session(self.store)
         start = self.store.begin_command("navigate-1", "navigate", "sha256:navigate")
         paused, reserved_lease = self.store.reserve_automation_command(
@@ -480,7 +784,7 @@ class BrowserStoreTests(unittest.TestCase):
         )
 
     def test_reserved_command_cannot_be_activated_as_a_controller_return(self):
-        self.store.create_session(_session(self.clock))
+        _create_session(self.store, _session(self.clock))
         active, lease = _activate_session(self.store)
         start = self.store.begin_command("navigate-1", "navigate", "sha256:navigate")
         paused, reserved_lease = self.store.reserve_automation_command(
@@ -507,7 +811,7 @@ class BrowserStoreTests(unittest.TestCase):
         )
 
     def test_only_original_owner_can_recover_lost_session(self):
-        self.store.create_session(_session(self.clock))
+        _create_session(self.store, _session(self.clock))
         lost = self.store.mark_lost("session-1", 0)
         wrong_start = self.store.begin_command(
             "recover-wrong", "recover", "sha256:recover-wrong"
@@ -553,7 +857,7 @@ class BrowserStoreTests(unittest.TestCase):
             self.store.begin_command("cmd-2", "navigate", "sha256:c")
 
     def test_superseded_close_attempt_cannot_commit_terminal_state(self):
-        self.store.create_session(_session(self.clock))
+        _create_session(self.store, _session(self.clock))
         active, _ = _activate_session(self.store)
         self.store.record_worker_context_closed(
             "session-1",
@@ -593,7 +897,7 @@ class BrowserStoreTests(unittest.TestCase):
         )
 
     def test_operator_lease_cannot_bypass_close_reservation(self):
-        self.store.create_session(_session(self.clock))
+        _create_session(self.store, _session(self.clock))
         active, automation = _activate_session(self.store)
         self.store.record_worker_context_closed(
             active.session_id,
@@ -633,7 +937,7 @@ class BrowserStoreTests(unittest.TestCase):
         )
 
     def test_paused_close_rejects_generic_lease_reacquisition(self):
-        self.store.create_session(_session(self.clock))
+        _create_session(self.store, _session(self.clock))
         active, _ = _activate_session(self.store)
         self.store.record_worker_context_closed(
             active.session_id,
@@ -667,7 +971,7 @@ class BrowserStoreTests(unittest.TestCase):
         )
 
     def test_receipts_and_metadata_events_survive_store_reopen(self):
-        self.store.create_session(_session(self.clock))
+        _create_session(self.store, _session(self.clock))
         receipt = ExecutionReceipt.create(
             receipt_id="receipt-1",
             action_id="action-1",
@@ -705,7 +1009,7 @@ class BrowserStoreTests(unittest.TestCase):
             self.store.save_receipt({"action_id": "action-1"})  # type: ignore[arg-type]
 
     def test_worker_close_attestation_must_match_created_context(self):
-        self.store.create_session(_session(self.clock))
+        _create_session(self.store, _session(self.clock))
         self.store.record_worker_context_created(
             "session-1",
             worker_session_id="worker-context-1",
@@ -744,7 +1048,7 @@ class BrowserStoreTests(unittest.TestCase):
 
     def test_unacknowledged_open_reservation_quarantines_until_worker_cleanup(self):
         start = self.store.begin_command("open-1", "open", "sha256:request")
-        self.store.create_session(_session(self.clock))
+        _create_session(self.store, _session(self.clock))
         lease = self.store.acquire_lease(
             "session-1",
             "run-1",
@@ -767,8 +1071,10 @@ class BrowserStoreTests(unittest.TestCase):
         )
         self.store.record_worker_cleanup_attested(
             "session-1",
+            worker_id="worker-1",
             worker_session_id="pending-session-1",
             worker_instance_id="worker-instance-1",
+            credential_binding_id="credential-binding-profile-1",
             command_id="close-reserved",
         )
         self.assertFalse(

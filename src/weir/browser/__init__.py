@@ -30,6 +30,14 @@ from weir.browser.process_worker import (
     WorkerProcessTimeout,
     WorkerRemoteError,
 )
+from weir.browser.profile_registry import (
+    EmptyProfileStateProvider,
+    ProfileBindingProvider,
+    ProfileStateProvider,
+    StaticProfileStateRegistry,
+    VerifiedProfileBinding,
+    VerifiedProfileState,
+)
 
 __all__ = [
     "BROWSER_CONTRACT_VERSION",
@@ -37,6 +45,7 @@ __all__ = [
     "ControllerKind",
     "ControllerLease",
     "ControllerLeaseView",
+    "EmptyProfileStateProvider",
     "LocatorAmbiguousError",
     "LocatorNotFoundError",
     "LocatorResolutionError",
@@ -44,10 +53,15 @@ __all__ = [
     "Observation",
     "ObservedElement",
     "ProcessBrowserWorker",
+    "ProfileBindingProvider",
+    "ProfileStateProvider",
     "ResolvedTarget",
     "SemanticLocator",
     "SessionState",
     "StaleObservationError",
+    "StaticProfileStateRegistry",
+    "VerifiedProfileBinding",
+    "VerifiedProfileState",
     "WorkerDeathAttestation",
     "WorkerProcessError",
     "WorkerProcessLost",

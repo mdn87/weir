@@ -12,7 +12,12 @@ from pathlib import Path
 from unittest import mock
 
 from weir.broker import AcquisitionBroker
-from weir.browser.store import SQLiteSessionStore
+from weir.browser.models import BrowserSession, SessionState
+from weir.browser.process_worker import WorkerDeathAttestation
+from weir.browser.store import (
+    DEAD_WORKER_RETIREMENT_DISPOSITION,
+    SQLiteSessionStore,
+)
 from weir.client import HttpWeirClient, InProcessWeirClient, WeirClientError
 from weir.engines.base import EngineProbe, ReaderEngine, SearchEngine
 from weir.evidence import AcquisitionEnvelope
@@ -23,6 +28,7 @@ from weir.service import (
     ACQUISITION_READ_SCOPE,
     COMMAND_READ_SCOPE,
     EVIDENCE_READ_SCOPE,
+    PROFILE_RETIRE_SCOPE,
     ClientCredential,
     ClientRegistry,
     ServiceRequestError,
@@ -33,6 +39,7 @@ from weir.work_context import WorkContext, WorkContextSource
 
 LUGOS_CREDENTIAL = "lugos-mcp-" + "a" * 40
 FADE_CREDENTIAL = "fade-authority-" + "b" * 40
+OPERATOR_CREDENTIAL = "weir-operator-" + "c" * 40
 
 
 class StubReader(ReaderEngine):
@@ -131,6 +138,12 @@ def _client_registry() -> ClientRegistry:
                 FADE_CREDENTIAL,
                 frozenset({COMMAND_READ_SCOPE}),
                 frozenset({DataClass.PUBLIC}),
+            ),
+            ClientCredential(
+                "weir-operator",
+                OPERATOR_CREDENTIAL,
+                frozenset({PROFILE_RETIRE_SCOPE}),
+                frozenset({DataClass.PUBLIC, DataClass.BWA_INTERNAL}),
             ),
         ]
     )
@@ -236,6 +249,109 @@ class ClientContractTests(unittest.TestCase):
 
 
 class ServiceBoundaryTests(unittest.TestCase):
+    def test_profile_retirement_uses_authenticated_actor_and_exact_death_evidence(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            store = SQLiteSessionStore(root / "browser.sqlite3")
+            now = datetime.now(timezone.utc)
+            session = BrowserSession(
+                session_id="session-retire-1",
+                owner_run_id="run-retire-1",
+                engine="playwright-observer",
+                worker_id="worker-retire-1",
+                worker_session_id="pending-retire-1",
+                profile_id="profile-retire-1",
+                data_class=DataClass.BWA_INTERNAL,
+                allowed_domains=["app.example.test"],
+                state=SessionState.OPENING,
+                revision=0,
+                epoch=1,
+                current_url=None,
+                created_at=now.isoformat(),
+                updated_at=now.isoformat(),
+                expires_at=(now + timedelta(hours=1)).isoformat(),
+            )
+            store.create_session(
+                session,
+                site_profile_id="site-retire-1",
+                credential_scope="read_only",
+                profile_policy_digest="sha256:" + "a" * 64,
+                credential_binding_id="credential-binding-retire-1",
+                worker_instance_id="worker-instance-retire-1",
+            )
+            store.mark_lost(session.session_id, session.revision)
+            attestation = WorkerDeathAttestation.create(
+                worker_id=session.worker_id,
+                worker_instance_id="worker-instance-retire-1",
+                process_id=4321,
+                exit_code=1,
+                reason="worker_exited",
+                worker_exited_gracefully=False,
+                process_tree_confirmed_dead=True,
+            )
+            store.record_worker_death_attestation(attestation)
+            body = json.dumps(
+                {
+                    "session_id": session.session_id,
+                    "retirement_id": "retirement-service-1",
+                    "expected_session_epoch": session.epoch,
+                    "expected_worker_id": session.worker_id,
+                    "expected_worker_instance_id": "worker-instance-retire-1",
+                    "expected_credential_binding_id": (
+                        "credential-binding-retire-1"
+                    ),
+                    "attestation_hash": attestation.attestation_hash,
+                    "disposition": DEAD_WORKER_RETIREMENT_DISPOSITION,
+                    "disposition_ref": "operator-ticket-1",
+                }
+            ).encode("utf-8")
+            backend, _, _ = _backend(root / "captures", command_store=store)
+            application = WeirServiceApplication(
+                backend,
+                _client_registry(),
+                session_store=store,
+            )
+            try:
+                with WeirService(application) as service:
+                    base_url = f"http://{service.address[0]}:{service.address[1]}"
+                    denied, denied_body = _raw_request(
+                        base_url,
+                        "/v1/browser/profile-retirements",
+                        client_id="fade-weir",
+                        credential=FADE_CREDENTIAL,
+                        body=body,
+                    )
+                    self.assertEqual(denied, 403)
+                    self.assertEqual(
+                        denied_body["error"]["reason_code"],
+                        "scope_denied",
+                    )
+
+                    status, response = _raw_request(
+                        base_url,
+                        "/v1/browser/profile-retirements",
+                        client_id="weir-operator",
+                        credential=OPERATOR_CREDENTIAL,
+                        body=body,
+                    )
+                    replay_status, replay = _raw_request(
+                        base_url,
+                        "/v1/browser/profile-retirements",
+                        client_id="weir-operator",
+                        credential=OPERATOR_CREDENTIAL,
+                        body=body,
+                    )
+                self.assertEqual(status, 200)
+                self.assertEqual(replay_status, 200)
+                self.assertEqual(replay, response)
+                self.assertEqual(response["session_state"], "closed")
+                self.assertEqual(response["reservation_state"], "released")
+                reservation = store.profile_reservation(session.session_id)
+                self.assertEqual(reservation.release_actor_id, "weir-operator")
+                self.assertEqual(reservation.release_ref, "operator-ticket-1")
+            finally:
+                store.close()
+
     def test_registry_rejects_shared_credentials(self):
         with self.assertRaisesRegex(ValueError, "may not share"):
             ClientRegistry(

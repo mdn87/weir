@@ -57,13 +57,14 @@ immutable persistence, and no authenticated browser dependency.
 - [x] Add a direct Playwright comparison adapter (fresh nonpersistent contexts,
   opaque read-only profile-state provider, JavaScript disabled, GET/HEAD-only
   transport, pinned DNS, observation only).
-- [x] Add profile isolation and one-live-session reservations per worker-local profile
-  namespace. Global cross-worker credential locking requires a store-schema decision.
+- [x] Add profile isolation, the worker-local defense-in-depth constraint, and
+  schema-v2 host-global reservations keyed by trusted `credential_binding_id`.
 - [x] Add expiring controller leases with monotonic fencing generations.
 - [x] Add same-owner recovery, durable per-session command reservation, worker-context
   quarantine, and fenced manual takeover/return semantics.
-- [ ] Add an authorized, audited dead-worker reservation retirement path; until then,
-  unacknowledged OPEN dispatches remain quarantined and direct store edits are unsupported.
+- [x] Add separate persisted worker-death evidence and an authenticated, audited
+  retirement path bound to the exact epoch, worker, instance, credential, and
+  disposition. Direct store edits remain unsupported.
 - [x] Add a drop-in, killable `BrowserWorker` process transport with propagated
   wall-clock deadlines, Windows Job Object/POSIX process-group termination, verified
   tree death, parent-death and wrapper-abandonment containment, a strict bounded JSON
@@ -95,6 +96,8 @@ are in `docs/remaining-integration-plan.md`.
 - [ ] Connect an authenticated Fade/Operator approval authority.
 - [ ] Reacquire state immediately before execution.
 - [x] Add deterministic semantic post-action verification and `ExecutionReceipt` contracts.
+- [x] Add durable one-use permit reservations plus atomic `outcome_unknown` receipt,
+  session, controller, credential, and operator-clear quarantine records.
 - [ ] Produce receipts from a real authorized executor.
 - [ ] Add bounded recovery patterns.
 

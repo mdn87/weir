@@ -324,6 +324,7 @@ class SessionSpec:
     worker_session_id: str
     owner_run_id: str
     profile_id: str
+    credential_binding_id: str
     site_profile_id: str
     credential_scope: str
     data_class: DataClass
@@ -336,6 +337,7 @@ class SessionSpec:
             "worker_session_id": self.worker_session_id,
             "owner_run_id": self.owner_run_id,
             "profile_id": self.profile_id,
+            "credential_binding_id": self.credential_binding_id,
             "site_profile_id": self.site_profile_id,
             "credential_scope": self.credential_scope,
             "data_class": self.data_class.value,

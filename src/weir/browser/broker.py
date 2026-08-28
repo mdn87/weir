@@ -16,6 +16,11 @@ from weir.browser.models import (
     SessionState,
 )
 from weir.browser.policy import check_browser_target_policy, normalize_allowed_domains
+from weir.browser.profile_registry import (
+    EmptyProfileStateProvider,
+    ProfileBindingProvider,
+    VerifiedProfileBinding,
+)
 from weir.browser.protocol import (
     BrowserWorker,
     SessionSpec,
@@ -77,6 +82,7 @@ class BrowserSessionBroker:
         store: SQLiteSessionStore,
         capture_store: CaptureStore,
         profiles: SiteProfileRegistry,
+        profile_bindings: ProfileBindingProvider | None = None,
         clock: Callable[[], datetime] | None = None,
         id_factory: Callable[[str], str] | None = None,
         session_ttl: timedelta = timedelta(hours=1),
@@ -92,6 +98,7 @@ class BrowserSessionBroker:
         self.store = store
         self.capture_store = capture_store
         self.profiles = profiles
+        self.profile_bindings = profile_bindings or EmptyProfileStateProvider()
         self.clock = clock or (lambda: datetime.now(timezone.utc))
         self.id_factory = id_factory or (lambda prefix: f"{prefix}-{uuid.uuid4().hex}")
         self.session_ttl = session_ttl
@@ -123,6 +130,7 @@ class BrowserSessionBroker:
         _require_external_operation_id(operation_id)
         worker = self._worker(worker_id)
         profile = self._validate_open_request(request, context, worker)
+        credential_binding = self._credential_binding(request, profile)
         reserved_instance = self.store.started_open_worker_instance(operation_id)
         if reserved_instance is not None and (
             reserved_instance != worker.descriptor.instance_id
@@ -135,6 +143,7 @@ class BrowserSessionBroker:
             "work_context": context.to_dict(),
             "worker_id": worker_id,
             "site_profile": profile.id,
+            "credential_binding_id": credential_binding.credential_binding_id,
         }
         start = self.store.begin_command(
             operation_id,
@@ -185,6 +194,8 @@ class BrowserSessionBroker:
                 site_profile_id=profile.id,
                 credential_scope=profile.browser_observation["credential_scope"],
                 profile_policy_digest=_profile_policy_digest(profile),
+                credential_binding_id=credential_binding.credential_binding_id,
+                worker_instance_id=worker.descriptor.instance_id or "",
                 opening_operation_id=operation_id,
             )
             created = True
@@ -266,8 +277,12 @@ class BrowserSessionBroker:
                     cleanup_succeeded = True
                     self.store.record_worker_cleanup_attested(
                         session_id,
+                        worker_id=worker.descriptor.worker_id,
                         worker_instance_id=worker.descriptor.instance_id or "",
                         worker_session_id=session.worker_session_id,
+                        credential_binding_id=self.store.profile_binding(
+                            session_id
+                        ).credential_binding_id,
                         command_id=cleanup_command.command_id,
                     )
                 except Exception:
@@ -281,7 +296,9 @@ class BrowserSessionBroker:
                         except Exception:
                             pass
             if created:
-                self._best_effort_lost(session_id, "open_failed", exc)
+                self._best_effort_lost(
+                    session_id, "open_failed", exc, worker=worker
+                )
             if lease is not None and self.store.valid_lease(lease):
                 self.store.release_lease(lease)
             raise
@@ -375,7 +392,9 @@ class BrowserSessionBroker:
                     f"navigate command {operation_id!r} attempt was superseded"
                 ) from exc
             if reserved is not None:
-                self._best_effort_lost(session_id, "navigate_failed", exc)
+                self._best_effort_lost(
+                    session_id, "navigate_failed", exc, worker=worker
+                )
             if reserved_lease is not None and self.store.valid_lease(reserved_lease):
                 self.store.release_lease(reserved_lease)
             raise
@@ -564,7 +583,9 @@ class BrowserSessionBroker:
                     f"observe command {operation_id!r} attempt was superseded"
                 ) from exc
             if reserved is not None:
-                self._best_effort_lost(session_id, "observation_failed", exc)
+                self._best_effort_lost(
+                    session_id, "observation_failed", exc, worker=worker
+                )
             if reserved_lease is not None and self.store.valid_lease(reserved_lease):
                 self.store.release_lease(reserved_lease)
             raise
@@ -670,7 +691,9 @@ class BrowserSessionBroker:
                     f"takeover command {operation_id!r} attempt was superseded"
                 ) from exc
             if paused is not None:
-                self._best_effort_lost(session_id, "takeover_fence_failed", exc)
+                self._best_effort_lost(
+                    session_id, "takeover_fence_failed", exc, worker=worker
+                )
             if operator is not None and self.store.valid_lease(operator):
                 self.store.release_lease(operator)
             raise
@@ -775,7 +798,10 @@ class BrowserSessionBroker:
                 ) from exc
             if paused is not None:
                 self._best_effort_lost(
-                    session.session_id, "return_control_fence_failed", exc
+                    session.session_id,
+                    "return_control_fence_failed",
+                    exc,
+                    worker=worker,
                 )
             if automation is not None and self.store.valid_lease(automation):
                 self.store.release_lease(automation)
@@ -859,6 +885,11 @@ class BrowserSessionBroker:
         new_worker_context = False
         new_worker_context_recorded = False
         try:
+            self.store.assert_live_profile_reservation_holder(
+                session_id,
+                worker_id=worker.descriptor.worker_id,
+                worker_instance_id=worker.descriptor.instance_id or "",
+            )
             opening = self.store.begin_recovery(
                 session_id,
                 context.run_id,
@@ -912,8 +943,12 @@ class BrowserSessionBroker:
                         worker.close_session(session_id, prior_cleanup_command)
                         self.store.record_worker_cleanup_attested(
                             session_id,
+                            worker_id=worker.descriptor.worker_id,
                             worker_instance_id=worker.descriptor.instance_id or "",
                             worker_session_id=old.worker_session_id,
+                            credential_binding_id=self.store.profile_binding(
+                                session_id
+                            ).credential_binding_id,
                             command_id=prior_cleanup_command.command_id,
                         )
                     except Exception as cleanup_exc:
@@ -995,8 +1030,12 @@ class BrowserSessionBroker:
                     cleanup_succeeded = True
                     self.store.record_worker_cleanup_attested(
                         session_id,
+                        worker_id=worker.descriptor.worker_id,
                         worker_instance_id=worker.descriptor.instance_id or "",
                         worker_session_id=opening.worker_session_id,
+                        credential_binding_id=self.store.profile_binding(
+                            session_id
+                        ).credential_binding_id,
                         command_id=cleanup_command.command_id,
                     )
                 except Exception:
@@ -1009,7 +1048,9 @@ class BrowserSessionBroker:
                             )
                         except Exception:
                             pass
-            self._best_effort_lost(session_id, "recovery_failed", exc)
+            self._best_effort_lost(
+                session_id, "recovery_failed", exc, worker=worker
+            )
             if lease is not None and self.store.valid_lease(lease):
                 self.store.release_lease(lease)
             raise
@@ -1091,8 +1132,12 @@ class BrowserSessionBroker:
                 worker.close_session(session_id, command)
                 self.store.record_worker_cleanup_attested(
                     session_id,
+                    worker_id=worker.descriptor.worker_id,
                     worker_instance_id=worker_instance_id,
                     worker_session_id=reserved.worker_session_id,
+                    credential_binding_id=self.store.profile_binding(
+                        session_id
+                    ).credential_binding_id,
                     command_id=operation_id,
                 )
             except Exception as exc:
@@ -1105,7 +1150,10 @@ class BrowserSessionBroker:
                     FailureClass.SESSION_LOST,
                 )
                 self._best_effort_lost(
-                    session_id, "worker_cleanup_unconfirmed", quarantine_error
+                    session_id,
+                    "worker_cleanup_unconfirmed",
+                    quarantine_error,
+                    worker=worker,
                 )
                 raise quarantine_error
 
@@ -1367,6 +1415,31 @@ class BrowserSessionBroker:
         )
         return profile
 
+    def _credential_binding(
+        self, request: WebRequest, profile: SiteProfile
+    ) -> VerifiedProfileBinding:
+        binding = self.profile_bindings.binding_for(request.profile_id or "")
+        if binding is None:
+            raise EnginePolicyBlocked(
+                f"no trusted credential binding is configured for profile "
+                f"{request.profile_id!r}"
+            )
+        binding.validate()
+        if binding.profile_id != request.profile_id:
+            raise EnginePolicyBlocked(
+                "profile registry returned a different profile identifier"
+            )
+        if binding.site_profile_id != profile.id:
+            raise EnginePolicyBlocked(
+                "browser credential is registered for a different site profile"
+            )
+        expected_scope = profile.browser_observation.get("credential_scope")
+        if binding.credential_scope != expected_scope:
+            raise EnginePolicyBlocked(
+                "browser credential registry and site-profile scopes disagree"
+            )
+        return binding
+
     def _owned_session(
         self, session_id: str, context: WorkContext
     ) -> BrowserSession:
@@ -1431,6 +1504,7 @@ class BrowserSessionBroker:
         profile: SiteProfile | None = None,
         worker_session_id: str | None = None,
     ) -> SessionSpec:
+        binding = self.store.profile_binding(session.session_id)
         bound_profile, credential_scope = self._bound_profile(
             session, initial_url, expected_profile=profile
         )
@@ -1439,6 +1513,7 @@ class BrowserSessionBroker:
             worker_session_id=worker_session_id or session.worker_session_id,
             owner_run_id=session.owner_run_id,
             profile_id=session.profile_id,
+            credential_binding_id=binding.credential_binding_id,
             site_profile_id=bound_profile.id,
             credential_scope=credential_scope,
             data_class=session.data_class,
@@ -1500,6 +1575,20 @@ class BrowserSessionBroker:
             raise EnginePolicyBlocked(
                 "browser session credential scope changed after open"
             )
+        current_binding = self.profile_bindings.binding_for(session.profile_id)
+        if current_binding is None:
+            raise EnginePolicyBlocked(
+                "browser session's credential binding is no longer configured"
+            )
+        current_binding.validate()
+        if (
+            current_binding.credential_binding_id != binding.credential_binding_id
+            or current_binding.site_profile_id != binding.site_profile_id
+            or current_binding.credential_scope != binding.credential_scope
+        ):
+            raise EnginePolicyBlocked(
+                "browser session's trusted credential binding changed after open"
+            )
         return profile, credential_scope
 
     def _command(
@@ -1557,8 +1646,24 @@ class BrowserSessionBroker:
         )
 
     def _best_effort_lost(
-        self, session_id: str, reason: str, exc: Exception
+        self,
+        session_id: str,
+        reason: str,
+        exc: Exception,
+        *,
+        worker: BrowserWorker | None = None,
     ) -> None:
+        if worker is not None:
+            try:
+                from weir.browser.process_worker import WorkerDeathAttestation
+
+                attestation = getattr(worker, "death_attestation", None)
+                if isinstance(attestation, WorkerDeathAttestation):
+                    self.store.record_worker_death_attestation(attestation)
+            except Exception:
+                # Loss handling remains fail-closed even if evidence persistence
+                # itself fails; the credential reservation stays quarantined.
+                pass
         try:
             current = self.store.get_session(session_id)
             if current.state in {

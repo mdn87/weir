@@ -92,6 +92,8 @@ def _fixture(
         site_profile_id="site-profile-proposal",
         credential_scope="credential-scope-proposal",
         profile_policy_digest="sha256:" + "1" * 64,
+        credential_binding_id="credential-binding-proposal-1",
+        worker_instance_id="worker-instance-proposal-1",
     )
     observation = Observation.create(
         observation_id="observation-proposal-1",

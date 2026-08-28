@@ -29,6 +29,10 @@ from weir.browser.process_worker import (
     WorkerProcessTimeout,
     WorkerRemoteError,
 )
+from weir.browser.profile_registry import (
+    StaticProfileStateRegistry,
+    VerifiedProfileState,
+)
 from weir.browser.protocol import SessionSpec, WorkerCommand
 from weir.browser.store import SQLiteSessionStore
 from weir.models import DataClass, RequestMode, WebRequest
@@ -152,6 +156,7 @@ def _spec() -> SessionSpec:
         worker_session_id="pending-session-process-1",
         owner_run_id="run-process-1",
         profile_id="ephemeral:process-1",
+        credential_binding_id="credential-binding-process-1",
         site_profile_id="site-process-1",
         credential_scope="read-only",
         data_class=DataClass.PUBLIC,
@@ -563,6 +568,17 @@ class ProcessBrowserWorkerTests(unittest.TestCase):
                     store=store,
                     capture_store=CaptureStore(root / "evidence"),
                     profiles=SiteProfileRegistry([profile]),
+                    profile_bindings=StaticProfileStateRegistry(
+                        [
+                            VerifiedProfileState(
+                                profile_id="profile-process-broker",
+                                credential_binding_id="credential-binding-process-broker",
+                                site_profile_id="test-portal",
+                                credential_scope="read_only",
+                                storage_state={},
+                            )
+                        ]
+                    ),
                     clock=lambda: now,
                 )
                 request = WebRequest(

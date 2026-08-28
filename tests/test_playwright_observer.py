@@ -45,11 +45,16 @@ class _AuthenticatedHandler(BaseHTTPRequestHandler):
 
 
 class _ProfileStates:
+    def binding_for(self, profile_id):
+        state = self.state_for(profile_id)
+        return None if state is None else state.binding
+
     def state_for(self, profile_id):
         if profile_id != "fixture-profile":
             raise KeyError(profile_id)
         return VerifiedProfileState(
             profile_id="fixture-profile",
+            credential_binding_id="credential-binding-fixture",
             site_profile_id="authenticated-fixture",
             credential_scope="read_only",
             storage_state={
@@ -112,6 +117,7 @@ class PlaywrightContainmentTests(unittest.TestCase):
             worker_session_id="pending-1",
             owner_run_id="run-1",
             profile_id="profile-1",
+            credential_binding_id="credential-binding-1",
             site_profile_id="portal",
             credential_scope="read_only",
             data_class=DataClass.BWA_INTERNAL,
@@ -120,6 +126,7 @@ class PlaywrightContainmentTests(unittest.TestCase):
         )
         state = VerifiedProfileState(
             profile_id="profile-1",
+            credential_binding_id="credential-binding-1",
             site_profile_id="portal",
             credential_scope="admin",
             storage_state={"cookies": [{}], "origins": []},
@@ -180,6 +187,7 @@ class PlaywrightContainmentTests(unittest.TestCase):
             worker_session_id="pending-1",
             owner_run_id="run-1",
             profile_id="profile-1",
+            credential_binding_id="credential-binding-1",
             site_profile_id="portal",
             credential_scope="read_only",
             data_class=DataClass.BWA_INTERNAL,
@@ -225,6 +233,7 @@ class PlaywrightContainmentTests(unittest.TestCase):
             worker_session_id="pending-1",
             owner_run_id="run-1",
             profile_id="profile-1",
+            credential_binding_id="credential-binding-1",
             site_profile_id="portal",
             credential_scope="read_only",
             data_class=DataClass.BWA_INTERNAL,
@@ -280,6 +289,7 @@ class PlaywrightContainmentTests(unittest.TestCase):
             worker_session_id="pending-1",
             owner_run_id="run-1",
             profile_id="profile-1",
+            credential_binding_id="credential-binding-1",
             site_profile_id="portal",
             credential_scope="read_only",
             data_class=DataClass.BWA_INTERNAL,
@@ -330,6 +340,7 @@ class PlaywrightContainmentTests(unittest.TestCase):
             worker_session_id="worker-context-1",
             owner_run_id="run-1",
             profile_id="profile-1",
+            credential_binding_id="credential-binding-1",
             site_profile_id="portal",
             credential_scope="read_only",
             data_class=DataClass.BWA_INTERNAL,
@@ -384,6 +395,7 @@ class PlaywrightContainmentTests(unittest.TestCase):
             worker_session_id="worker-context-1",
             owner_run_id="run-1",
             profile_id="profile-1",
+            credential_binding_id="credential-binding-1",
             site_profile_id="portal",
             credential_scope="read_only",
             data_class=DataClass.BWA_INTERNAL,
@@ -471,6 +483,7 @@ class PlaywrightObserverSmokeTests(unittest.TestCase):
                 store=store,
                 capture_store=CaptureStore(Path(temporary.name) / "evidence"),
                 profiles=SiteProfileRegistry([profile]),
+                profile_bindings=_ProfileStates(),
                 id_factory=_Ids(),
             )
             request = WebRequest(
