@@ -1,0 +1,50 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://lugos.local/weir/acquisition-envelope.schema.json",
+  "title": "AcquisitionEnvelope",
+  "description": "The full immutable work identity and WebRequest presented at the acquisition boundary.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["contract_version", "work_context", "request", "envelope_hash"],
+  "properties": {
+    "contract_version": {"const": "0.1"},
+    "work_context": {"$ref": "work-context.schema.json"},
+    "request": {
+      "allOf": [
+        {"$ref": "web-request.schema.json"},
+        {
+          "required": [
+            "contract_version", "request_id", "run_id", "mode", "data_class",
+            "auth_context", "intent", "url", "query", "source", "constraints",
+            "profile_id", "allowed_domains", "preferred_engine", "maximum_depth",
+            "evidence_required", "side_effects_allowed", "capture_policy"
+          ],
+          "properties": {
+            "constraints": {"$ref": "#/$defs/portableObject"},
+            "maximum_depth": {"type": "integer", "minimum": 0, "maximum": 32}
+          }
+        }
+      ]
+    },
+    "envelope_hash": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"}
+  },
+  "$defs": {
+    "portableKey": {"pattern": "^[a-z][a-z0-9_.-]{0,63}$"},
+    "portableObject": {
+      "type": "object",
+      "maxProperties": 128,
+      "propertyNames": {"$ref": "#/$defs/portableKey"},
+      "additionalProperties": {"$ref": "#/$defs/portableValue"}
+    },
+    "portableValue": {
+      "oneOf": [
+        {"type": "null"},
+        {"type": "boolean"},
+        {"type": "integer", "minimum": -9007199254740991, "maximum": 9007199254740991},
+        {"type": "string", "maxLength": 16384},
+        {"type": "array", "maxItems": 256, "items": {"$ref": "#/$defs/portableValue"}},
+        {"$ref": "#/$defs/portableObject"}
+      ]
+    }
+  }
+}

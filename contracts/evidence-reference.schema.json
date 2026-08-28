@@ -1,0 +1,52 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://lugos.local/weir/evidence-reference.schema.json",
+  "title": "EvidenceReference",
+  "description": "A context-specific binding to context-free WebCapture content. A retained artifact is the exact canonical content JSON bytes and hashes directly to content_hash.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "contract_version", "evidence_ref_id", "work_context_hash", "request_id",
+    "capture_id", "capture_contract_version", "content_hash", "artifact_ref",
+    "media_type", "capture_policy", "data_class", "trust", "created_at",
+    "reference_hash"
+  ],
+  "properties": {
+    "contract_version": {"const": "0.1"},
+    "evidence_ref_id": {"type": "string", "minLength": 1, "maxLength": 128},
+    "work_context_hash": {"$ref": "#/$defs/digest"},
+    "request_id": {"type": "string", "minLength": 1, "maxLength": 128},
+    "capture_id": {"type": "string", "minLength": 1, "maxLength": 128},
+    "capture_contract_version": {"const": "0.1"},
+    "content_hash": {"$ref": "#/$defs/digest"},
+    "artifact_ref": {
+      "type": ["string", "null"],
+      "pattern": "^weir-artifact:sha256:[0-9a-f]{64}$"
+    },
+    "media_type": {"enum": ["application/json", null]},
+    "capture_policy": {"enum": ["metadata", "content", "full_evidence"]},
+    "data_class": {"enum": ["public", "personal", "bwa_internal", "restricted"]},
+    "trust": {"enum": ["untrusted_external_content", "trusted_internal_source", "unknown"]},
+    "created_at": {"type": "string", "format": "date-time"},
+    "reference_hash": {"$ref": "#/$defs/digest"}
+  },
+  "allOf": [
+    {
+      "if": {"properties": {"artifact_ref": {"type": "null"}}, "required": ["artifact_ref"]},
+      "then": {"properties": {"media_type": {"type": "null"}}},
+      "else": {"properties": {"media_type": {"const": "application/json"}}}
+    },
+    {
+      "if": {"properties": {"capture_policy": {"const": "metadata"}}, "required": ["capture_policy"]},
+      "then": {
+        "properties": {
+          "artifact_ref": {"type": "null"},
+          "media_type": {"type": "null"}
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"}
+  }
+}

@@ -1,0 +1,92 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://lugos.local/weir/legacy/execution-receipt-v0.2.schema.json",
+  "title": "LegacyExecutionReceiptV0_2",
+  "description": "Read-only compatibility schema retained through the Batch 0 published retention window. New producers emit ExecutionReceipt v0.3.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "contract_version", "receipt_id", "action_id", "proposal_hash", "session_id",
+    "session_epoch", "lease_generation", "executed_by", "executed_at", "result",
+    "approval_ref", "capture_ids", "failure_class", "verification"
+  ],
+  "properties": {
+    "contract_version": {"const": "0.2"},
+    "receipt_id": {"type": "string", "minLength": 1},
+    "action_id": {"type": "string", "minLength": 1},
+    "proposal_hash": {"$ref": "#/$defs/digest"},
+    "session_id": {"type": "string", "minLength": 1},
+    "session_epoch": {"type": "integer", "minimum": 1},
+    "lease_generation": {"type": "integer", "minimum": 1},
+    "executed_by": {"type": "string", "minLength": 1},
+    "executed_at": {"type": "string", "format": "date-time"},
+    "result": {"enum": ["completed", "failed", "blocked", "cancelled"]},
+    "approval_ref": {"type": ["string", "null"]},
+    "capture_ids": {
+      "type": "array",
+      "maxItems": 2,
+      "items": {"type": "string", "minLength": 1},
+      "uniqueItems": true
+    },
+    "failure_class": {
+      "type": ["string", "null"],
+      "enum": [null, "engine_unavailable", "engine_failure", "network_failure", "blocked_target", "cannot_read", "javascript_required", "auth_required", "challenge", "policy_blocked", "approval_required", "stale_reference", "session_lost", "controller_conflict", "profile_in_use", "ambiguous_target", "idempotency_conflict", "command_expired", "verification_failed", "unknown"]
+    },
+    "verification": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["method", "confidence", "supporting_evidence_refs", "verified_capture_index"],
+      "properties": {
+        "method": {"type": ["string", "null"], "minLength": 1},
+        "confidence": {"enum": ["verified", "probable", "uncertain", "failed", "blocked"]},
+        "supporting_evidence_refs": {"type": "array", "items": {"type": "string", "minLength": 1}, "uniqueItems": true},
+        "verified_capture_index": {"type": ["integer", "null"], "minimum": 0}
+      },
+      "allOf": [
+        {
+          "if": {"properties": {"confidence": {"const": "verified"}}, "required": ["confidence"]},
+          "then": {
+            "properties": {
+              "method": {"type": "string", "minLength": 1},
+              "supporting_evidence_refs": {"minItems": 1},
+              "verified_capture_index": {"const": 1}
+            }
+          },
+          "else": {"properties": {"verified_capture_index": {"type": "null"}}}
+        }
+      ]
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "verification": {
+            "properties": {"confidence": {"const": "verified"}},
+            "required": ["confidence"]
+          }
+        },
+        "required": ["verification"]
+      },
+      "then": {"properties": {"capture_ids": {"minItems": 2, "maxItems": 2}}}
+    },
+    {
+      "if": {"properties": {"result": {"const": "completed"}}},
+      "then": {
+        "properties": {
+          "capture_ids": {"minItems": 2, "maxItems": 2},
+          "approval_ref": {"type": "string", "minLength": 1},
+          "failure_class": {"type": "null"},
+          "verification": {"properties": {"confidence": {"const": "verified"}}}
+        }
+      }
+    },
+    {
+      "if": {"properties": {"result": {"enum": ["failed", "blocked"]}}, "required": ["result"]},
+      "then": {"properties": {"failure_class": {"type": "string"}}}
+    }
+  ],
+  "$defs": {
+    "digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"}
+  }
+}

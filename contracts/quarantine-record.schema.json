@@ -1,0 +1,53 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://lugos.local/weir/quarantine-record.schema.json",
+  "title": "QuarantineRecord",
+  "description": "An append-only active or operator-cleared session quarantine caused by an unknown action outcome.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "contract_version", "quarantine_id", "session_id", "session_epoch",
+    "work_context_hash", "permit_id", "command_id", "receipt_id", "state",
+    "reason_code", "recorded_at", "supersedes_hash", "disposition_actor_id",
+    "disposition_ref", "record_hash"
+  ],
+  "properties": {
+    "contract_version": {"const": "0.1"},
+    "quarantine_id": {"type": "string", "minLength": 1, "maxLength": 128},
+    "session_id": {"type": "string", "minLength": 1, "maxLength": 128},
+    "session_epoch": {"type": "integer", "minimum": 1},
+    "work_context_hash": {"$ref": "#/$defs/digest"},
+    "permit_id": {"type": "string", "minLength": 1, "maxLength": 128},
+    "command_id": {"type": "string", "minLength": 1, "maxLength": 128},
+    "receipt_id": {"type": "string", "minLength": 1, "maxLength": 128},
+    "state": {"enum": ["active", "cleared"]},
+    "reason_code": {"const": "outcome_unknown"},
+    "recorded_at": {"type": "string", "format": "date-time"},
+    "supersedes_hash": {"anyOf": [{"type": "null"}, {"$ref": "#/$defs/digest"}]},
+    "disposition_actor_id": {"type": ["string", "null"], "minLength": 1, "maxLength": 128},
+    "disposition_ref": {"type": ["string", "null"], "minLength": 1, "maxLength": 128},
+    "record_hash": {"$ref": "#/$defs/digest"}
+  },
+  "allOf": [
+    {
+      "if": {"properties": {"state": {"const": "active"}}, "required": ["state"]},
+      "then": {
+        "properties": {
+          "supersedes_hash": {"type": "null"},
+          "disposition_actor_id": {"type": "null"},
+          "disposition_ref": {"type": "null"}
+        }
+      },
+      "else": {
+        "properties": {
+          "supersedes_hash": {"$ref": "#/$defs/digest"},
+          "disposition_actor_id": {"type": "string", "minLength": 1},
+          "disposition_ref": {"type": "string", "minLength": 1}
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"}
+  }
+}

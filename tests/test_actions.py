@@ -24,8 +24,10 @@ from weir.actions import (
 from weir.browser.locators import resolve_locator
 from weir.browser.models import Observation, ObservedElement, SemanticLocator
 from weir.engines.base import FailureClass
+from weir.models import DataClass
 
 CONTRACTS = Path(__file__).resolve().parents[1] / "contracts"
+WORK_CONTEXT_HASH = "sha256:" + "a" * 64
 
 
 def _validator(name: str) -> Draft202012Validator:
@@ -53,10 +55,14 @@ def _proposal(risk: Risk | None = None):
         action_id="action-1",
         request_id="request-1",
         owner_run_id="run-1",
+        work_context_hash=WORK_CONTEXT_HASH,
+        correlation_id="request-1",
+        assignment_id="assignment-1",
         observation=_observation(),
         locator=SemanticLocator(role="button", name="Save"),
         action_type=ActionType.CLICK,
         parameters={},
+        parameter_data_class=DataClass.PUBLIC,
         risk=risk,
         created_at="2026-08-27T12:00:01+00:00",
         expires_at="2026-08-27T12:01:01+00:00",
@@ -90,10 +96,14 @@ class ActionFoundationTests(unittest.TestCase):
                         action_id=f"action-{action_type.value}",
                         request_id="request-risk",
                         owner_run_id="run-1",
+                        work_context_hash=WORK_CONTEXT_HASH,
+                        correlation_id="request-risk",
+                        assignment_id="assignment-1",
                         observation=_observation(),
                         locator=SemanticLocator(role="button", name="Save"),
                         action_type=action_type,
                         parameters={},
+                        parameter_data_class=DataClass.PUBLIC,
                         risk=Risk.LOCAL_MUTATION,
                         created_at="2026-08-27T12:00:01+00:00",
                         expires_at="2026-08-27T12:01:01+00:00",
@@ -180,10 +190,14 @@ class ActionFoundationTests(unittest.TestCase):
             action_id="action-verify",
             request_id="request-verify",
             owner_run_id="run-1",
+            work_context_hash=WORK_CONTEXT_HASH,
+            correlation_id="request-verify",
+            assignment_id="assignment-1",
             observation=before,
             locator=locator,
             action_type=ActionType.CLICK,
             parameters={},
+            parameter_data_class=DataClass.PUBLIC,
             created_at="2026-08-27T12:00:01+00:00",
             expires_at="2026-08-27T12:01:01+00:00",
             expected_postconditions=[
@@ -245,10 +259,14 @@ class ActionFoundationTests(unittest.TestCase):
 
     def test_completed_receipt_requires_and_serializes_verified_evidence(self):
         proposal = _proposal()
-        receipt = ExecutionReceipt(
+        receipt = ExecutionReceipt.create(
             receipt_id="receipt-1",
             action_id=proposal.action_id,
             proposal_hash=proposal.proposal_hash,
+            permit_id="permit-1",
+            work_context_hash=proposal.work_context_hash,
+            command_id="command-1",
+            reservation_ref="reservation-1",
             session_id=proposal.session_id,
             session_epoch=proposal.session_epoch,
             lease_generation=3,
@@ -268,54 +286,64 @@ class ActionFoundationTests(unittest.TestCase):
         _validator("execution-receipt.schema.json").validate(receipt.to_dict())
 
     def test_runtime_receipt_validation_matches_identifier_and_hash_schema(self):
-        receipt = ExecutionReceipt(
-            receipt_id="",
-            action_id="action-1",
-            proposal_hash="sha256:not-a-digest",
-            session_id="session-1",
-            session_epoch=1,
-            lease_generation=1,
-            executed_by="worker",
-            executed_at="2026-08-27T12:00:00+00:00",
-            result=ReceiptResult.BLOCKED,
-            approval_ref=None,
-            capture_ids=(),
-            failure_class=FailureClass.APPROVAL_REQUIRED,
-            verification=Verification(
-                None, VerificationConfidence.BLOCKED, ("", "")
-            ),
-        )
         with self.assertRaisesRegex(ValueError, "receipt_id"):
-            receipt.validate()
+            ExecutionReceipt.create(
+                receipt_id="",
+                action_id="action-1",
+                proposal_hash="sha256:not-a-digest",
+                permit_id="permit-1",
+                work_context_hash=WORK_CONTEXT_HASH,
+                command_id="command-1",
+                reservation_ref="reservation-1",
+                session_id="session-1",
+                session_epoch=1,
+                lease_generation=1,
+                executed_by="worker",
+                executed_at="2026-08-27T12:00:00+00:00",
+                result=ReceiptResult.BLOCKED,
+                approval_ref=None,
+                capture_ids=(),
+                failure_class=FailureClass.APPROVAL_REQUIRED,
+                verification=Verification(None, VerificationConfidence.BLOCKED, ()),
+            )
 
     def test_completed_receipt_cannot_claim_success_without_post_evidence(self):
         proposal = _proposal()
-        receipt = ExecutionReceipt(
-            receipt_id="receipt-1",
-            action_id=proposal.action_id,
-            proposal_hash=proposal.proposal_hash,
-            session_id=proposal.session_id,
-            session_epoch=proposal.session_epoch,
-            lease_generation=3,
-            executed_by="fade-worker-1",
-            executed_at=(datetime.now(timezone.utc) + timedelta(seconds=1)).isoformat(),
-            result=ReceiptResult.COMPLETED,
-            approval_ref="approval-1",
-            capture_ids=("webcap-before",),
-            failure_class=None,
-            verification=Verification(
-                None, VerificationConfidence.PROBABLE, ("webcap-before",)
-            ),
-        )
         with self.assertRaisesRegex(ValueError, "before and after"):
-            receipt.validate()
+            ExecutionReceipt.create(
+                receipt_id="receipt-1",
+                action_id=proposal.action_id,
+                proposal_hash=proposal.proposal_hash,
+                permit_id="permit-1",
+                work_context_hash=proposal.work_context_hash,
+                command_id="command-1",
+                reservation_ref="reservation-1",
+                session_id=proposal.session_id,
+                session_epoch=proposal.session_epoch,
+                lease_generation=3,
+                executed_by="fade-worker-1",
+                executed_at=(
+                    datetime.now(timezone.utc) + timedelta(seconds=1)
+                ).isoformat(),
+                result=ReceiptResult.COMPLETED,
+                approval_ref="approval-1",
+                capture_ids=("webcap-before",),
+                failure_class=None,
+                verification=Verification(
+                    None, VerificationConfidence.PROBABLE, ("webcap-before",)
+                ),
+            )
 
     def test_verified_receipt_always_has_an_addressable_after_capture(self):
         proposal = _proposal()
-        receipt = ExecutionReceipt(
+        receipt = ExecutionReceipt.create(
             receipt_id="receipt-1",
             action_id=proposal.action_id,
             proposal_hash=proposal.proposal_hash,
+            permit_id="permit-1",
+            work_context_hash=proposal.work_context_hash,
+            command_id="command-1",
+            reservation_ref="reservation-1",
             session_id=proposal.session_id,
             session_epoch=proposal.session_epoch,
             lease_generation=3,
@@ -323,7 +351,7 @@ class ActionFoundationTests(unittest.TestCase):
             executed_at=datetime.now(timezone.utc).isoformat(),
             result=ReceiptResult.BLOCKED,
             approval_ref=None,
-            capture_ids=("webcap-before",),
+            capture_ids=("webcap-before", "webcap-after"),
             failure_class=FailureClass.APPROVAL_REQUIRED,
             verification=Verification(
                 "semantic_postcondition",
@@ -333,20 +361,22 @@ class ActionFoundationTests(unittest.TestCase):
             ),
         )
         with self.assertRaisesRegex(ValueError, "before and after"):
-            receipt.validate()
-        schema_value = replace(
-            receipt, capture_ids=("webcap-before", "webcap-after")
-        ).to_dict()
+            replace(receipt, capture_ids=("webcap-before",)).validate()
+        schema_value = receipt.to_dict()
         schema_value["capture_ids"] = ["webcap-before"]
         with self.assertRaises(ValidationError):
             _validator("execution-receipt.schema.json").validate(schema_value)
 
     def test_schema_rejects_completed_receipt_with_failure(self):
         proposal = _proposal()
-        value = ExecutionReceipt(
+        value = ExecutionReceipt.create(
             receipt_id="receipt-1",
             action_id=proposal.action_id,
             proposal_hash=proposal.proposal_hash,
+            permit_id="permit-1",
+            work_context_hash=proposal.work_context_hash,
+            command_id="command-1",
+            reservation_ref="reservation-1",
             session_id=proposal.session_id,
             session_epoch=1,
             lease_generation=1,
@@ -366,10 +396,14 @@ class ActionFoundationTests(unittest.TestCase):
 
     def test_receipt_schema_rejects_false_verified_success(self):
         proposal = _proposal()
-        valid = ExecutionReceipt(
+        valid = ExecutionReceipt.create(
             receipt_id="receipt-verified",
             action_id=proposal.action_id,
             proposal_hash=proposal.proposal_hash,
+            permit_id="permit-1",
+            work_context_hash=proposal.work_context_hash,
+            command_id="command-1",
+            reservation_ref="reservation-1",
             session_id=proposal.session_id,
             session_epoch=proposal.session_epoch,
             lease_generation=3,

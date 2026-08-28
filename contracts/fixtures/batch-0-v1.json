@@ -1,0 +1,1096 @@
+{
+  "artifact_materialization": {
+    "artifact_ref": "weir-artifact:sha256:<content digest>",
+    "cache_key_fields": [
+      "capture_policy",
+      "max_capture_bytes"
+    ],
+    "format": "exact WEIR canonical JSON bytes of WebCapture.content after truncation",
+    "media_type": "application/json",
+    "metadata_policy_satisfies_content_input": false,
+    "rehash": "SHA-256 over materialized bytes equals EvidenceReference.content_hash"
+  },
+  "canonical_json": {
+    "encoding": "UTF-8",
+    "hash_algorithm": "SHA-256",
+    "hash_basis": "the complete contract object except its own *_hash field",
+    "hash_prefix": "sha256:",
+    "key_order": "recursive lexicographic order; extension keys are lowercase ASCII",
+    "numbers": "integers only in extension values, bounded to IEEE-754 safe range",
+    "whitespace": "none"
+  },
+  "fade_forbidden_keys": [
+    "api_key",
+    "authorization",
+    "bearer_token",
+    "cookie",
+    "password",
+    "refresh_token",
+    "secret",
+    "secret_values",
+    "token"
+  ],
+  "fixture_version": 1,
+  "integration_invariants": {
+    "apu_attribution": {
+      "cwd_selection": "unique active candidate among exact normalized-cwd matches",
+      "explicit_id_cwd_mismatch": "reject",
+      "no_attribution": {
+        "cli_exit": "nonzero",
+        "kind": "no_attribution"
+      }
+    },
+    "apu_evidence": "schema version bump and watcher deployment approval required",
+    "autowork_assignment_binding": [
+      "correlation_id",
+      "assignment_id"
+    ],
+    "autowork_request_run_id": "absent; orchestrator attests run linkage after parse",
+    "autowork_v5": "breaking exact-set migration; no silent field loss",
+    "dias_v2": "separate schemas and version dispatch; v1 silent-drop canary required",
+    "fade_weir_authority": "second server, port, credential, run directory, and ID namespace",
+    "lugos_mcp_context": "authenticated origin established upstream of create_server and both dispatch paths",
+    "mission_control_before_hud_registration": true,
+    "work_context_evidence_refs": "caller input only and fixed at root creation"
+  },
+  "limits": {
+    "acquisition_envelope_canonical_bytes": 131072,
+    "action_parameters_canonical_bytes": 65536,
+    "action_proposal_canonical_bytes": 262144,
+    "evidence_reference_canonical_bytes": 8192,
+    "execution_permit_canonical_bytes": 8192,
+    "execution_receipt_canonical_bytes": 32768,
+    "quarantine_record_canonical_bytes": 8192,
+    "work_context_canonical_bytes": 8192,
+    "work_context_input_evidence_refs": 32
+  },
+  "negative": [
+    {
+      "document": {
+        "assignment_id": "assignment-fixture-1",
+        "context_hash": "sha256:cffabdff06bdd93a9de35c44111f6ed0cfd5f78cef9e6eb37e9ca59aa388a54b",
+        "context_id": "context-fixture-1",
+        "contract_version": "0.1",
+        "correlation_id": "request-fixture-1",
+        "created_at": "2026-08-27T12:00:00+00:00",
+        "evidence_refs": [
+          "weir-capture:late-output"
+        ],
+        "objective_id": "objective-fixture-1",
+        "run_id": "run-fixture-1",
+        "source": "autowork"
+      },
+      "name": "work_context.late_evidence_mutation",
+      "reason_code": "context_hash_mismatch",
+      "schema": "work-context.schema.json",
+      "validator": "work_context_runtime"
+    },
+    {
+      "document": {
+        "artifact_ref": null,
+        "capture_contract_version": "0.1",
+        "capture_id": "webcap-fixture-1",
+        "capture_policy": "metadata",
+        "content_hash": "sha256:09ed214b42bdf1a26dc2dc5e3954388dbb884711b222fae637592f43f38e506f",
+        "contract_version": "0.1",
+        "created_at": "2026-08-27T12:00:02+00:00",
+        "data_class": "public",
+        "evidence_ref_id": "evidence-fixture-metadata",
+        "media_type": null,
+        "reference_hash": "sha256:64430e809497760c7a048fc37dc7358e2b2c9593534111a96767df65b09b1df8",
+        "request_id": "request-fixture-1",
+        "trust": "untrusted_external_content",
+        "work_context_hash": "sha256:cffabdff06bdd93a9de35c44111f6ed0cfd5f78cef9e6eb37e9ca59aa388a54b"
+      },
+      "name": "evidence_reference.metadata_as_content_input",
+      "reason_code": "evidence_content_unavailable",
+      "schema": "evidence-reference.schema.json",
+      "validator": "evidence_input_runtime"
+    },
+    {
+      "document": {
+        "artifact_ref": "weir-artifact:sha256:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+        "capture_contract_version": "0.1",
+        "capture_id": "webcap-fixture-1",
+        "capture_policy": "content",
+        "content_hash": "sha256:09ed214b42bdf1a26dc2dc5e3954388dbb884711b222fae637592f43f38e506f",
+        "contract_version": "0.1",
+        "created_at": "2026-08-27T12:00:02+00:00",
+        "data_class": "public",
+        "evidence_ref_id": "evidence-fixture-1",
+        "media_type": "application/json",
+        "reference_hash": "sha256:d2f3ce6c4bb6f4773f5bebb086525b16eefeb358fa07a30afb558729b1673f8a",
+        "request_id": "request-fixture-1",
+        "trust": "untrusted_external_content",
+        "work_context_hash": "sha256:cffabdff06bdd93a9de35c44111f6ed0cfd5f78cef9e6eb37e9ca59aa388a54b"
+      },
+      "name": "evidence_reference.artifact_digest_substitution",
+      "reason_code": "artifact_hash_mismatch",
+      "schema": "evidence-reference.schema.json",
+      "validator": "evidence_reference_runtime"
+    },
+    {
+      "document": {
+        "contract_version": "0.1",
+        "envelope_hash": "sha256:120aa528d95615cdde0380ef9863bb504ce007b2c732ead2fc860ffc055b32f7",
+        "request": {
+          "allowed_domains": [
+            "example.test"
+          ],
+          "auth_context": "none",
+          "capture_policy": "content",
+          "constraints": {},
+          "contract_version": "0.1",
+          "data_class": "public",
+          "evidence_required": true,
+          "intent": "Read the deterministic contract fixture",
+          "maximum_depth": 0,
+          "mode": "read",
+          "preferred_engine": "http",
+          "profile_id": null,
+          "query": null,
+          "request_id": "request-fixture-1",
+          "run_id": "run-other",
+          "side_effects_allowed": false,
+          "source": null,
+          "url": "https://example.test/fixture"
+        },
+        "work_context": {
+          "assignment_id": "assignment-fixture-1",
+          "context_hash": "sha256:cffabdff06bdd93a9de35c44111f6ed0cfd5f78cef9e6eb37e9ca59aa388a54b",
+          "context_id": "context-fixture-1",
+          "contract_version": "0.1",
+          "correlation_id": "request-fixture-1",
+          "created_at": "2026-08-27T12:00:00+00:00",
+          "evidence_refs": [],
+          "objective_id": "objective-fixture-1",
+          "run_id": "run-fixture-1",
+          "source": "autowork"
+        }
+      },
+      "name": "acquisition_envelope.run_mismatch",
+      "reason_code": "acquisition_run_mismatch",
+      "schema": "acquisition-envelope.schema.json",
+      "validator": "acquisition_envelope_runtime"
+    },
+    {
+      "document": {
+        "contract_version": "0.1",
+        "envelope_hash": "sha256:c8544bfb6fbd293e80099ffdd5a9059be8ef4b7158b630f926fd325121b13656",
+        "request": {
+          "allowed_domains": [
+            "example.test"
+          ],
+          "auth_context": "none",
+          "capture_policy": "content",
+          "constraints": {
+            "ratio": 1.5
+          },
+          "contract_version": "0.1",
+          "data_class": "public",
+          "evidence_required": true,
+          "intent": "Read the deterministic contract fixture",
+          "maximum_depth": 0,
+          "mode": "read",
+          "preferred_engine": "http",
+          "profile_id": null,
+          "query": null,
+          "request_id": "request-fixture-1",
+          "run_id": "run-fixture-1",
+          "side_effects_allowed": false,
+          "source": null,
+          "url": "https://example.test/fixture"
+        },
+        "work_context": {
+          "assignment_id": "assignment-fixture-1",
+          "context_hash": "sha256:cffabdff06bdd93a9de35c44111f6ed0cfd5f78cef9e6eb37e9ca59aa388a54b",
+          "context_id": "context-fixture-1",
+          "contract_version": "0.1",
+          "correlation_id": "request-fixture-1",
+          "created_at": "2026-08-27T12:00:00+00:00",
+          "evidence_refs": [],
+          "objective_id": "objective-fixture-1",
+          "run_id": "run-fixture-1",
+          "source": "autowork"
+        }
+      },
+      "name": "acquisition_envelope.nonportable_constraints",
+      "reason_code": "acquisition_request_not_portable",
+      "schema": "acquisition-envelope.schema.json",
+      "validator": "acquisition_envelope_runtime"
+    },
+    {
+      "document": {
+        "action_id": "action-fixture-1",
+        "action_type": "fill",
+        "assignment_id": "assignment-fixture-1",
+        "contract_version": "0.3",
+        "correlation_id": "request-fixture-1",
+        "created_at": "2026-08-27T12:00:04+00:00",
+        "evidence_refs": [
+          "webcap-browser-before"
+        ],
+        "expected_postconditions": [],
+        "expires_at": "2026-08-27T12:05:04+00:00",
+        "observation_hash": "sha256:85a78f655fe8a7f249bafa71a600a8f1235bda68fbc4ea776b085771474c73cc",
+        "observation_id": "observation-fixture-1",
+        "owner_run_id": "run-fixture-1",
+        "parameter_data_class": "personal",
+        "parameters": {
+          "password": "fixture-value"
+        },
+        "preconditions": [
+          {
+            "expected": "sha256:85a78f655fe8a7f249bafa71a600a8f1235bda68fbc4ea776b085771474c73cc",
+            "kind": "observation_hash_equals",
+            "locator": null,
+            "target": null
+          },
+          {
+            "expected": true,
+            "kind": "element_present",
+            "locator": {
+              "contract_version": "0.2",
+              "name": "Shipping address",
+              "name_match": "exact",
+              "ordinal": null,
+              "required_state": null,
+              "role": "textbox",
+              "test_id": null
+            },
+            "target": {
+              "contract_version": "0.2",
+              "element_ref": "element-fixture-1",
+              "locator_hash": "sha256:65650cf83b4e2afb0e9eacd92c348fb3db2b4b8f3c9c837aa56bb7db963d3e29",
+              "name": "Shipping address",
+              "observation_id": "observation-fixture-1",
+              "role": "textbox",
+              "session_epoch": 1,
+              "session_id": "session-fixture-1",
+              "session_revision": 2,
+              "state": "enabled",
+              "test_id": "shipping_address"
+            }
+          }
+        ],
+        "proposal_hash": "sha256:99810c158be0c0d7b070a2e625aa1bd57b2be6eddcdf3692bcdd06ccd28de2fc",
+        "request_id": "request-fixture-1",
+        "requires_approval": true,
+        "resolved_target": {
+          "contract_version": "0.2",
+          "element_ref": "element-fixture-1",
+          "locator_hash": "sha256:65650cf83b4e2afb0e9eacd92c348fb3db2b4b8f3c9c837aa56bb7db963d3e29",
+          "name": "Shipping address",
+          "observation_id": "observation-fixture-1",
+          "role": "textbox",
+          "session_epoch": 1,
+          "session_id": "session-fixture-1",
+          "session_revision": 2,
+          "state": "enabled",
+          "test_id": "shipping_address"
+        },
+        "risk": "unknown",
+        "semantic_locator": {
+          "contract_version": "0.2",
+          "name": "Shipping address",
+          "name_match": "exact",
+          "ordinal": null,
+          "required_state": null,
+          "role": "textbox",
+          "test_id": null
+        },
+        "session_epoch": 1,
+        "session_id": "session-fixture-1",
+        "session_revision": 2,
+        "work_context_hash": "sha256:cffabdff06bdd93a9de35c44111f6ed0cfd5f78cef9e6eb37e9ca59aa388a54b"
+      },
+      "name": "action_proposal.fade_forbidden_parameter_key",
+      "reason_code": "fade_forbidden_field",
+      "schema": "action-proposal.schema.json",
+      "validator": "schema"
+    },
+    {
+      "document": {
+        "action_type": "fill",
+        "approval_ref": "approval-fixture-1",
+        "contract_version": "0.1",
+        "expires_at": "2026-08-27T12:01:10+00:00",
+        "issued_at": "2026-08-27T12:00:10+00:00",
+        "issuer_id": "fade-weir-authority",
+        "owner_run_id": "run-fixture-1",
+        "permit_hash": "sha256:abc52a4043f25c1f530f25c23af6dd3fdc67b2831e2dc27c2acc2e0906118752",
+        "permit_id": "permit-fixture-1",
+        "proposal_hash": "sha256:cf8f953db8b1422d9f43fd5447cdd88d15f415ec302f03abab565b964283399a",
+        "risk": "unknown",
+        "session_epoch": 1,
+        "session_id": "session-fixture-1",
+        "use_limit": 1,
+        "work_context_hash": "sha256:cffabdff06bdd93a9de35c44111f6ed0cfd5f78cef9e6eb37e9ca59aa388a54b"
+      },
+      "name": "execution_permit.expired",
+      "reason_code": "permit_expired",
+      "schema": "execution-permit.schema.json",
+      "validation_time": "2026-08-27T12:01:11+00:00",
+      "validator": "permit_clock_runtime"
+    },
+    {
+      "document": {
+        "action_type": "fill",
+        "approval_ref": "approval-fixture-1",
+        "contract_version": "0.1",
+        "expires_at": "2026-08-27T12:01:10+00:00",
+        "issued_at": "2026-08-27T12:00:10+00:00",
+        "issuer_id": "fade-weir-authority",
+        "owner_run_id": "run-fixture-1",
+        "permit_hash": "sha256:abc52a4043f25c1f530f25c23af6dd3fdc67b2831e2dc27c2acc2e0906118752",
+        "permit_id": "permit-fixture-1",
+        "proposal_hash": "sha256:cf8f953db8b1422d9f43fd5447cdd88d15f415ec302f03abab565b964283399a",
+        "risk": "unknown",
+        "session_epoch": 1,
+        "session_id": "session-fixture-1",
+        "use_limit": 1,
+        "work_context_hash": "sha256:cffabdff06bdd93a9de35c44111f6ed0cfd5f78cef9e6eb37e9ca59aa388a54b"
+      },
+      "name": "execution_permit.insufficient_dispatch_margin",
+      "reason_code": "permit_expiry_margin",
+      "schema": "execution-permit.schema.json",
+      "validation_time": "2026-08-27T12:00:56+00:00",
+      "validator": "permit_clock_runtime"
+    },
+    {
+      "document": {
+        "action_type": "fill",
+        "approval_ref": "approval-fixture-1",
+        "contract_version": "0.1",
+        "expires_at": "2026-08-27T12:01:10+00:00",
+        "issued_at": "2026-08-27T12:00:10+00:00",
+        "issuer_id": "fade-weir-authority",
+        "owner_run_id": "run-fixture-1",
+        "permit_hash": "sha256:abc52a4043f25c1f530f25c23af6dd3fdc67b2831e2dc27c2acc2e0906118752",
+        "permit_id": "permit-fixture-1",
+        "proposal_hash": "sha256:cf8f953db8b1422d9f43fd5447cdd88d15f415ec302f03abab565b964283399a",
+        "risk": "unknown",
+        "session_epoch": 1,
+        "session_id": "session-fixture-1",
+        "token": "not-a-real-credential",
+        "use_limit": 1,
+        "work_context_hash": "sha256:cffabdff06bdd93a9de35c44111f6ed0cfd5f78cef9e6eb37e9ca59aa388a54b"
+      },
+      "name": "execution_permit.fade_forbidden_field",
+      "reason_code": "fade_forbidden_field",
+      "schema": "execution-permit.schema.json",
+      "validator": "schema"
+    },
+    {
+      "document": {
+        "action_id": "action-fixture-1",
+        "approval_ref": "approval-fixture-1",
+        "capture_ids": [
+          "webcap-browser-before",
+          "webcap-browser-after"
+        ],
+        "command_id": "command-fixture-unknown",
+        "contract_version": "0.3",
+        "executed_at": "2026-08-27T12:00:31+00:00",
+        "executed_by": "weir-worker-fixture-1",
+        "failure_class": "outcome_unknown",
+        "lease_generation": 4,
+        "permit_id": "permit-fixture-1",
+        "proposal_hash": "sha256:cf8f953db8b1422d9f43fd5447cdd88d15f415ec302f03abab565b964283399a",
+        "quarantine_ref": "weir-quarantine:quarantine-fixture-1",
+        "receipt_hash": "sha256:4a8be4eb28126b391d165cdbc2a7cab5a896c5ead73ad6e6264b48b3420afeaa",
+        "receipt_id": "receipt-fixture-unknown",
+        "reservation_ref": "reservation-fixture-unknown",
+        "result": "outcome_unknown",
+        "session_epoch": 1,
+        "session_id": "session-fixture-1",
+        "verification": {
+          "confidence": "verified",
+          "method": "semantic_postconditions",
+          "supporting_evidence_refs": [
+            "webcap-browser-after"
+          ],
+          "verified_capture_index": 1
+        },
+        "work_context_hash": "sha256:cffabdff06bdd93a9de35c44111f6ed0cfd5f78cef9e6eb37e9ca59aa388a54b"
+      },
+      "name": "execution_receipt.unknown_with_post_state_claim",
+      "reason_code": "unknown_outcome_post_state_claim",
+      "schema": "execution-receipt.schema.json",
+      "validator": "execution_receipt_runtime"
+    },
+    {
+      "document": {
+        "action_id": "action-fixture-1",
+        "approval_ref": "approval-fixture-1",
+        "capture_ids": [
+          "webcap-browser-before"
+        ],
+        "command_id": "command-fixture-unknown",
+        "contract_version": "0.3",
+        "executed_at": "2026-08-27T12:00:31+00:00",
+        "executed_by": "weir-worker-fixture-1",
+        "failure_class": "outcome_unknown",
+        "lease_generation": 4,
+        "permit_id": "permit-fixture-1",
+        "proposal_hash": "sha256:cf8f953db8b1422d9f43fd5447cdd88d15f415ec302f03abab565b964283399a",
+        "quarantine_ref": null,
+        "receipt_hash": "sha256:174173466d6f360d4f94bee20fb0f3ba082d7617e2e4cc7e6ee135dfe87f0b35",
+        "receipt_id": "receipt-fixture-unknown",
+        "reservation_ref": "reservation-fixture-unknown",
+        "result": "outcome_unknown",
+        "session_epoch": 1,
+        "session_id": "session-fixture-1",
+        "verification": {
+          "confidence": "uncertain",
+          "method": null,
+          "supporting_evidence_refs": [],
+          "verified_capture_index": null
+        },
+        "work_context_hash": "sha256:cffabdff06bdd93a9de35c44111f6ed0cfd5f78cef9e6eb37e9ca59aa388a54b"
+      },
+      "name": "execution_receipt.unknown_without_quarantine",
+      "reason_code": "unknown_outcome_without_quarantine",
+      "schema": "execution-receipt.schema.json",
+      "validator": "execution_receipt_runtime"
+    },
+    {
+      "document": {
+        "action_id": "action-fixture-1",
+        "approval_ref": "approval-fixture-1",
+        "capture_ids": [
+          "webcap-browser-before"
+        ],
+        "command_id": "command-fixture-unknown",
+        "contract_version": "0.3",
+        "executed_at": "2026-08-27T12:00:31+00:00",
+        "executed_by": "weir-worker-fixture-1",
+        "failure_class": "outcome_unknown",
+        "lease_generation": 4,
+        "permit_id": "permit-fixture-1",
+        "proposal_hash": "sha256:cf8f953db8b1422d9f43fd5447cdd88d15f415ec302f03abab565b964283399a",
+        "quarantine_ref": "weir-quarantine:quarantine-fixture-1",
+        "receipt_hash": "sha256:7e5cd156f5856a6a6569631015f89cbaff319241ec0966e8bc5549acc4406b10",
+        "receipt_id": "receipt-fixture-unknown",
+        "reservation_ref": "reservation-fixture-unknown",
+        "result": "outcome_unknown",
+        "session_epoch": 1,
+        "session_id": "session-fixture-1",
+        "verification": {
+          "confidence": "verified",
+          "method": "semantic_postconditions",
+          "supporting_evidence_refs": [
+            "webcap-browser-before"
+          ],
+          "verified_capture_index": 1
+        },
+        "work_context_hash": "sha256:cffabdff06bdd93a9de35c44111f6ed0cfd5f78cef9e6eb37e9ca59aa388a54b"
+      },
+      "name": "execution_receipt.unknown_with_verification_claim",
+      "reason_code": "unknown_outcome_verification_claim",
+      "schema": "execution-receipt.schema.json",
+      "validator": "execution_receipt_runtime"
+    },
+    {
+      "document": {
+        "action_id": "action-fixture-1",
+        "action_type": "fill",
+        "event_type": "weir.action.proposed",
+        "evidence_ref_count": 1,
+        "header": {
+          "assignment_id": "assignment-fixture-1",
+          "correlation_id": "request-fixture-1",
+          "event_id": "event-fixture-1",
+          "occurred_at": "2026-08-27T12:00:05+00:00",
+          "producer": "weir",
+          "run_id": "run-fixture-1",
+          "schema_version": 1,
+          "work_context_hash": "sha256:cffabdff06bdd93a9de35c44111f6ed0cfd5f78cef9e6eb37e9ca59aa388a54b"
+        },
+        "parameter_data_class": "personal",
+        "parameters": {
+          "value": "must-not-reach-HUD"
+        },
+        "permit_hash": null,
+        "proposal_hash": "sha256:cf8f953db8b1422d9f43fd5447cdd88d15f415ec302f03abab565b964283399a",
+        "reason_code": null,
+        "receipt_id": null,
+        "risk": "unknown",
+        "schema_version": 1,
+        "session_id": "session-fixture-1",
+        "state": "proposed"
+      },
+      "name": "weir_action_event.parameter_leak",
+      "reason_code": "projection_sensitive_field",
+      "schema": "weir-action-event.schema.json",
+      "validator": "schema"
+    }
+  ],
+  "permit_clock": {
+    "authority": "weir",
+    "maximum_lifetime_seconds": 300,
+    "maximum_tolerated_skew_seconds": 5,
+    "minimum_issuer_margin_seconds": 15,
+    "minimum_lifetime_seconds": 30
+  },
+  "positive": [
+    {
+      "canonical_sha256": "sha256:c742d678d45c72ead8bf2cc1b5dfb784c64f99a844147dcfedd20d5bd70c2691",
+      "document": {
+        "assignment_id": "assignment-fixture-1",
+        "context_hash": "sha256:cffabdff06bdd93a9de35c44111f6ed0cfd5f78cef9e6eb37e9ca59aa388a54b",
+        "context_id": "context-fixture-1",
+        "contract_version": "0.1",
+        "correlation_id": "request-fixture-1",
+        "created_at": "2026-08-27T12:00:00+00:00",
+        "evidence_refs": [],
+        "objective_id": "objective-fixture-1",
+        "run_id": "run-fixture-1",
+        "source": "autowork"
+      },
+      "name": "work_context.empty_fixed_inputs",
+      "schema": "work-context.schema.json"
+    },
+    {
+      "canonical_sha256": "sha256:4a9c53322782409a44bf27ee6dff0afe934cc059d1b84b58d311e5cfb02c568c",
+      "document": {
+        "contract_version": "0.1",
+        "envelope_hash": "sha256:f4bbf2281a5709c2beda0b2a94cc637b51b62e3f3f9bd4c7efa96a764419ea57",
+        "request": {
+          "allowed_domains": [
+            "example.test"
+          ],
+          "auth_context": "none",
+          "capture_policy": "content",
+          "constraints": {},
+          "contract_version": "0.1",
+          "data_class": "public",
+          "evidence_required": true,
+          "intent": "Read the deterministic contract fixture",
+          "maximum_depth": 0,
+          "mode": "read",
+          "preferred_engine": "http",
+          "profile_id": null,
+          "query": null,
+          "request_id": "request-fixture-1",
+          "run_id": "run-fixture-1",
+          "side_effects_allowed": false,
+          "source": null,
+          "url": "https://example.test/fixture"
+        },
+        "work_context": {
+          "assignment_id": "assignment-fixture-1",
+          "context_hash": "sha256:cffabdff06bdd93a9de35c44111f6ed0cfd5f78cef9e6eb37e9ca59aa388a54b",
+          "context_id": "context-fixture-1",
+          "contract_version": "0.1",
+          "correlation_id": "request-fixture-1",
+          "created_at": "2026-08-27T12:00:00+00:00",
+          "evidence_refs": [],
+          "objective_id": "objective-fixture-1",
+          "run_id": "run-fixture-1",
+          "source": "autowork"
+        }
+      },
+      "name": "acquisition_envelope.bound",
+      "schema": "acquisition-envelope.schema.json"
+    },
+    {
+      "canonical_sha256": "sha256:3012a2df252825b622b31c102099d01150cd571e6e05938569d2aff9f7111deb",
+      "document": {
+        "artifact_ref": "weir-artifact:sha256:09ed214b42bdf1a26dc2dc5e3954388dbb884711b222fae637592f43f38e506f",
+        "capture_contract_version": "0.1",
+        "capture_id": "webcap-fixture-1",
+        "capture_policy": "content",
+        "content_hash": "sha256:09ed214b42bdf1a26dc2dc5e3954388dbb884711b222fae637592f43f38e506f",
+        "contract_version": "0.1",
+        "created_at": "2026-08-27T12:00:02+00:00",
+        "data_class": "public",
+        "evidence_ref_id": "evidence-fixture-1",
+        "media_type": "application/json",
+        "reference_hash": "sha256:48388a18c87e97f947168e8dd2e2df540bc1535b95a4ab2b35df0ed7b18715f4",
+        "request_id": "request-fixture-1",
+        "trust": "untrusted_external_content",
+        "work_context_hash": "sha256:cffabdff06bdd93a9de35c44111f6ed0cfd5f78cef9e6eb37e9ca59aa388a54b"
+      },
+      "name": "evidence_reference.content",
+      "schema": "evidence-reference.schema.json"
+    },
+    {
+      "canonical_sha256": "sha256:8aece8b40bf0b671842af1c465a709a5a6fd41f6338044d8adc1ec387917ca31",
+      "document": {
+        "action_id": "action-fixture-1",
+        "action_type": "fill",
+        "assignment_id": "assignment-fixture-1",
+        "contract_version": "0.3",
+        "correlation_id": "request-fixture-1",
+        "created_at": "2026-08-27T12:00:04+00:00",
+        "evidence_refs": [
+          "webcap-browser-before"
+        ],
+        "expected_postconditions": [],
+        "expires_at": "2026-08-27T12:05:04+00:00",
+        "observation_hash": "sha256:85a78f655fe8a7f249bafa71a600a8f1235bda68fbc4ea776b085771474c73cc",
+        "observation_id": "observation-fixture-1",
+        "owner_run_id": "run-fixture-1",
+        "parameter_data_class": "personal",
+        "parameters": {
+          "value": "123 Fixture Street"
+        },
+        "preconditions": [
+          {
+            "expected": "sha256:85a78f655fe8a7f249bafa71a600a8f1235bda68fbc4ea776b085771474c73cc",
+            "kind": "observation_hash_equals",
+            "locator": null,
+            "target": null
+          },
+          {
+            "expected": true,
+            "kind": "element_present",
+            "locator": {
+              "contract_version": "0.2",
+              "name": "Shipping address",
+              "name_match": "exact",
+              "ordinal": null,
+              "required_state": null,
+              "role": "textbox",
+              "test_id": null
+            },
+            "target": {
+              "contract_version": "0.2",
+              "element_ref": "element-fixture-1",
+              "locator_hash": "sha256:65650cf83b4e2afb0e9eacd92c348fb3db2b4b8f3c9c837aa56bb7db963d3e29",
+              "name": "Shipping address",
+              "observation_id": "observation-fixture-1",
+              "role": "textbox",
+              "session_epoch": 1,
+              "session_id": "session-fixture-1",
+              "session_revision": 2,
+              "state": "enabled",
+              "test_id": "shipping_address"
+            }
+          }
+        ],
+        "proposal_hash": "sha256:cf8f953db8b1422d9f43fd5447cdd88d15f415ec302f03abab565b964283399a",
+        "request_id": "request-fixture-1",
+        "requires_approval": true,
+        "resolved_target": {
+          "contract_version": "0.2",
+          "element_ref": "element-fixture-1",
+          "locator_hash": "sha256:65650cf83b4e2afb0e9eacd92c348fb3db2b4b8f3c9c837aa56bb7db963d3e29",
+          "name": "Shipping address",
+          "observation_id": "observation-fixture-1",
+          "role": "textbox",
+          "session_epoch": 1,
+          "session_id": "session-fixture-1",
+          "session_revision": 2,
+          "state": "enabled",
+          "test_id": "shipping_address"
+        },
+        "risk": "unknown",
+        "semantic_locator": {
+          "contract_version": "0.2",
+          "name": "Shipping address",
+          "name_match": "exact",
+          "ordinal": null,
+          "required_state": null,
+          "role": "textbox",
+          "test_id": null
+        },
+        "session_epoch": 1,
+        "session_id": "session-fixture-1",
+        "session_revision": 2,
+        "work_context_hash": "sha256:cffabdff06bdd93a9de35c44111f6ed0cfd5f78cef9e6eb37e9ca59aa388a54b"
+      },
+      "name": "action_proposal.full_authority",
+      "schema": "action-proposal.schema.json"
+    },
+    {
+      "canonical_sha256": "sha256:ac693b5475da7dba8d0f85b4752bbc38fb6f401a0093213d0a1817d907c702c8",
+      "document": {
+        "action_type": "fill",
+        "approval_ref": "approval-fixture-1",
+        "contract_version": "0.1",
+        "expires_at": "2026-08-27T12:01:10+00:00",
+        "issued_at": "2026-08-27T12:00:10+00:00",
+        "issuer_id": "fade-weir-authority",
+        "owner_run_id": "run-fixture-1",
+        "permit_hash": "sha256:abc52a4043f25c1f530f25c23af6dd3fdc67b2831e2dc27c2acc2e0906118752",
+        "permit_id": "permit-fixture-1",
+        "proposal_hash": "sha256:cf8f953db8b1422d9f43fd5447cdd88d15f415ec302f03abab565b964283399a",
+        "risk": "unknown",
+        "session_epoch": 1,
+        "session_id": "session-fixture-1",
+        "use_limit": 1,
+        "work_context_hash": "sha256:cffabdff06bdd93a9de35c44111f6ed0cfd5f78cef9e6eb37e9ca59aa388a54b"
+      },
+      "name": "execution_permit.one_use",
+      "schema": "execution-permit.schema.json"
+    },
+    {
+      "canonical_sha256": "sha256:78f7b90dd59ff8749588622b8fa3db2fa9eab91bdf7a5a25761d7fe134605ab4",
+      "document": {
+        "action_id": "action-fixture-1",
+        "approval_ref": "approval-fixture-1",
+        "capture_ids": [
+          "webcap-browser-before",
+          "webcap-browser-after"
+        ],
+        "command_id": "command-fixture-completed",
+        "contract_version": "0.3",
+        "executed_at": "2026-08-27T12:00:30+00:00",
+        "executed_by": "weir-worker-fixture-1",
+        "failure_class": null,
+        "lease_generation": 3,
+        "permit_id": "permit-fixture-1",
+        "proposal_hash": "sha256:cf8f953db8b1422d9f43fd5447cdd88d15f415ec302f03abab565b964283399a",
+        "quarantine_ref": null,
+        "receipt_hash": "sha256:d6a0cefa22dd83f55971178b2a9500274b685ee2fc096fd6f8752519669b0818",
+        "receipt_id": "receipt-fixture-completed",
+        "reservation_ref": "reservation-fixture-completed",
+        "result": "completed",
+        "session_epoch": 1,
+        "session_id": "session-fixture-1",
+        "verification": {
+          "confidence": "verified",
+          "method": "semantic_postconditions",
+          "supporting_evidence_refs": [
+            "webcap-browser-after"
+          ],
+          "verified_capture_index": 1
+        },
+        "work_context_hash": "sha256:cffabdff06bdd93a9de35c44111f6ed0cfd5f78cef9e6eb37e9ca59aa388a54b"
+      },
+      "name": "execution_receipt.completed",
+      "schema": "execution-receipt.schema.json"
+    },
+    {
+      "canonical_sha256": "sha256:bee012882cdad5ce6a1bd9f4a05999561638d431b2acfbd8195a8a0ac51635da",
+      "document": {
+        "action_id": "action-fixture-1",
+        "approval_ref": "approval-fixture-1",
+        "capture_ids": [
+          "webcap-browser-before"
+        ],
+        "command_id": "command-fixture-unknown",
+        "contract_version": "0.3",
+        "executed_at": "2026-08-27T12:00:31+00:00",
+        "executed_by": "weir-worker-fixture-1",
+        "failure_class": "outcome_unknown",
+        "lease_generation": 4,
+        "permit_id": "permit-fixture-1",
+        "proposal_hash": "sha256:cf8f953db8b1422d9f43fd5447cdd88d15f415ec302f03abab565b964283399a",
+        "quarantine_ref": "weir-quarantine:quarantine-fixture-1",
+        "receipt_hash": "sha256:f5f7d1124661f0990c7e7e3f80ff07b65f85a0799ad7466d4e264c7b95a1deff",
+        "receipt_id": "receipt-fixture-unknown",
+        "reservation_ref": "reservation-fixture-unknown",
+        "result": "outcome_unknown",
+        "session_epoch": 1,
+        "session_id": "session-fixture-1",
+        "verification": {
+          "confidence": "uncertain",
+          "method": null,
+          "supporting_evidence_refs": [],
+          "verified_capture_index": null
+        },
+        "work_context_hash": "sha256:cffabdff06bdd93a9de35c44111f6ed0cfd5f78cef9e6eb37e9ca59aa388a54b"
+      },
+      "name": "execution_receipt.outcome_unknown",
+      "schema": "execution-receipt.schema.json"
+    },
+    {
+      "canonical_sha256": "sha256:e5f154d610e06385fd0301d03f39bfedae132074112271119402420457eabc62",
+      "document": {
+        "command_id": "command-fixture-unknown",
+        "contract_version": "0.1",
+        "disposition_actor_id": null,
+        "disposition_ref": null,
+        "permit_id": "permit-fixture-1",
+        "quarantine_id": "quarantine-fixture-1",
+        "reason_code": "outcome_unknown",
+        "receipt_id": "receipt-fixture-unknown",
+        "record_hash": "sha256:5770fdb7900528f9bf068764ad196077ed048d3cb7d8a7d41cacdd50a4eaf39f",
+        "recorded_at": "2026-08-27T12:00:32+00:00",
+        "session_epoch": 1,
+        "session_id": "session-fixture-1",
+        "state": "active",
+        "supersedes_hash": null,
+        "work_context_hash": "sha256:cffabdff06bdd93a9de35c44111f6ed0cfd5f78cef9e6eb37e9ca59aa388a54b"
+      },
+      "name": "quarantine.active",
+      "schema": "quarantine-record.schema.json"
+    },
+    {
+      "canonical_sha256": "sha256:0fa9bbc51fea56a716b8caddba200bef309cae4f97e22a286c722ab9bc289542",
+      "document": {
+        "command_id": "command-fixture-unknown",
+        "contract_version": "0.1",
+        "disposition_actor_id": "operator-fixture-1",
+        "disposition_ref": "disposition-fixture-1",
+        "permit_id": "permit-fixture-1",
+        "quarantine_id": "quarantine-fixture-1",
+        "reason_code": "outcome_unknown",
+        "receipt_id": "receipt-fixture-unknown",
+        "record_hash": "sha256:dcf9138925204c3cc237278a57fe15785769c9f632593e66ef8c8be01715cc65",
+        "recorded_at": "2026-08-27T13:00:00+00:00",
+        "session_epoch": 1,
+        "session_id": "session-fixture-1",
+        "state": "cleared",
+        "supersedes_hash": "sha256:5770fdb7900528f9bf068764ad196077ed048d3cb7d8a7d41cacdd50a4eaf39f",
+        "work_context_hash": "sha256:cffabdff06bdd93a9de35c44111f6ed0cfd5f78cef9e6eb37e9ca59aa388a54b"
+      },
+      "name": "quarantine.operator_cleared",
+      "schema": "quarantine-record.schema.json"
+    },
+    {
+      "canonical_sha256": "sha256:852108ae70aa37e3dfaa5ca10d016d483e40e71d409103a58c2283777459cda5",
+      "document": {
+        "assignment_id": "assignment-fixture-1",
+        "correlation_id": "request-fixture-1",
+        "event_id": "event-fixture-1",
+        "occurred_at": "2026-08-27T12:00:05+00:00",
+        "producer": "weir",
+        "run_id": "run-fixture-1",
+        "schema_version": 1,
+        "work_context_hash": "sha256:cffabdff06bdd93a9de35c44111f6ed0cfd5f78cef9e6eb37e9ca59aa388a54b"
+      },
+      "name": "correlation_header",
+      "schema": "correlation-header.schema.json"
+    },
+    {
+      "canonical_sha256": "sha256:dae9af26d799544a2d678b71fffa1d0b79fb4c74f193fea1a93825defb663c44",
+      "document": {
+        "action_id": "action-fixture-1",
+        "action_type": "fill",
+        "event_type": "weir.action.proposed",
+        "evidence_ref_count": 1,
+        "header": {
+          "assignment_id": "assignment-fixture-1",
+          "correlation_id": "request-fixture-1",
+          "event_id": "event-fixture-1",
+          "occurred_at": "2026-08-27T12:00:05+00:00",
+          "producer": "weir",
+          "run_id": "run-fixture-1",
+          "schema_version": 1,
+          "work_context_hash": "sha256:cffabdff06bdd93a9de35c44111f6ed0cfd5f78cef9e6eb37e9ca59aa388a54b"
+        },
+        "parameter_data_class": "personal",
+        "permit_hash": null,
+        "proposal_hash": "sha256:cf8f953db8b1422d9f43fd5447cdd88d15f415ec302f03abab565b964283399a",
+        "reason_code": null,
+        "receipt_id": null,
+        "risk": "unknown",
+        "schema_version": 1,
+        "session_id": "session-fixture-1",
+        "state": "proposed"
+      },
+      "name": "weir_action_event.redacted",
+      "schema": "weir-action-event.schema.json"
+    },
+    {
+      "canonical_sha256": "sha256:307fb94c75460fab267859d71952e4c71f4111db77fc42f46867c3ae8bd2f555",
+      "document": {
+        "action_id": "action-fixture-1",
+        "action_type": "fill",
+        "contract_version": "0.2",
+        "created_at": "2026-08-27T12:00:04+00:00",
+        "evidence_refs": [
+          "webcap-browser-before"
+        ],
+        "expected_postconditions": [],
+        "expires_at": "2026-08-27T12:05:04+00:00",
+        "observation_hash": "sha256:85a78f655fe8a7f249bafa71a600a8f1235bda68fbc4ea776b085771474c73cc",
+        "observation_id": "observation-fixture-1",
+        "owner_run_id": "run-fixture-1",
+        "parameters": {
+          "value": "123 Fixture Street"
+        },
+        "preconditions": [
+          {
+            "expected": "sha256:85a78f655fe8a7f249bafa71a600a8f1235bda68fbc4ea776b085771474c73cc",
+            "kind": "observation_hash_equals",
+            "locator": null,
+            "target": null
+          },
+          {
+            "expected": true,
+            "kind": "element_present",
+            "locator": {
+              "contract_version": "0.2",
+              "name": "Shipping address",
+              "name_match": "exact",
+              "ordinal": null,
+              "required_state": null,
+              "role": "textbox",
+              "test_id": null
+            },
+            "target": {
+              "contract_version": "0.2",
+              "element_ref": "element-fixture-1",
+              "locator_hash": "sha256:65650cf83b4e2afb0e9eacd92c348fb3db2b4b8f3c9c837aa56bb7db963d3e29",
+              "name": "Shipping address",
+              "observation_id": "observation-fixture-1",
+              "role": "textbox",
+              "session_epoch": 1,
+              "session_id": "session-fixture-1",
+              "session_revision": 2,
+              "state": "enabled",
+              "test_id": "shipping_address"
+            }
+          }
+        ],
+        "proposal_hash": "sha256:66cf686cb490a15410c597d1002bb7f84bd99fc51b5039c9f4229b3554180898",
+        "request_id": "request-fixture-1",
+        "requires_approval": true,
+        "resolved_target": {
+          "contract_version": "0.2",
+          "element_ref": "element-fixture-1",
+          "locator_hash": "sha256:65650cf83b4e2afb0e9eacd92c348fb3db2b4b8f3c9c837aa56bb7db963d3e29",
+          "name": "Shipping address",
+          "observation_id": "observation-fixture-1",
+          "role": "textbox",
+          "session_epoch": 1,
+          "session_id": "session-fixture-1",
+          "session_revision": 2,
+          "state": "enabled",
+          "test_id": "shipping_address"
+        },
+        "risk": "unknown",
+        "semantic_locator": {
+          "contract_version": "0.2",
+          "name": "Shipping address",
+          "name_match": "exact",
+          "ordinal": null,
+          "required_state": null,
+          "role": "textbox",
+          "test_id": null
+        },
+        "session_epoch": 1,
+        "session_id": "session-fixture-1",
+        "session_revision": 2
+      },
+      "name": "action_proposal.legacy_v0_2_read",
+      "schema": "legacy/action-proposal-v0.2.schema.json"
+    },
+    {
+      "canonical_sha256": "sha256:29a6d24e8a8a0a1e0709bfd833e71c30681ce50f163f178c11024ec4c50e1c1a",
+      "document": {
+        "action_id": "action-fixture-1",
+        "approval_ref": "approval-fixture-1",
+        "capture_ids": [
+          "webcap-browser-before",
+          "webcap-browser-after"
+        ],
+        "contract_version": "0.2",
+        "executed_at": "2026-08-27T12:00:30+00:00",
+        "executed_by": "weir-worker-fixture-1",
+        "failure_class": null,
+        "lease_generation": 3,
+        "proposal_hash": "sha256:cf8f953db8b1422d9f43fd5447cdd88d15f415ec302f03abab565b964283399a",
+        "receipt_id": "receipt-fixture-completed",
+        "result": "completed",
+        "session_epoch": 1,
+        "session_id": "session-fixture-1",
+        "verification": {
+          "confidence": "verified",
+          "method": "semantic_postconditions",
+          "supporting_evidence_refs": [
+            "webcap-browser-after"
+          ],
+          "verified_capture_index": 1
+        }
+      },
+      "name": "execution_receipt.legacy_v0_2_read",
+      "schema": "legacy/execution-receipt-v0.2.schema.json"
+    }
+  ],
+  "reason_codes": [
+    "acquisition_correlation_mismatch",
+    "acquisition_request_not_portable",
+    "acquisition_run_mismatch",
+    "artifact_hash_mismatch",
+    "artifact_metadata_mismatch",
+    "artifact_not_canonical_json",
+    "capacity_pressure",
+    "capture_request_mismatch",
+    "context_hash_mismatch",
+    "contract_too_large",
+    "cwd_mismatch",
+    "envelope_hash_mismatch",
+    "evidence_content_unavailable",
+    "fade_forbidden_field",
+    "metadata_policy_has_content",
+    "no_attribution",
+    "outcome_unknown",
+    "permit_binding_mismatch",
+    "permit_expired",
+    "permit_expiry_margin",
+    "permit_hash_mismatch",
+    "permit_lifetime_too_long",
+    "permit_lifetime_too_short",
+    "permit_not_yet_valid",
+    "permit_reused",
+    "projection_sensitive_field",
+    "proposal_hash_mismatch",
+    "quarantine_already_cleared",
+    "quarantine_disposition_time_invalid",
+    "quarantine_record_hash_mismatch",
+    "receipt_hash_mismatch",
+    "reference_hash_mismatch",
+    "reservation_conflict",
+    "session_quarantined",
+    "unknown_outcome_post_state_claim",
+    "unknown_outcome_verification_claim",
+    "unknown_outcome_without_quarantine",
+    "unsupported_schema_version"
+  ],
+  "redaction": {
+    "construction_boundary": "WEIR producer before any HUD or Mission Control transport",
+    "forbidden_public_content": [
+      "action parameters",
+      "form values",
+      "raw DOM",
+      "page bodies",
+      "prompt text",
+      "credentials",
+      "cookies",
+      "private profile IDs",
+      "reusable permits"
+    ],
+    "full_authority_only_fields": [
+      "parameters"
+    ],
+    "hud_read_authentication_assumption": "none"
+  },
+  "retention": {
+    "active_unknown_outcome": "until operator disposition; restart, retry, timeout, and expiry never clear it",
+    "cleared_quarantine_minimum_days": 400,
+    "evidence_reference_minimum_days": 90,
+    "permit_minimum_days": 400,
+    "receipt_minimum_days": 400,
+    "referenced_artifact_minimum": "same as its live EvidenceReference unless a stricter data policy forbids persistence"
+  },
+  "schema_digests": {
+    "acquisition-envelope.schema.json": "sha256:d9dca526ca460b275f9b55cf998c0281f9ee43f06f1398edc85bd3c679f6c5e4",
+    "action-proposal.schema.json": "sha256:c53fbceea9d23a8a738d8cd8d8c0f8766ebcfd1c6da8127733ac7a8b28550ef8",
+    "correlation-header.schema.json": "sha256:ad46755c1ed6f2a59e18a50feaeb04280feb32167dd217b5f0f9b5eba76e9288",
+    "evidence-reference.schema.json": "sha256:4d284877c9ed08bc3b338949a633c590ee39bdd91abf2336d920ef9de3ead733",
+    "execution-permit.schema.json": "sha256:103b84e649f80280132fea987b93979fcef9d419b047a9eb805fc5c8c66d7c44",
+    "execution-receipt.schema.json": "sha256:c62e0a3b6a531fe8cad75e7c8111bbd57c5fc5a1dde76ac06e0f6d34dcf60880",
+    "legacy/action-proposal-v0.2.schema.json": "sha256:751592d4448e6c24a09c02be90d6af4cfbb5adf62d0a6ec5f81804fdba8e215c",
+    "legacy/execution-receipt-v0.2.schema.json": "sha256:0161c50da91b7d862a1d7cfdaa1fa5dc9f6e937c6989973398a7c9b2ee85780b",
+    "quarantine-record.schema.json": "sha256:b08fcde59a2c02687bb714a064485122d42c0fdd54b23187880ef3e6899c762a",
+    "web-request.schema.json": "sha256:efac2fd5a7948e4116bbe84a76e6943e80ba01ad3ca7e899c2a18a951736777b",
+    "weir-action-event.schema.json": "sha256:d20b05946ffa5631abd7ebf0a0b1d7dfa4e263873618af585c6c7c346cba730b",
+    "work-context.schema.json": "sha256:5ef8d2d5152bfebeec8f20f14c88b104f7fffd008363a4c7b5841806093b06ab"
+  },
+  "service_authentication": {
+    "credentials_in_contracts_or_logs": false,
+    "fade_aire_credential_reuse": false,
+    "mode": "per_client_secret",
+    "required_named_clients": [
+      "lugos-mcp",
+      "fade-weir-authority"
+    ]
+  },
+  "status": "frozen"
+}

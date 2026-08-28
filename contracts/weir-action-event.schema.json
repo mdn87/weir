@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://lugos.local/weir/weir-action-event.schema.json",
+  "title": "WeirActionEvent",
+  "description": "Public-safe metadata constructed before it reaches HUD's unauthenticated read projection. It cannot carry action parameters, form values, DOM, page content, profile IDs, or reusable permits.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version", "header", "event_type", "state", "action_id",
+    "session_id", "action_type", "risk", "proposal_hash", "permit_hash",
+    "receipt_id", "evidence_ref_count", "parameter_data_class", "reason_code"
+  ],
+  "properties": {
+    "schema_version": {"const": 1},
+    "header": {"$ref": "correlation-header.schema.json"},
+    "event_type": {"type": "string", "pattern": "^weir\\.action\\.[a-z][a-z0-9_.-]{0,63}$"},
+    "state": {"enum": ["proposed", "permit_received", "completed", "failed", "blocked", "cancelled", "outcome_unknown", "quarantine_cleared"]},
+    "action_id": {"type": "string", "minLength": 1, "maxLength": 128},
+    "session_id": {"type": "string", "minLength": 1, "maxLength": 128},
+    "action_type": {"enum": ["click", "fill", "select", "check", "uncheck", "upload", "submit"]},
+    "risk": {"enum": ["read_only", "reversible", "local_mutation", "external_upload", "external_submit", "message_send", "purchase", "account_change", "credential_change", "destructive", "unknown"]},
+    "proposal_hash": {"$ref": "#/$defs/digest"},
+    "permit_hash": {"anyOf": [{"type": "null"}, {"$ref": "#/$defs/digest"}]},
+    "receipt_id": {"type": ["string", "null"], "minLength": 1, "maxLength": 128},
+    "evidence_ref_count": {"type": "integer", "minimum": 0, "maximum": 64},
+    "parameter_data_class": {"enum": ["public", "personal", "bwa_internal", "restricted"]},
+    "reason_code": {"type": ["string", "null"], "minLength": 1, "maxLength": 64}
+  },
+  "$defs": {
+    "digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"}
+  }
+}

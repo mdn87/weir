@@ -74,6 +74,28 @@ class WebRequest:
     contract_version: str = CONTRACT_VERSION
 
     def validate(self) -> None:
+        if self.contract_version != CONTRACT_VERSION:
+            raise ValueError("unsupported WebRequest contract version")
+        for name in ("request_id", "run_id"):
+            value = getattr(self, name)
+            if not isinstance(value, str) or not value:
+                raise ValueError(f"{name} cannot be empty")
+        if not isinstance(self.mode, RequestMode) or not isinstance(
+            self.data_class, DataClass
+        ):
+            raise ValueError("WebRequest mode or data_class is invalid")
+        if not isinstance(self.auth_context, str) or not self.auth_context:
+            raise ValueError("auth_context cannot be empty")
+        if not isinstance(self.intent, str):
+            raise ValueError("intent must be a string")
+        for name in ("url", "query", "profile_id", "preferred_engine"):
+            value = getattr(self, name)
+            if value is not None and not isinstance(value, str):
+                raise ValueError(f"{name} must be a string or null")
+        if type(self.evidence_required) is not bool or type(
+            self.side_effects_allowed
+        ) is not bool:
+            raise ValueError("WebRequest boolean policy fields are invalid")
         if not self.url and not self.query:
             raise ValueError("WebRequest requires url or query")
         no_side_effect_modes = {
@@ -97,7 +119,7 @@ class WebRequest:
             raise ValueError("source must be a normalized lowercase name")
         if self.auth_context == "none" and self.profile_id is not None:
             raise ValueError("profile_id requires a non-none auth_context")
-        if self.maximum_depth < 0:
+        if type(self.maximum_depth) is not int or self.maximum_depth < 0:
             raise ValueError("maximum_depth cannot be negative")
         if self.capture_policy not in {"metadata", "content", "full_evidence"}:
             raise ValueError(f"unknown capture_policy {self.capture_policy!r}")
@@ -116,6 +138,56 @@ class WebRequest:
             raise ValueError("allowed_domains entries must be normalized lowercase domain names")
         if not isinstance(self.constraints, dict) or not _is_json_value(self.constraints):
             raise ValueError("constraints must be a JSON-compatible object")
+
+    @classmethod
+    def from_dict(cls, value: dict[str, Any]) -> WebRequest:
+        required = {
+            "contract_version",
+            "request_id",
+            "run_id",
+            "mode",
+            "data_class",
+            "auth_context",
+            "intent",
+            "url",
+            "query",
+            "source",
+            "constraints",
+            "profile_id",
+            "allowed_domains",
+            "preferred_engine",
+            "maximum_depth",
+            "evidence_required",
+            "side_effects_allowed",
+            "capture_policy",
+        }
+        if not isinstance(value, dict) or set(value) != required:
+            raise ValueError("WebRequest has missing or unknown fields")
+        try:
+            request = cls(
+                contract_version=value["contract_version"],
+                request_id=value["request_id"],
+                run_id=value["run_id"],
+                mode=RequestMode(value["mode"]),
+                data_class=DataClass(value["data_class"]),
+                auth_context=value["auth_context"],
+                intent=value["intent"],
+                url=value["url"],
+                query=value["query"],
+                source=value["source"],
+                constraints=value["constraints"],
+                profile_id=value["profile_id"],
+                allowed_domains=value["allowed_domains"],
+                preferred_engine=value["preferred_engine"],
+                maximum_depth=value["maximum_depth"],
+                evidence_required=value["evidence_required"],
+                side_effects_allowed=value["side_effects_allowed"],
+                capture_policy=value["capture_policy"],
+            )
+        except (TypeError, ValueError) as exc:
+            raise ValueError("WebRequest enum field is invalid") from exc
+        request.validate()
+        return request
 
     def to_dict(self) -> dict[str, Any]:
         self.validate()

@@ -7,13 +7,19 @@
   "required": ["contract_version", "context_id", "objective_id", "run_id", "assignment_id", "correlation_id", "source", "evidence_refs", "created_at", "context_hash"],
   "properties": {
     "contract_version": {"const": "0.1"},
-    "context_id": {"type": "string", "minLength": 1},
-    "objective_id": {"type": ["string", "null"], "minLength": 1},
-    "run_id": {"type": "string", "minLength": 1},
-    "assignment_id": {"type": ["string", "null"], "minLength": 1},
-    "correlation_id": {"type": "string", "minLength": 1},
+    "context_id": {"type": "string", "minLength": 1, "maxLength": 128},
+    "objective_id": {"type": ["string", "null"], "minLength": 1, "maxLength": 128},
+    "run_id": {"type": "string", "minLength": 1, "maxLength": 128},
+    "assignment_id": {"type": ["string", "null"], "minLength": 1, "maxLength": 128},
+    "correlation_id": {"type": "string", "minLength": 1, "maxLength": 128},
     "source": {"enum": ["caller", "ogmi", "autowork", "lugos-mcp"]},
-    "evidence_refs": {"type": "array", "items": {"type": "string", "minLength": 1}, "uniqueItems": true},
+    "evidence_refs": {
+      "description": "Caller-supplied input references fixed at root creation; acquisition outputs use EvidenceReference and never mutate this array.",
+      "type": "array",
+      "maxItems": 32,
+      "items": {"type": "string", "minLength": 1, "maxLength": 512},
+      "uniqueItems": true
+    },
     "created_at": {"type": "string", "format": "date-time"},
     "context_hash": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"}
   },

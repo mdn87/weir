@@ -1,5 +1,6 @@
 import json
 import unittest
+from dataclasses import FrozenInstanceError
 from pathlib import Path
 
 from jsonschema import FormatChecker
@@ -30,7 +31,7 @@ class WorkContextTests(unittest.TestCase):
             context.to_dict()
         )
 
-    def test_context_tampering_is_detected(self):
+    def test_root_context_is_immutable_after_creation(self):
         context = WorkContext.create(
             context_id="ctx-1",
             run_id="run-1",
@@ -38,9 +39,13 @@ class WorkContextTests(unittest.TestCase):
             source=WorkContextSource.CALLER,
             created_at="2026-08-27T12:00:00+00:00",
         )
-        context.run_id = "run-2"
+        with self.assertRaises(FrozenInstanceError):
+            context.run_id = "run-2"  # type: ignore[misc]
+
+        value = context.to_dict()
+        value["run_id"] = "run-2"
         with self.assertRaisesRegex(ValueError, "context_hash"):
-            context.validate()
+            WorkContext.from_dict(value)
 
     def test_system_sources_require_their_authority_identity(self):
         with self.assertRaisesRegex(ValueError, "objective_id"):
@@ -52,6 +57,17 @@ class WorkContextTests(unittest.TestCase):
                 created_at="2026-08-27T12:00:00+00:00",
             )
 
+    def test_creation_does_not_treat_a_string_as_an_evidence_array(self):
+        with self.assertRaisesRegex(ValueError, "evidence_refs must be an array"):
+            WorkContext.create(
+                context_id="ctx-1",
+                run_id="run-1",
+                correlation_id="request-1",
+                source=WorkContextSource.CALLER,
+                evidence_refs="weir-capture:not-an-array",  # type: ignore[arg-type]
+                created_at="2026-08-27T12:00:00+00:00",
+            )
+
     def test_optional_identities_and_evidence_keep_schema_types_at_runtime(self):
         context = WorkContext.create(
             context_id="ctx-1",
@@ -60,14 +76,15 @@ class WorkContextTests(unittest.TestCase):
             source=WorkContextSource.CALLER,
             created_at="2026-08-27T12:00:00+00:00",
         )
-        context.objective_id = 7
+        invalid_identity = context.to_dict()
+        invalid_identity["objective_id"] = 7
         with self.assertRaisesRegex(ValueError, "objective_id"):
-            context.validate()
+            WorkContext.from_dict(invalid_identity)
 
-        context.objective_id = None
-        context.evidence_refs = ()
+        invalid_evidence = context.to_dict()
+        invalid_evidence["evidence_refs"] = "not-an-array"
         with self.assertRaisesRegex(ValueError, "evidence_refs"):
-            context.validate()
+            WorkContext.from_dict(invalid_evidence)
         with self.assertRaisesRegex(ValueError, "assignment_id"):
             WorkContext.create(
                 context_id="ctx-2",

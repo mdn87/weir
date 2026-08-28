@@ -1,0 +1,34 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://lugos.local/weir/execution-permit.schema.json",
+  "title": "ExecutionPermit",
+  "description": "A one-use Fade-issued authority object. WEIR's clock is authoritative; implementations apply the Batch 0 skew and dispatch-margin constants.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "contract_version", "permit_id", "proposal_hash", "work_context_hash",
+    "owner_run_id", "session_id", "session_epoch", "action_type", "risk",
+    "approval_ref", "issuer_id", "issued_at", "expires_at", "use_limit",
+    "permit_hash"
+  ],
+  "properties": {
+    "contract_version": {"const": "0.1"},
+    "permit_id": {"type": "string", "minLength": 1, "maxLength": 128},
+    "proposal_hash": {"$ref": "#/$defs/digest"},
+    "work_context_hash": {"$ref": "#/$defs/digest"},
+    "owner_run_id": {"type": "string", "minLength": 1, "maxLength": 128},
+    "session_id": {"type": "string", "minLength": 1, "maxLength": 128},
+    "session_epoch": {"type": "integer", "minimum": 1},
+    "action_type": {"enum": ["click", "fill", "select", "check", "uncheck", "upload", "submit"]},
+    "risk": {"enum": ["read_only", "reversible", "local_mutation", "external_upload", "external_submit", "message_send", "purchase", "account_change", "credential_change", "destructive", "unknown"]},
+    "approval_ref": {"type": "string", "minLength": 1, "maxLength": 128},
+    "issuer_id": {"type": "string", "minLength": 1, "maxLength": 128},
+    "issued_at": {"type": "string", "format": "date-time"},
+    "expires_at": {"type": "string", "format": "date-time"},
+    "use_limit": {"const": 1},
+    "permit_hash": {"$ref": "#/$defs/digest"}
+  },
+  "$defs": {
+    "digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"}
+  }
+}

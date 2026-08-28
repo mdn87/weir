@@ -1,2 +1,2 @@
-recursive-include contracts *.json
+recursive-include contracts *.json *.sha256
 recursive-include profiles *.yaml

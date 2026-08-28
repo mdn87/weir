@@ -5,31 +5,37 @@
   "type": "object",
   "additionalProperties": false,
   "required": [
-    "contract_version", "receipt_id", "action_id", "proposal_hash", "session_id",
+    "contract_version", "receipt_id", "action_id", "proposal_hash", "permit_id",
+    "work_context_hash", "command_id", "reservation_ref", "session_id",
     "session_epoch", "lease_generation", "executed_by", "executed_at", "result",
-    "approval_ref", "capture_ids", "failure_class", "verification"
+    "approval_ref", "capture_ids", "failure_class", "verification",
+    "quarantine_ref", "receipt_hash"
   ],
   "properties": {
-    "contract_version": {"const": "0.2"},
-    "receipt_id": {"type": "string", "minLength": 1},
-    "action_id": {"type": "string", "minLength": 1},
-    "proposal_hash": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
-    "session_id": {"type": "string", "minLength": 1},
+    "contract_version": {"const": "0.3"},
+    "receipt_id": {"type": "string", "minLength": 1, "maxLength": 128},
+    "action_id": {"type": "string", "minLength": 1, "maxLength": 128},
+    "proposal_hash": {"$ref": "#/$defs/digest"},
+    "permit_id": {"type": "string", "minLength": 1, "maxLength": 128},
+    "work_context_hash": {"$ref": "#/$defs/digest"},
+    "command_id": {"type": "string", "minLength": 1, "maxLength": 128},
+    "reservation_ref": {"type": "string", "minLength": 1, "maxLength": 128},
+    "session_id": {"type": "string", "minLength": 1, "maxLength": 128},
     "session_epoch": {"type": "integer", "minimum": 1},
     "lease_generation": {"type": "integer", "minimum": 1},
-    "executed_by": {"type": "string", "minLength": 1},
+    "executed_by": {"type": "string", "minLength": 1, "maxLength": 128},
     "executed_at": {"type": "string", "format": "date-time"},
-    "result": {"enum": ["completed", "failed", "blocked", "cancelled"]},
-    "approval_ref": {"type": ["string", "null"]},
+    "result": {"enum": ["completed", "failed", "blocked", "cancelled", "outcome_unknown"]},
+    "approval_ref": {"type": ["string", "null"], "minLength": 1, "maxLength": 128},
     "capture_ids": {
       "type": "array",
       "maxItems": 2,
-      "items": {"type": "string", "minLength": 1},
+      "items": {"type": "string", "minLength": 1, "maxLength": 128},
       "uniqueItems": true
     },
     "failure_class": {
       "type": ["string", "null"],
-      "enum": [null, "engine_unavailable", "engine_failure", "network_failure", "blocked_target", "cannot_read", "javascript_required", "auth_required", "challenge", "policy_blocked", "approval_required", "stale_reference", "session_lost", "controller_conflict", "profile_in_use", "ambiguous_target", "idempotency_conflict", "command_expired", "verification_failed", "unknown"]
+      "enum": [null, "engine_unavailable", "engine_failure", "network_failure", "blocked_target", "cannot_read", "javascript_required", "auth_required", "challenge", "policy_blocked", "approval_required", "stale_reference", "session_lost", "controller_conflict", "profile_in_use", "ambiguous_target", "idempotency_conflict", "command_expired", "verification_failed", "outcome_unknown", "unknown"]
     },
     "verification": {
       "type": "object",
@@ -38,7 +44,7 @@
       "properties": {
         "method": {"type": ["string", "null"], "minLength": 1},
         "confidence": {"enum": ["verified", "probable", "uncertain", "failed", "blocked"]},
-        "supporting_evidence_refs": {"type": "array", "items": {"type": "string", "minLength": 1}, "uniqueItems": true},
+        "supporting_evidence_refs": {"type": "array", "maxItems": 64, "items": {"type": "string", "minLength": 1, "maxLength": 512}, "uniqueItems": true},
         "verified_capture_index": {"type": ["integer", "null"], "minimum": 0}
       },
       "allOf": [
@@ -57,7 +63,12 @@
           "else": {"properties": {"verified_capture_index": {"type": "null"}}}
         }
       ]
-    }
+    },
+    "quarantine_ref": {
+      "type": ["string", "null"],
+      "pattern": "^weir-quarantine:[A-Za-z0-9][A-Za-z0-9._-]{0,127}$"
+    },
+    "receipt_hash": {"$ref": "#/$defs/digest"}
   },
   "allOf": [
     {
@@ -79,13 +90,42 @@
           "capture_ids": {"minItems": 2, "maxItems": 2},
           "approval_ref": {"type": "string", "minLength": 1},
           "failure_class": {"type": "null"},
-          "verification": {"properties": {"confidence": {"const": "verified"}}}
+          "verification": {"properties": {"confidence": {"const": "verified"}}},
+          "quarantine_ref": {"type": "null"}
         }
       }
     },
     {
       "if": {"properties": {"result": {"enum": ["failed", "blocked"]}}, "required": ["result"]},
       "then": {"properties": {"failure_class": {"type": "string"}}}
+    },
+    {
+      "if": {"properties": {"result": {"const": "outcome_unknown"}}, "required": ["result"]},
+      "then": {
+        "properties": {
+          "capture_ids": {"minItems": 1, "maxItems": 1},
+          "approval_ref": {"type": "string", "minLength": 1},
+          "failure_class": {"const": "outcome_unknown"},
+          "verification": {
+            "properties": {
+              "method": {"type": "null"},
+              "confidence": {"const": "uncertain"},
+              "supporting_evidence_refs": {"maxItems": 0},
+              "verified_capture_index": {"type": "null"}
+            }
+          },
+          "quarantine_ref": {"type": "string", "minLength": 1}
+        }
+      },
+      "else": {
+        "properties": {
+          "failure_class": {"not": {"const": "outcome_unknown"}},
+          "quarantine_ref": {"type": "null"}
+        }
+      }
     }
-  ]
+  ],
+  "$defs": {
+    "digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"}
+  }
 }

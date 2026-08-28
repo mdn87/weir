@@ -15,11 +15,18 @@ class build_py(_build_py):
     def run(self) -> None:
         super().run()
         package_data = Path(self.build_lib) / "weir" / "data"
-        for directory, pattern in (("contracts", "*.json"), ("profiles", "*.y*ml")):
-            destination = package_data / directory
-            destination.mkdir(parents=True, exist_ok=True)
-            for source in sorted((ROOT / directory).glob(pattern)):
-                copy2(source, destination / source.name)
+        for directory, patterns in (
+            ("contracts", ("*.json", "*.sha256")),
+            ("profiles", ("*.yaml", "*.yml")),
+        ):
+            source_root = ROOT / directory
+            for pattern in patterns:
+                for source in sorted(source_root.rglob(pattern)):
+                    destination = package_data / directory / source.relative_to(
+                        source_root
+                    )
+                    destination.parent.mkdir(parents=True, exist_ok=True)
+                    copy2(source, destination)
 
 
 setup(cmdclass={"build_py": build_py})

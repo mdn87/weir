@@ -366,6 +366,12 @@ parallel share no mutable repository state once D1–D12 are accepted.
 
 Owner: WEIR with consumer review.
 
+Status: completed in WEIR on 2026-08-27. The frozen schemas, positive/negative
+documents, hash vectors, limits, expiry rules, redaction allowlist, reason codes,
+retention windows, and sibling migration invariants are in
+`contracts/fixtures/batch-0-v1.json`; `docs/contract-freeze.md` explains the consumer
+process. Python and Node TypeScript parity checks pass. Execution remains disabled.
+
 1. Record Fable's D1–D12 decisions in this document.
 2. Add canonical positive and negative fixtures for `WorkContext`,
    `EvidenceReference`, `ActionProposal`, `ExecutionPermit`, `ExecutionReceipt`, and

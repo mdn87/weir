@@ -115,6 +115,9 @@ WEIR defines stable objects independent of engine syntax:
 - `SemanticLocator`
 - `ActionProposal`
 - `ExecutionReceipt`
+- `ExecutionPermit`
+- `EvidenceReference`
+- `AcquisitionEnvelope`
 - `SiteProfile`
 - `WorkContext`
 - `MarketplaceListing`
@@ -175,7 +178,9 @@ approval authority denies it and no executor is exposed. Fade/Operator approval,
 pre-execution reacquisition, and real post-action receipts remain P3 work. See
 `docs/focus-and-interaction.md` for the cross-system identity and controller model.
 The implementation-ready cross-repository sequence and Fable review decisions are in
-`docs/sibling-integration-plan.md`.
+`docs/sibling-integration-plan.md`. The accepted Batch 0 schemas, retention rules,
+negative cases, and Python/TypeScript parity process are in
+`docs/contract-freeze.md` and `contracts/fixtures/batch-0-v1.json`.
 
 ## Development
 

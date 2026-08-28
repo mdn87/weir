@@ -668,10 +668,14 @@ class BrowserStoreTests(unittest.TestCase):
 
     def test_receipts_and_metadata_events_survive_store_reopen(self):
         self.store.create_session(_session(self.clock))
-        receipt = ExecutionReceipt(
+        receipt = ExecutionReceipt.create(
             receipt_id="receipt-1",
             action_id="action-1",
             proposal_hash="sha256:" + "1" * 64,
+            permit_id="permit-1",
+            work_context_hash="sha256:" + "2" * 64,
+            command_id="command-1",
+            reservation_ref="reservation-1",
             session_id="session-1",
             session_epoch=1,
             lease_generation=1,

@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://lugos.local/weir/correlation-header.schema.json",
+  "title": "CorrelationHeader",
+  "description": "The small shared identity header carried by independently owned producer events.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "event_id", "schema_version", "occurred_at", "producer", "run_id",
+    "assignment_id", "correlation_id", "work_context_hash"
+  ],
+  "properties": {
+    "event_id": {"type": "string", "minLength": 1, "maxLength": 128},
+    "schema_version": {"const": 1},
+    "occurred_at": {"type": "string", "format": "date-time"},
+    "producer": {"type": "string", "minLength": 1, "maxLength": 128},
+    "run_id": {"type": "string", "minLength": 1, "maxLength": 128},
+    "assignment_id": {"type": ["string", "null"], "minLength": 1, "maxLength": 128},
+    "correlation_id": {"type": "string", "minLength": 1, "maxLength": 128},
+    "work_context_hash": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"}
+  }
+}

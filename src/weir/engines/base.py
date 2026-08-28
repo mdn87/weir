@@ -26,6 +26,7 @@ class FailureClass(StrEnum):
     IDEMPOTENCY_CONFLICT = "idempotency_conflict"
     COMMAND_EXPIRED = "command_expired"
     VERIFICATION_FAILED = "verification_failed"
+    OUTCOME_UNKNOWN = "outcome_unknown"
     UNKNOWN = "unknown"
 
 
