@@ -1,0 +1,90 @@
+# Authenticated WEIR service boundary
+
+Batch 2A adds the acquisition half of the persistent WEIR boundary. It does not start,
+install, or configure a service, and it does not enable browser effects.
+
+## One typed client contract
+
+`WeirClient` defines `read`, `search`, `enrich`, evidence lookup, evidence
+materialization, and command-status lookup. `InProcessWeirClient` and
+`HttpWeirClient` return the same validated `AcquisitionResponse` shape. That response
+binds the full `AcquisitionEnvelope`, reusable `WebCapture`, context-specific
+`EvidenceReference`, opaque reference handle, and cache provenance.
+
+The HTTP client accepts only an `http://` loopback IP origin, disables ambient proxies,
+and refuses redirects so a bearer credential cannot be forwarded to another origin.
+It caps request/error/success bodies independently and revalidates every returned
+contract. Evidence content travels as the exact canonical artifact bytes; the client
+checks the response's content/reference hash headers and then hashes and parses the
+bytes again.
+
+## Routes and scopes
+
+Every route requires `Authorization: Bearer ...`, `X-Weir-Client-Id`, and an RFC 3339
+`X-Weir-Deadline` no more than 30 seconds ahead.
+
+| Route | Scope | Result |
+| --- | --- | --- |
+| `POST /v1/acquisition/read` | `acquisition:read` | validated context-bound acquisition |
+| `POST /v1/acquisition/search` | `acquisition:read` | validated context-bound acquisition |
+| `POST /v1/acquisition/enrich` | `acquisition:read` | validated context-bound acquisition |
+| `GET /v1/evidence/{id}` | `evidence:read` | validated `EvidenceReference` |
+| `GET /v1/evidence/{id}/content` | `evidence:read` | exact canonical artifact bytes |
+| `GET /v1/commands/{id}` | `command:read` | durable command status or typed not-found |
+
+Each named client has a unique credential, scopes, and allowed `DataClass` values.
+Shared credentials are rejected at registry construction. Authentication compares all
+registered identities with constant-time comparisons, and the handler suppresses the
+standard request log. Command status returns a result when completed and an
+`error_present` marker when failed; it never returns stored adapter error text.
+
+The service request limit is 256 KiB and its maximum response limit is 6 MiB. A
+deployment may configure a smaller response cap. `Expect: 100-continue` requests are
+rejected at the header boundary when oversized; other oversized streams are closed
+without buffering. Operations check the caller deadline before and after dispatch.
+Adapter-specific cancellation remains part of the later worker supervisor.
+
+## Durable sources
+
+The service uses the Batch 1A immutable `CaptureStore` for captures, artifacts, and
+evidence references. Command lookup reads the existing SQLite browser command table;
+this slice makes no database schema change. Tests close and reopen that database and
+confirm the same settled status is returned. Cache or artifact corruption remains a
+typed integrity failure and never becomes a network retry.
+
+## Disabled-by-default deployment
+
+There is deliberately no `weir serve` command, generated credential, Windows service,
+systemd unit, or background process in this batch. A deployment must inject a
+`ClientRegistry` from a secret provider or a user-ACL-restricted file outside the
+repository. Creating that credential material and installing a service are separate
+operator-approved actions. The standalone CLI remains on its private legacy seam, and
+no sibling integration is enabled merely because the server class exists.
+
+## Remaining Batch 2 work
+
+Batch 2 is not complete until WEIR also has:
+
+- a durable proposal store with observation-bound registration;
+- separate full-authority and already-redacted proposal reads;
+- disabled effect routes that later accept only Fade's exact permit/proposal binding;
+- killable browser worker processes with deadline propagation; and
+- authorized dead-worker retirement and deployment lifecycle configuration.
+
+Those additions must preserve per-client scope separation. In particular,
+`lugos-mcp` may acquire and read evidence but cannot read command/action authority;
+Fade's future client may read command/proposal authority but must not reuse another
+client's credential.
+
+## Verification
+
+Run the focused gate:
+
+```bash
+python -m pytest -q tests/test_client_service.py
+```
+
+The repository gate remains `python -m pytest -q`. The service tests exercise both
+client implementations, all acquisition methods, exact materialization, distinct
+credentials, scope and data-class denial before engine access, deadline and size
+limits, fail-closed tampering, loopback-only binding, and status lookup after restart.

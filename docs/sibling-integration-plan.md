@@ -477,6 +477,20 @@ compatibility window; make new clients read and write v2 immediately.
 
 Owner: WEIR. Depends on 1A.
 
+Status: acquisition-service slice (Batch 2A) completed in WEIR on 2026-08-27.
+`WeirClient` now has in-process and authenticated HTTP implementations over one
+validated response shape. The disabled-by-default loopback server exposes scoped
+acquisition, evidence lookup/materialization, and durable command-status reads with
+per-client credentials, data-class allowlists, bounded bodies/responses, caller
+deadlines, no redirects/proxies in the HTTP client, and no raw command error text.
+No service process, credential file, or lifecycle configuration is installed.
+
+Still required before Batch 2 as a whole is complete: observation-bound proposal
+registration and full-authority/redacted proposal lookup; effect routes; a killable
+out-of-process browser-worker supervisor; and deployment configuration with externally
+provisioned, user-ACL-restricted credentials. These are not implied by the acquisition
+server. See `docs/service-boundary.md`.
+
 Create a typed client and loopback service, including:
 
 - authenticated `read`, `search`, `enrich`, evidence lookup, and command-status routes;

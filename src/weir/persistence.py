@@ -309,6 +309,13 @@ class CaptureStore:
     def materialize_evidence(self, reference: EvidenceReference) -> Any:
         """Resolve a persisted reference and verify its exact artifact bytes."""
 
+        return reference.verify_materialized_artifact(
+            self.materialize_evidence_bytes(reference)
+        )
+
+    def materialize_evidence_bytes(self, reference: EvidenceReference) -> bytes:
+        """Resolve a persisted reference to its verified canonical artifact bytes."""
+
         stored = self.load_evidence_reference(reference.evidence_ref_id)
         if stored.to_dict() != reference.to_dict():
             raise ContractViolation(
@@ -316,9 +323,9 @@ class CaptureStore:
                 "supplied EvidenceReference does not match the persisted binding",
             )
         stored.require_materialized_content()
-        return stored.verify_materialized_artifact(
-            self.load_artifact_bytes(stored.artifact_ref or "")
-        )
+        payload = self.load_artifact_bytes(stored.artifact_ref or "")
+        stored.verify_materialized_artifact(payload)
+        return payload
 
     def persist_blob(self, payload: bytes, request: WebRequest) -> str | None:
         """Persist binary evidence only when the request's retention policy allows it."""

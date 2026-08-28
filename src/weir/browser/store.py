@@ -62,6 +62,68 @@ class CommandStart:
 
 
 @dataclass(frozen=True, slots=True)
+class CommandStatus:
+    command_id: str
+    operation: str
+    request_digest: str
+    status: str
+    result: dict[str, Any] | None
+    error_present: bool
+    created_at: str
+    updated_at: str
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "command_id": self.command_id,
+            "operation": self.operation,
+            "request_digest": self.request_digest,
+            "status": self.status,
+            "result": self.result,
+            "error_present": self.error_present,
+            "created_at": self.created_at,
+            "updated_at": self.updated_at,
+        }
+
+    @classmethod
+    def from_dict(cls, value: dict[str, Any]) -> CommandStatus:
+        required = {
+            "command_id",
+            "operation",
+            "request_digest",
+            "status",
+            "result",
+            "error_present",
+            "created_at",
+            "updated_at",
+        }
+        if not isinstance(value, dict) or set(value) != required:
+            raise ValueError("command status has missing or unknown fields")
+        status = cls(**value)
+        status.validate()
+        return status
+
+    def validate(self) -> None:
+        for name in ("command_id", "operation", "request_digest"):
+            value = getattr(self, name)
+            if not isinstance(value, str) or not value or len(value) > 256:
+                raise ValueError(f"command status {name} is invalid")
+        if self.status not in {"started", "completed", "failed"}:
+            raise ValueError("command status value is invalid")
+        if self.result is not None and not isinstance(self.result, dict):
+            raise ValueError("command status result must be an object or null")
+        if self.status == "completed" and self.result is None:
+            raise ValueError("completed command status requires a result")
+        if self.status != "completed" and self.result is not None:
+            raise ValueError("only completed command status may carry a result")
+        if type(self.error_present) is not bool or self.error_present != (
+            self.status == "failed"
+        ):
+            raise ValueError("command status error marker is invalid")
+        _parse(self.created_at)
+        _parse(self.updated_at)
+
+
+@dataclass(frozen=True, slots=True)
 class SessionEvent:
     sequence: int
     occurred_at: str
@@ -1748,6 +1810,29 @@ class SQLiteSessionStore:
             except Exception:
                 self.database.rollback()
                 raise
+
+    def command_status(self, command_id: str) -> CommandStatus | None:
+        if not isinstance(command_id, str) or not command_id or len(command_id) > 128:
+            raise ValueError("command_id must be a non-empty string up to 128 characters")
+        with self._lock:
+            row = self.database.execute(
+                "SELECT * FROM browser_commands WHERE command_id = ?", (command_id,)
+            ).fetchone()
+        if row is None:
+            return None
+        result = json.loads(row["result_json"]) if row["result_json"] is not None else None
+        status = CommandStatus(
+            command_id=row["command_id"],
+            operation=row["operation"],
+            request_digest=row["request_digest"],
+            status=row["status"],
+            result=result,
+            error_present=row["error"] is not None,
+            created_at=row["created_at"],
+            updated_at=row["updated_at"],
+        )
+        status.validate()
+        return status
 
     def complete_command(
         self,
