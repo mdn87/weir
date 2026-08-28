@@ -189,8 +189,9 @@ approval authority denies it and no executor is exposed. Fade/Operator approval,
 pre-execution reacquisition, and real post-action receipts remain P3 work. See
 `docs/focus-and-interaction.md` for the cross-system identity and controller model.
 The implementation-ready cross-repository sequence and Fable review decisions are in
-`docs/sibling-integration-plan.md`. The accepted Batch 0 schemas, retention rules,
-negative cases, and Python/TypeScript parity process are in
+`docs/sibling-integration-plan.md`; the focused post-freeze delivery plan for the
+remaining sibling work is in `docs/remaining-integration-plan.md`. The accepted Batch
+0 schemas, retention rules, negative cases, and Python/TypeScript parity process are in
 `docs/contract-freeze.md` and `contracts/fixtures/batch-0-v1.json`.
 The implemented Batch 1A caller, cache, persistence, and telemetry invariants are in
 `docs/context-bound-acquisition.md`.

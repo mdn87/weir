@@ -1,5 +1,9 @@
 # Sibling integration plan — Fable review packet
 
+> The architecture and contract decisions in this document are frozen. The focused
+> post-freeze delivery sequence for unfinished work is in
+> `docs/remaining-integration-plan.md`.
+
 - Status: reviewed — `contracts may freeze` with amendments A1–A9 and corrections
   C1–C6 (see the Fable review findings and decision record at the end)
 - Prepared: 2026-08-27
