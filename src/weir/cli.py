@@ -211,7 +211,7 @@ def main(argv: list[str] | None = None) -> int:
             side_effects_allowed=False,
         )
         try:
-            result = _broker(registry).search(request)
+            result = _broker(registry)._legacy_search_for_cli(request)
         except (AcquisitionFailed, WeirEngineError, ValueError, OSError) as exc:
             return _print_error(exc)
         print(json.dumps(result.to_envelope(), indent=2))
@@ -229,7 +229,7 @@ def main(argv: list[str] | None = None) -> int:
             side_effects_allowed=False,
         )
         try:
-            result = _broker(registry).enrich(request)
+            result = _broker(registry)._legacy_enrich_for_cli(request)
         except (AcquisitionFailed, WeirEngineError, ValueError, OSError) as exc:
             return _print_error(exc)
         envelope = result.to_envelope()
@@ -255,9 +255,9 @@ def main(argv: list[str] | None = None) -> int:
             side_effects_allowed=False,
         )
         try:
-            result = _broker(registry, allow_test_engine=args.engine == "fake").read(
-                request, args.engine
-            )
+            result = _broker(
+                registry, allow_test_engine=args.engine == "fake"
+            )._legacy_read_for_cli(request, args.engine)
         except (AcquisitionFailed, WeirEngineError, ValueError, OSError) as exc:
             return _print_error(exc)
         print(json.dumps(result.to_envelope(), indent=2))

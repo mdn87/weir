@@ -5,6 +5,7 @@ from pathlib import Path
 from unittest import mock
 
 from weir.broker import AcquisitionBroker, AcquisitionFailed
+from weir.contract import ContractViolation, canonical_digest
 from weir.engines.base import (
     Engine,
     EnginePolicyBlocked,
@@ -14,9 +15,11 @@ from weir.engines.base import (
     ReaderEngine,
     SearchEngine,
 )
+from weir.evidence import ACQUISITION_ENVELOPE_VERSION, AcquisitionEnvelope
 from weir.models import DataClass, ReaderResult, RequestMode, WebRequest
-from weir.persistence import CaptureStore, FileCaptureCache
+from weir.persistence import CacheIntegrityError, CaptureStore, FileCaptureCache
 from weir.telemetry import RecordingTraceSink
+from weir.work_context import WorkContext, WorkContextSource
 
 
 class StubReader(ReaderEngine):
@@ -62,10 +65,14 @@ class StubRegistry:
 class StubSearch(SearchEngine):
     id = "ebay"
 
+    def __init__(self) -> None:
+        self.calls = 0
+
     def probe(self) -> EngineProbe:
         return EngineProbe(self.id, True, version="test")
 
     def search(self, request: WebRequest) -> ReaderResult:
+        self.calls += 1
         return ReaderResult(
             engine=self.id,
             engine_version="test",
@@ -87,15 +94,57 @@ def _request(request_id: str = "r1", capture_policy: str = "content") -> WebRequ
     )
 
 
+def _search_request(request_id: str = "search-1") -> WebRequest:
+    return WebRequest(
+        request_id=request_id,
+        run_id="run1",
+        mode=RequestMode.SEARCH,
+        data_class=DataClass.PUBLIC,
+        auth_context="none",
+        query="private marketplace phrase",
+        source="ebay",
+        capture_policy="content",
+    )
+
+
+def _context(request: WebRequest, *, run_id: str | None = None) -> WorkContext:
+    return WorkContext.create(
+        context_id=f"context-{request.request_id}-{run_id or request.run_id}",
+        run_id=run_id or request.run_id,
+        correlation_id=request.request_id,
+        source=WorkContextSource.CALLER,
+        created_at="2026-08-27T12:00:00+00:00",
+    )
+
+
+def _acquisition(request: WebRequest) -> AcquisitionEnvelope:
+    return AcquisitionEnvelope.create(work_context=_context(request), request=request)
+
+
+def _unchecked_acquisition(
+    request: WebRequest, context: WorkContext
+) -> AcquisitionEnvelope:
+    basis = {
+        "contract_version": ACQUISITION_ENVELOPE_VERSION,
+        "work_context": context.to_dict(),
+        "request": request.to_dict(),
+    }
+    return AcquisitionEnvelope(
+        work_context=context,
+        request=request,
+        envelope_hash=canonical_digest(basis),
+    )
+
+
 class AcquisitionBrokerTests(unittest.TestCase):
     @mock.patch("weir.broker.check_target_policy")
-    def test_fallback_is_reusable_outside_the_cli_and_traced(self, policy_check):
+    def test_legacy_cli_fallback_is_traced(self, policy_check):
         oc = StubReader("oc", EngineUnavailable("oc missing"))
         agent = StubReader("agent-browser-read")
         traces = RecordingTraceSink()
         broker = AcquisitionBroker(registry=StubRegistry(oc, agent), trace_sink=traces)
 
-        result = broker.read(_request())
+        result = broker._legacy_read_for_cli(_request())
 
         self.assertEqual(policy_check.call_count, 2)
         self.assertEqual(result.capture.engine, "agent-browser-read")
@@ -113,7 +162,7 @@ class AcquisitionBrokerTests(unittest.TestCase):
         broker = AcquisitionBroker(registry=StubRegistry(first, second))
 
         with self.assertRaises(AcquisitionFailed) as raised:
-            broker.read(_request())
+            broker._legacy_read_for_cli(_request())
 
         self.assertEqual(raised.exception.failure_class, FailureClass.POLICY_BLOCKED)
         self.assertEqual(second.calls, 0)
@@ -130,7 +179,7 @@ class AcquisitionBrokerTests(unittest.TestCase):
 
         with mock.patch("weir.broker.check_target_policy", side_effect=policy):
             with self.assertRaises(AcquisitionFailed) as raised:
-                broker.read(_request())
+                broker._legacy_read_for_cli(_request())
         self.assertEqual(raised.exception.failure_class, FailureClass.POLICY_BLOCKED)
         self.assertEqual(second.calls, 0)
 
@@ -142,7 +191,7 @@ class AcquisitionBrokerTests(unittest.TestCase):
             "weir.broker.check_target_policy", side_effect=EnginePolicyBlocked("private target")
         ):
             with self.assertRaises(EnginePolicyBlocked):
-                broker.read(_request(), "oc")
+                broker._legacy_read_for_cli(_request(), "oc")
         self.assertEqual(reader.calls, 0)
         self.assertEqual([span.name for span in traces.spans], ["web.route", "web.policy.check"])
 
@@ -152,8 +201,8 @@ class AcquisitionBrokerTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp:
             cache = FileCaptureCache(Path(temp) / "cache")
             broker = AcquisitionBroker(registry=StubRegistry(reader), cache=cache)
-            first = broker.read(_request("first"), "reader")
-            second = broker.read(_request("second"), "reader")
+            first = broker._legacy_read_for_cli(_request("first"), "reader")
+            second = broker._legacy_read_for_cli(_request("second"), "reader")
 
         self.assertEqual(reader.calls, 1)
         self.assertEqual(first.cache.status, "miss")
@@ -173,8 +222,8 @@ class AcquisitionBrokerTests(unittest.TestCase):
             small = AcquisitionBroker(
                 registry=StubRegistry(reader), cache=cache, max_capture_bytes=256
             )
-            first = large.read(_request("first"), "reader")
-            second = small.read(_request("second"), "reader")
+            first = large._legacy_read_for_cli(_request("first"), "reader")
+            second = small._legacy_read_for_cli(_request("second"), "reader")
 
         self.assertEqual(reader.calls, 2)
         self.assertEqual(first.cache.status, "miss")
@@ -187,7 +236,9 @@ class AcquisitionBrokerTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp:
             store = CaptureStore(Path(temp))
             broker = AcquisitionBroker(registry=StubRegistry(reader), store=store)
-            result = broker.read(_request(capture_policy="metadata"), "reader")
+            result = broker._legacy_read_for_cli(
+                _request(capture_policy="metadata"), "reader"
+            )
             loaded = store.load_capture(result.capture.capture_id)
 
         self.assertIsNone(result.capture.content)
@@ -203,7 +254,7 @@ class AcquisitionBrokerTests(unittest.TestCase):
             registry=StubRegistry(reader),
             max_capture_bytes=256,
         )
-        result = broker.read(_request(), "reader")
+        result = broker._legacy_read_for_cli(_request(), "reader")
 
         self.assertTrue(result.capture.content["weir_truncated"])
         self.assertEqual(result.capture.content["original_content_bytes"], 2_011)
@@ -222,8 +273,212 @@ class AcquisitionBrokerTests(unittest.TestCase):
         )
         broker = AcquisitionBroker(registry=StubRegistry(StubSearch()), max_capture_bytes=256)
         with self.assertRaises(AcquisitionFailed) as raised:
-            broker.search(request)
+            broker._legacy_search_for_cli(request)
         self.assertEqual(raised.exception.failure_class, FailureClass.CANNOT_READ)
+
+
+class ContextBoundAcquisitionTests(unittest.TestCase):
+    def test_public_methods_reject_bare_requests_before_engine_access(self):
+        reader = StubReader("oc")
+        search = StubSearch()
+        with tempfile.TemporaryDirectory() as temp:
+            broker = AcquisitionBroker(
+                registry=StubRegistry(reader, search),
+                store=CaptureStore(Path(temp)),
+            )
+            with self.assertRaisesRegex(TypeError, "AcquisitionEnvelope"):
+                broker.read(_request())  # type: ignore[arg-type]
+            with self.assertRaisesRegex(TypeError, "AcquisitionEnvelope"):
+                broker.search(_search_request())  # type: ignore[arg-type]
+            with self.assertRaisesRegex(TypeError, "AcquisitionEnvelope"):
+                broker.enrich(_request())  # type: ignore[arg-type]
+
+        self.assertEqual(reader.calls, 0)
+        self.assertEqual(search.calls, 0)
+
+    def test_public_acquisition_requires_a_store_before_engine_access(self):
+        reader = StubReader("reader")
+        broker = AcquisitionBroker(registry=StubRegistry(reader))
+        with self.assertRaisesRegex(RuntimeError, "durable CaptureStore"):
+            broker.read(_acquisition(_request()), "reader")
+        self.assertEqual(reader.calls, 0)
+
+    @mock.patch("weir.broker.check_target_policy")
+    def test_public_result_is_detached_from_the_callers_mutable_request(
+        self, policy_check
+    ):
+        request = _request()
+        acquisition = _acquisition(request)
+        with tempfile.TemporaryDirectory() as temp:
+            broker = AcquisitionBroker(
+                registry=StubRegistry(StubReader("reader")),
+                store=CaptureStore(Path(temp)),
+            )
+            result = broker.read(acquisition, "reader")
+            request.intent = "caller mutation after return"
+
+        self.assertEqual(result.request.intent, "")
+        result.acquisition.validate()
+
+    @mock.patch("weir.broker.check_target_policy")
+    def test_run_mismatch_fails_before_policy_or_network(self, policy_check):
+        request = _request()
+        reader = StubReader("reader")
+        mismatched = _unchecked_acquisition(
+            request, _context(request, run_id="different-run")
+        )
+        with tempfile.TemporaryDirectory() as temp:
+            broker = AcquisitionBroker(
+                registry=StubRegistry(reader),
+                store=CaptureStore(Path(temp)),
+            )
+            with self.assertRaises(ContractViolation) as raised:
+                broker.read(mismatched, "reader")
+
+        self.assertEqual(raised.exception.reason_code, "acquisition_run_mismatch")
+        self.assertEqual(reader.calls, 0)
+        policy_check.assert_not_called()
+
+    @mock.patch("weir.broker.check_target_policy")
+    def test_read_returns_a_persisted_context_binding(self, policy_check):
+        request = _request()
+        reader = StubReader("reader")
+        with tempfile.TemporaryDirectory() as temp:
+            store = CaptureStore(Path(temp))
+            broker = AcquisitionBroker(
+                registry=StubRegistry(reader),
+                store=store,
+                evidence_id_factory=lambda: "evidence-read-1",
+            )
+            result = broker.read(_acquisition(request), "reader")
+            wire = result.to_envelope()
+
+            self.assertEqual(
+                store.load_evidence_reference(result.evidence_reference_ref),
+                result.evidence_reference,
+            )
+            self.assertEqual(
+                store.materialize_evidence(result.evidence_reference),
+                {"text": "evidence"},
+            )
+
+        self.assertEqual(result.evidence_reference.request_id, request.request_id)
+        self.assertEqual(
+            result.evidence_reference.work_context_hash,
+            result.acquisition.work_context.context_hash,
+        )
+        self.assertEqual(wire["evidence_reference_ref"], "weir-evidence:evidence-read-1")
+        self.assertNotEqual(wire["capture"], wire["evidence_reference"])
+
+    @mock.patch("weir.broker.check_target_policy")
+    def test_cache_hit_rebinds_without_duplicating_the_capture(self, policy_check):
+        reader = StubReader("reader")
+        evidence_ids = iter(("evidence-cache-first", "evidence-cache-second"))
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            store = CaptureStore(root)
+            cache = FileCaptureCache(root / "cache")
+            broker = AcquisitionBroker(
+                registry=StubRegistry(reader),
+                store=store,
+                cache=cache,
+                evidence_id_factory=lambda: next(evidence_ids),
+            )
+            first = broker.read(_acquisition(_request("first")), "reader")
+            second = broker.read(_acquisition(_request("second")), "reader")
+
+            first_content = store.materialize_evidence(first.evidence_reference)
+            second_content = store.materialize_evidence(second.evidence_reference)
+            capture_files = list((root / "captures").glob("*.json"))
+            artifact_files = list((root / "artifacts").rglob("*.json"))
+            reference_files = list((root / "evidence-references").glob("*.json"))
+
+        self.assertEqual(reader.calls, 1)
+        self.assertEqual(first.cache.status, "miss")
+        self.assertEqual(second.cache.status, "hit")
+        self.assertEqual(second.capture.capture_id, first.capture.capture_id)
+        self.assertEqual(second.capture.request_id, "first")
+        self.assertEqual(second.evidence_reference.request_id, "second")
+        self.assertNotEqual(
+            first.evidence_reference.reference_hash,
+            second.evidence_reference.reference_hash,
+        )
+        self.assertEqual(first_content, second_content)
+        self.assertEqual(len(capture_files), 1)
+        self.assertEqual(len(artifact_files), 1)
+        self.assertEqual(len(reference_files), 2)
+
+    @mock.patch("weir.broker.check_target_policy")
+    def test_corrupt_cache_fails_before_network_retry(self, policy_check):
+        reader = StubReader("reader")
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            cache = FileCaptureCache(root / "cache")
+            broker = AcquisitionBroker(
+                registry=StubRegistry(reader),
+                store=CaptureStore(root),
+                cache=cache,
+            )
+            broker.read(_acquisition(_request("first")), "reader")
+            key = cache.key_for(_request("second"), ["reader"], broker.max_capture_bytes)
+            path = root / "cache" / f"{key}.json"
+            value = json.loads(path.read_text(encoding="utf-8"))
+            value["capture"]["content"] = {"text": "tampered"}
+            path.write_text(json.dumps(value), encoding="utf-8")
+
+            with self.assertRaises(CacheIntegrityError):
+                broker.read(_acquisition(_request("second")), "reader")
+
+        self.assertEqual(reader.calls, 1)
+
+    @mock.patch("weir.broker.check_target_policy")
+    def test_tampered_artifact_fails_during_cache_rebinding(self, policy_check):
+        reader = StubReader("reader")
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            broker = AcquisitionBroker(
+                registry=StubRegistry(reader),
+                store=CaptureStore(root),
+                cache=FileCaptureCache(root / "cache"),
+            )
+            first = broker.read(_acquisition(_request("first")), "reader")
+            digest = (first.capture.raw_artifact_ref or "").removeprefix(
+                "weir-artifact:sha256:"
+            )
+            artifact_path = root / "artifacts" / "sha256" / digest[:2] / f"{digest}.json"
+            artifact_path.write_bytes(b'{"text":"tampered"}')
+
+            with self.assertRaises(ContractViolation) as raised:
+                broker.read(_acquisition(_request("second")), "reader")
+
+        self.assertEqual(raised.exception.reason_code, "artifact_hash_mismatch")
+        self.assertEqual(reader.calls, 1)
+
+    def test_search_and_enrich_are_context_bound_and_emit_metadata_only(self):
+        search = StubSearch()
+        reader = StubReader("oc")
+        traces = RecordingTraceSink()
+        with tempfile.TemporaryDirectory() as temp:
+            broker = AcquisitionBroker(
+                registry=StubRegistry(search, reader),
+                store=CaptureStore(Path(temp)),
+                trace_sink=traces,
+            )
+            search_result = broker.search(_acquisition(_search_request()))
+            with mock.patch("weir.broker.check_target_policy"):
+                enrich_result = broker.enrich(_acquisition(_request("enrich-1")))
+
+        serialized_spans = json.dumps([span.to_dict() for span in traces.spans])
+        self.assertNotIn("private marketplace phrase", serialized_spans)
+        self.assertEqual(search.calls, 1)
+        self.assertEqual(reader.calls, 1)
+        self.assertEqual(search_result.evidence_reference.request_id, "search-1")
+        self.assertEqual(enrich_result.evidence_reference.request_id, "enrich-1")
+        self.assertEqual(search_result.warnings, ())
+        self.assertEqual(enrich_result.warnings, ())
+        binding_spans = [span for span in traces.spans if span.name == "web.evidence.bind"]
+        self.assertEqual(len(binding_spans), 2)
+        self.assertTrue(all("work_context_hash" in span.attributes for span in binding_spans))
 
 
 if __name__ == "__main__":

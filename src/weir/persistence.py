@@ -2,19 +2,25 @@ from __future__ import annotations
 
 import hashlib
 import json
+import math
 import os
 import re
 import time
 import uuid
 from dataclasses import dataclass, replace
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
+from weir.contract import ContractViolation, canonical_json_bytes
 from weir.models import DataClass, RequestMode, WebCapture, WebRequest
+
+if TYPE_CHECKING:
+    from weir.evidence import EvidenceReference
 
 ARTIFACT_REF_PREFIX = "weir-artifact:sha256:"
 BLOB_REF_PREFIX = "weir-blob:sha256:"
 CAPTURE_REF_PREFIX = "weir-capture:"
+EVIDENCE_REF_PREFIX = "weir-evidence:"
 SAFE_CAPTURE_ID = re.compile(r"[A-Za-z0-9][A-Za-z0-9._-]*")
 SHA256_DIGEST = re.compile(r"[0-9a-f]{64}")
 
@@ -143,7 +149,21 @@ class CaptureStore:
     def persist(
         self, capture: WebCapture, request: WebRequest
     ) -> tuple[WebCapture, PersistenceInfo]:
+        request.validate()
         _validate_capture_id(capture.capture_id)
+        if capture.request_id != request.request_id:
+            raise ContractViolation(
+                "capture_request_mismatch",
+                "WebCapture.request_id must match WebRequest.request_id",
+            )
+        payload = _canonical_bytes(capture.content)
+        digest = hashlib.sha256(payload).hexdigest()
+        expected_hash = f"sha256:{digest}"
+        if expected_hash != capture.content_hash:
+            raise ContractViolation(
+                "artifact_hash_mismatch",
+                "capture content no longer matches its content_hash",
+            )
         decision = self.policy.decide(request)
         if not decision.persist_manifest:
             return capture, PersistenceInfo(False, None, None, decision.reason)
@@ -151,11 +171,6 @@ class CaptureStore:
         stored_capture = capture
         artifact_ref: str | None = None
         if decision.persist_content:
-            payload = _canonical_bytes(capture.content)
-            digest = hashlib.sha256(payload).hexdigest()
-            expected_hash = f"sha256:{digest}"
-            if expected_hash != capture.content_hash:
-                raise OSError("capture content no longer matches its content_hash")
             artifact_path = self.root / "artifacts" / "sha256" / digest[:2] / f"{digest}.json"
             _write_immutable(artifact_path, payload)
             artifact_ref = ARTIFACT_REF_PREFIX + digest
@@ -183,6 +198,11 @@ class CaptureStore:
         return capture
 
     def load_artifact(self, artifact_ref: str) -> Any:
+        return json.loads(self.load_artifact_bytes(artifact_ref))
+
+    def load_artifact_bytes(self, artifact_ref: str) -> bytes:
+        """Load and hash-check the exact canonical bytes addressed by a reference."""
+
         if not artifact_ref.startswith(ARTIFACT_REF_PREFIX):
             raise ValueError(f"unsupported artifact reference {artifact_ref!r}")
         digest = artifact_ref.removeprefix(ARTIFACT_REF_PREFIX)
@@ -191,8 +211,114 @@ class CaptureStore:
         path = self.root / "artifacts" / "sha256" / digest[:2] / f"{digest}.json"
         payload = path.read_bytes()
         if hashlib.sha256(payload).hexdigest() != digest:
-            raise OSError(f"artifact {artifact_ref} failed its content-hash check")
-        return json.loads(payload)
+            raise ContractViolation(
+                "artifact_hash_mismatch",
+                f"artifact {artifact_ref} failed its content-hash check",
+            )
+        return payload
+
+    def verify_capture(self, capture: WebCapture) -> None:
+        """Verify a capture against its immutable manifest and retained artifact."""
+
+        stored = self.load_capture(capture.capture_id, hydrate=False)
+        if stored.request_id != capture.request_id:
+            raise ContractViolation(
+                "capture_request_mismatch",
+                "cached capture request_id does not match its immutable manifest",
+            )
+        expected = stored.to_dict()
+        actual = replace(capture, content=None).to_dict()
+        if expected != actual:
+            raise ContractViolation(
+                "artifact_hash_mismatch",
+                "capture metadata does not match its immutable manifest",
+            )
+        if capture.raw_artifact_ref is None:
+            return
+        payload = self.load_artifact_bytes(capture.raw_artifact_ref)
+        expected_hash = "sha256:" + hashlib.sha256(payload).hexdigest()
+        if expected_hash != capture.content_hash:
+            raise ContractViolation(
+                "artifact_hash_mismatch",
+                "capture artifact does not match content_hash",
+            )
+        try:
+            materialized = json.loads(payload)
+        except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+            raise ContractViolation(
+                "artifact_not_canonical_json",
+                "capture artifact must be UTF-8 JSON",
+            ) from exc
+        if canonical_json_bytes(materialized) != payload:
+            raise ContractViolation(
+                "artifact_not_canonical_json",
+                "capture artifact is not exact WEIR canonical JSON",
+            )
+        if capture.content is not None and canonical_json_bytes(capture.content) != payload:
+            raise ContractViolation(
+                "artifact_hash_mismatch",
+                "capture content does not match its retained artifact",
+            )
+
+    def persist_evidence_reference(self, reference: EvidenceReference) -> str:
+        """Persist a context binding immutably and return its opaque store handle."""
+
+        from weir.evidence import EvidenceReference
+
+        if not isinstance(reference, EvidenceReference):
+            raise TypeError("reference must be an EvidenceReference")
+        reference.validate()
+        _validate_evidence_ref_id(reference.evidence_ref_id)
+        path = self.root / "evidence-references" / f"{reference.evidence_ref_id}.json"
+        _write_immutable(path, canonical_json_bytes(reference.to_dict()) + b"\n")
+        loaded = self.load_evidence_reference(reference.evidence_ref_id)
+        if loaded.to_dict() != reference.to_dict():
+            raise ContractViolation(
+                "reference_hash_mismatch",
+                "persisted EvidenceReference does not match the supplied reference",
+            )
+        return EVIDENCE_REF_PREFIX + reference.evidence_ref_id
+
+    def load_evidence_reference(self, reference_id: str) -> EvidenceReference:
+        from weir.evidence import EvidenceReference
+
+        if reference_id.startswith(EVIDENCE_REF_PREFIX):
+            reference_id = reference_id.removeprefix(EVIDENCE_REF_PREFIX)
+        _validate_evidence_ref_id(reference_id)
+        path = self.root / "evidence-references" / f"{reference_id}.json"
+        try:
+            value = json.loads(path.read_text(encoding="utf-8"))
+        except json.JSONDecodeError as exc:
+            raise ContractViolation(
+                "reference_hash_mismatch",
+                "persisted EvidenceReference is not valid JSON",
+            ) from exc
+        if not isinstance(value, dict):
+            raise ContractViolation(
+                "reference_hash_mismatch",
+                "persisted EvidenceReference is not an object",
+            )
+        try:
+            return EvidenceReference.from_dict(value)
+        except (TypeError, ValueError) as exc:
+            raise ContractViolation(
+                "reference_hash_mismatch",
+                "persisted EvidenceReference failed validation",
+            ) from exc
+
+    def materialize_evidence(self, reference: EvidenceReference) -> Any:
+        """Resolve a persisted reference and verify its exact artifact bytes."""
+
+        stored = self.load_evidence_reference(reference.evidence_ref_id)
+        if stored.to_dict() != reference.to_dict():
+            raise ContractViolation(
+                "reference_hash_mismatch",
+                "supplied EvidenceReference does not match the persisted binding",
+            )
+        stored.require_materialized_content()
+        return stored.verify_materialized_artifact(
+            self.load_artifact_bytes(stored.artifact_ref or "")
+        )
 
     def persist_blob(self, payload: bytes, request: WebRequest) -> str | None:
         """Persist binary evidence only when the request's retention policy allows it."""
@@ -273,6 +399,12 @@ class CacheHit:
     key: str
 
 
+class CacheIntegrityError(OSError):
+    """A cache record exists but cannot be trusted as stored evidence."""
+
+    reason_code = "artifact_hash_mismatch"
+
+
 class FileCaptureCache:
     def __init__(self, root: Path, clock: Any = time.time) -> None:
         self.root = root
@@ -307,17 +439,30 @@ class FileCaptureCache:
         _validate_cache_key(key)
         path = self.root / f"{key}.json"
         try:
-            value = json.loads(path.read_text(encoding="utf-8"))
+            serialized = path.read_text(encoding="utf-8")
+        except FileNotFoundError:
+            return None
+        except OSError:
+            raise
+        try:
+            value = json.loads(serialized)
+            if not isinstance(value, dict) or set(value) != {"key", "stored_at", "capture"}:
+                raise ValueError("cache record has missing or unknown fields")
             stored_at = float(value["stored_at"])
+            if not math.isfinite(stored_at):
+                raise ValueError("cache stored_at must be finite")
             capture_value = value["capture"]
             if value["key"] != key or not isinstance(capture_value, dict):
-                return None
+                raise ValueError("cache record key or capture is invalid")
+            capture = WebCapture.from_dict(capture_value)
             age = max(self._clock() - stored_at, 0.0)
             if age > ttl_seconds:
                 return None
-            return CacheHit(WebCapture.from_dict(capture_value), age, key)
-        except (OSError, ValueError, TypeError, KeyError, json.JSONDecodeError):
-            return None
+            return CacheHit(capture, age, key)
+        except (ValueError, TypeError, KeyError, json.JSONDecodeError) as exc:
+            raise CacheIntegrityError(
+                f"cache entry {key} failed its integrity check"
+            ) from exc
 
     def put(self, key: str, capture: WebCapture) -> None:
         _validate_cache_key(key)
@@ -328,6 +473,11 @@ class FileCaptureCache:
 def _validate_capture_id(capture_id: str) -> None:
     if not SAFE_CAPTURE_ID.fullmatch(capture_id) or capture_id in {".", ".."}:
         raise ValueError(f"invalid capture id {capture_id!r}")
+
+
+def _validate_evidence_ref_id(reference_id: str) -> None:
+    if not SAFE_CAPTURE_ID.fullmatch(reference_id) or reference_id in {".", ".."}:
+        raise ValueError(f"invalid evidence reference id {reference_id!r}")
 
 
 def _validate_cache_key(key: str) -> None:

@@ -149,10 +149,13 @@ broader three-tier framing behind it.
 durable session kernel.**
 
 The reusable `AcquisitionBroker` now owns route selection, site-profile policy,
-domain checks, bounded fallback, capture creation, optional immutable persistence,
-public-cache eligibility, and metadata-only trace spans. The CLI is a thin caller of
-that same path. The eBay marketplace slice is a live consumer through Lode, including
-structured search, pagination, listing hashes, and page enrichment.
+domain checks, bounded fallback, capture creation, immutable evidence persistence,
+public-cache eligibility, and metadata-only trace spans. Its public `read`, `search`,
+and `enrich` methods require an `AcquisitionEnvelope` and return a newly persisted
+context-bound `EvidenceReference` with the reusable capture. The standalone CLI keeps
+a private legacy seam until the authenticated WEIR service replaces in-process sibling
+calls. The eBay marketplace slice is a live consumer through Lode, including structured
+search, pagination, listing hashes, and page enrichment.
 
 WEIR still does not declare one reader the universal winner. Existing benchmark
 evidence promotes direct HTTP for API-shaped resources and keeps `oc` then
@@ -181,6 +184,8 @@ The implementation-ready cross-repository sequence and Fable review decisions ar
 `docs/sibling-integration-plan.md`. The accepted Batch 0 schemas, retention rules,
 negative cases, and Python/TypeScript parity process are in
 `docs/contract-freeze.md` and `contracts/fixtures/batch-0-v1.json`.
+The implemented Batch 1A caller, cache, persistence, and telemetry invariants are in
+`docs/context-bound-acquisition.md`.
 
 ## Development
 
@@ -225,13 +230,17 @@ export WEIR_PROFILE_DIR=profiles
 export WEIR_TRACE_FILE=.weir/aitu-spans.jsonl
 ```
 
-`WEIR_STATE_DIR` stores immutable capture manifests, content-addressed JSON and binary
-evidence, and a short-lived file cache. Only unauthenticated `public` read/search requests qualify
-for that shared cache; authenticated, personal, internal, and restricted evidence bypasses it. A cache
-hit returns the original immutable capture and names its capture ID in the envelope.
+`WEIR_STATE_DIR` stores immutable capture manifests, context-bound evidence references,
+content-addressed JSON and binary evidence, and a short-lived file cache. Only
+unauthenticated `public` read/search requests qualify for that shared cache;
+authenticated, personal, internal, and restricted evidence bypasses it. In the
+context-bound broker, a cache hit reuses the original immutable capture but persists a
+new evidence reference for the requesting work context. The CLI remains on the
+temporary unbound path and should not be used as a sibling integration boundary.
 
-`WEIR_TRACE_FILE` receives metadata-only `web.*` JSONL spans. Queries, page bodies,
-credentials, and raw artifacts are not trace attributes. Normalized reader content is
+`WEIR_TRACE_FILE` receives metadata-only `web.*` JSONL spans. The sink rejects unknown
+attribute names and unbounded values; queries, URLs, page bodies, errors, credentials,
+and raw artifacts are not trace attributes. Normalized reader content is
 limited to 5 MiB; oversized prose captures carry an explicit bounded preview, while an
 oversized structured-search set fails instead of violating its result-set contract.
 

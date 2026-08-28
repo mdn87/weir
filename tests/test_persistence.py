@@ -4,8 +4,11 @@ import threading
 import unittest
 from pathlib import Path
 
+from weir.contract import ContractViolation
+from weir.evidence import EvidenceReference
 from weir.models import DataClass, ReaderResult, RequestMode, WebCapture, WebRequest
-from weir.persistence import CachePolicy, CaptureStore, FileCaptureCache
+from weir.persistence import CacheIntegrityError, CachePolicy, CaptureStore, FileCaptureCache
+from weir.work_context import WorkContext, WorkContextSource
 
 
 def _request(
@@ -34,6 +37,16 @@ def _capture(request: WebRequest) -> WebCapture:
         content={"json": {"answer": 42}},
     )
     return WebCapture.from_reader_result(result, request)
+
+
+def _context(request: WebRequest) -> WorkContext:
+    return WorkContext.create(
+        context_id="context-persistence",
+        run_id=request.run_id,
+        correlation_id=request.request_id,
+        source=WorkContextSource.CALLER,
+        created_at="2026-08-27T12:00:00+00:00",
+    )
 
 
 class CaptureStoreTests(unittest.TestCase):
@@ -77,6 +90,17 @@ class CaptureStoreTests(unittest.TestCase):
 
         self.assertFalse(ordinary_info.stored)
         self.assertTrue(explicit_info.stored)
+
+    def test_content_hash_mismatch_fails_before_any_store_write(self):
+        request = _request(capture_policy="metadata")
+        capture = _capture(request)
+        capture.content = {"json": {"answer": "mutated"}}
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            with self.assertRaises(ContractViolation) as raised:
+                CaptureStore(root).persist(capture, request)
+            self.assertEqual(list(root.rglob("*")), [])
+        self.assertEqual(raised.exception.reason_code, "artifact_hash_mismatch")
 
     def test_capture_lookup_rejects_path_traversal(self):
         with tempfile.TemporaryDirectory() as temp:
@@ -123,6 +147,55 @@ class CaptureStoreTests(unittest.TestCase):
             self.assertEqual(store.load_blob(refs[0] or ""), payload)
             self.assertEqual(list(root.rglob("*.tmp")), [])
 
+    def test_evidence_reference_is_durable_and_materializes_exact_content(self):
+        request = _request(capture_policy="content")
+        with tempfile.TemporaryDirectory() as temp:
+            store = CaptureStore(Path(temp))
+            capture, _ = store.persist(_capture(request), request)
+            reference = EvidenceReference.create(
+                evidence_ref_id="evidence-persistence",
+                work_context=_context(request),
+                request=request,
+                capture=capture,
+            )
+            reference_ref = store.persist_evidence_reference(reference)
+
+            self.assertEqual(reference_ref, "weir-evidence:evidence-persistence")
+            self.assertEqual(store.load_evidence_reference(reference_ref), reference)
+            self.assertEqual(store.materialize_evidence(reference), capture.content)
+
+    def test_tampered_reference_and_artifact_fail_closed(self):
+        request = _request(capture_policy="content")
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            store = CaptureStore(root)
+            capture, _ = store.persist(_capture(request), request)
+            reference = EvidenceReference.create(
+                evidence_ref_id="evidence-tamper",
+                work_context=_context(request),
+                request=request,
+                capture=capture,
+            )
+            store.persist_evidence_reference(reference)
+            reference_path = root / "evidence-references" / "evidence-tamper.json"
+            original_reference = reference_path.read_bytes()
+            value = json.loads(original_reference)
+            value["capture_id"] = "webcap-substituted"
+            reference_path.write_text(json.dumps(value), encoding="utf-8")
+            with self.assertRaises(ContractViolation) as raised:
+                store.load_evidence_reference(reference.evidence_ref_id)
+            self.assertEqual(raised.exception.reason_code, "reference_hash_mismatch")
+
+            reference_path.write_bytes(original_reference)
+            digest = (capture.raw_artifact_ref or "").removeprefix(
+                "weir-artifact:sha256:"
+            )
+            artifact_path = root / "artifacts" / "sha256" / digest[:2] / f"{digest}.json"
+            artifact_path.write_bytes(b'{"tampered":true}')
+            with self.assertRaises(ContractViolation) as raised:
+                store.materialize_evidence(reference)
+            self.assertEqual(raised.exception.reason_code, "artifact_hash_mismatch")
+
 
 class CachePolicyTests(unittest.TestCase):
     def test_only_public_unauthenticated_evidence_is_shared_cache_eligible(self):
@@ -156,7 +229,7 @@ class CachePolicyTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "SHA-256"):
                 cache.get("../outside", 10)
 
-    def test_tampered_cache_capture_is_a_miss(self):
+    def test_tampered_cache_capture_fails_closed(self):
         request = _request()
         capture = _capture(request)
         with tempfile.TemporaryDirectory() as temp:
@@ -168,7 +241,25 @@ class CachePolicyTests(unittest.TestCase):
             value = json.loads(path.read_text(encoding="utf-8"))
             value["capture"]["content"] = {"json": {"answer": "tampered"}}
             path.write_text(json.dumps(value), encoding="utf-8")
-            self.assertIsNone(cache.get(key, 10))
+            with self.assertRaises(CacheIntegrityError):
+                cache.get(key, 10)
+
+    def test_expired_tampered_cache_still_fails_closed(self):
+        now = [100.0]
+        request = _request()
+        capture = _capture(request)
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            cache = FileCaptureCache(root, clock=lambda: now[0])
+            key = cache.key_for(request, ["http"])
+            cache.put(key, capture)
+            path = root / f"{key}.json"
+            value = json.loads(path.read_text(encoding="utf-8"))
+            value["capture"]["content"] = {"json": {"answer": "tampered"}}
+            path.write_text(json.dumps(value), encoding="utf-8")
+            now[0] = 1_000.0
+            with self.assertRaises(CacheIntegrityError):
+                cache.get(key, 10)
 
 
 if __name__ == "__main__":

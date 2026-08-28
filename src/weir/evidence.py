@@ -77,6 +77,58 @@ class EvidenceReference:
         created_at: str | None = None,
         artifact_ref: str | None = None,
     ) -> EvidenceReference:
+        """Bind a newly acquired capture to its originating request."""
+
+        return cls._create(
+            evidence_ref_id=evidence_ref_id,
+            work_context=work_context,
+            request=request,
+            capture=capture,
+            created_at=created_at,
+            artifact_ref=artifact_ref,
+            reusable_capture=False,
+        )
+
+    @classmethod
+    def create_for_reusable_capture(
+        cls,
+        *,
+        evidence_ref_id: str,
+        work_context: WorkContext,
+        request: WebRequest,
+        capture: WebCapture,
+        created_at: str | None = None,
+        artifact_ref: str | None = None,
+    ) -> EvidenceReference:
+        """Bind a store-verified cache capture to a new requesting context.
+
+        ``WebCapture.request_id`` records the request that originally acquired the
+        reusable content. The new reference records the current request ID; callers
+        must verify the immutable capture and artifact before using this constructor.
+        """
+
+        return cls._create(
+            evidence_ref_id=evidence_ref_id,
+            work_context=work_context,
+            request=request,
+            capture=capture,
+            created_at=created_at,
+            artifact_ref=artifact_ref,
+            reusable_capture=True,
+        )
+
+    @classmethod
+    def _create(
+        cls,
+        *,
+        evidence_ref_id: str,
+        work_context: WorkContext,
+        request: WebRequest,
+        capture: WebCapture,
+        created_at: str | None,
+        artifact_ref: str | None,
+        reusable_capture: bool,
+    ) -> EvidenceReference:
         work_context.validate()
         request.validate()
         if request.run_id != work_context.run_id:
@@ -89,7 +141,7 @@ class EvidenceReference:
                 "acquisition_correlation_mismatch",
                 "WebRequest.request_id must match WorkContext.correlation_id",
             )
-        if capture.request_id != request.request_id:
+        if not reusable_capture and capture.request_id != request.request_id:
             raise ContractViolation(
                 "capture_request_mismatch",
                 "WebCapture.request_id must match WebRequest.request_id",

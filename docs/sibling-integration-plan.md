@@ -390,12 +390,20 @@ the same hashes. Execution remains disabled.
 
 Owner: WEIR. May run in parallel with 1B and 1C.
 
-Likely files:
+Status: completed in WEIR on 2026-08-27. `AcquisitionBroker.read`, `search`, and
+`enrich` now accept only a validated `AcquisitionEnvelope` and require a durable
+`CaptureStore`. Each result includes the original reusable capture and a separately
+persisted context-bound `EvidenceReference`. The standalone CLI retains private,
+explicitly named legacy methods until it moves to the authenticated service in Batch 2;
+no sibling-facing unbound method remains.
 
-- create `contracts/evidence-reference.schema.json` and
-  `contracts/acquisition-envelope.schema.json`;
-- extend `src/weir/broker.py`, `models.py`, `persistence.py`, and `telemetry.py`;
-- add contract, broker, persistence, cache, and tamper tests.
+Implemented files:
+
+- the Batch 0 `contracts/evidence-reference.schema.json` and
+  `contracts/acquisition-envelope.schema.json` remain unchanged;
+- `src/weir/broker.py`, `evidence.py`, `persistence.py`, `telemetry.py`, and `cli.py`
+  implement the bound API and transitional seam; and
+- broker, persistence, cache, artifact-tamper, and telemetry tests enforce the gate.
 
 Required behavior:
 
@@ -408,6 +416,13 @@ Required behavior:
 
 Rollback: keep the legacy in-process API temporarily for WEIR's own CLI, but do not
 enable a sibling caller without evidence binding.
+
+Implemented failure semantics: envelope identity and durable-store availability are
+checked before routing or network access; corrupt cache records do not become misses;
+stored capture metadata and canonical artifact bytes are verified before a cached
+capture is rebound; reference writes are immutable and read back through their hash
+validator; and the telemetry sink rejects attributes outside its bounded metadata
+allowlist. See `docs/context-bound-acquisition.md` for the caller and storage contract.
 
 ### Batch 1B — Make APU attribution explicit
 

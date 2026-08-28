@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 import time
-import urllib.parse
+import uuid
 from dataclasses import dataclass, replace
 from typing import Any, Callable
 
@@ -15,8 +15,10 @@ from weir.engines.base import (
     WeirEngineError,
 )
 from weir.engines.http_connector import check_target_policy
+from weir.evidence import AcquisitionEnvelope, EvidenceReference
 from weir.models import ReaderResult, RequestMode, WebCapture, WebRequest
 from weir.persistence import (
+    CacheIntegrityError,
     CachePolicy,
     CaptureStore,
     FileCaptureCache,
@@ -65,7 +67,7 @@ class CacheInfo:
 
 
 @dataclass(frozen=True, slots=True)
-class AcquisitionResult:
+class _CaptureAcquisitionResult:
     request: WebRequest
     capture: WebCapture
     attempts: tuple[EngineAttempt, ...]
@@ -99,6 +101,60 @@ class AcquisitionResult:
         return value
 
 
+@dataclass(frozen=True, slots=True)
+class AcquisitionResult:
+    """A context-bound acquisition result safe to pass across system boundaries."""
+
+    acquisition: AcquisitionEnvelope
+    evidence_reference: EvidenceReference
+    evidence_reference_ref: str
+    _capture_result: _CaptureAcquisitionResult
+
+    @property
+    def request(self) -> WebRequest:
+        return self._capture_result.request
+
+    @property
+    def capture(self) -> WebCapture:
+        return self._capture_result.capture
+
+    @property
+    def attempts(self) -> tuple[EngineAttempt, ...]:
+        return self._capture_result.attempts
+
+    @property
+    def route(self) -> RouteDecision | None:
+        return self._capture_result.route
+
+    @property
+    def profile(self) -> SiteProfile | None:
+        return self._capture_result.profile
+
+    @property
+    def cache(self) -> CacheInfo | None:
+        return self._capture_result.cache
+
+    @property
+    def persistence(self) -> PersistenceInfo | None:
+        return self._capture_result.persistence
+
+    @property
+    def warnings(self) -> tuple[str, ...]:
+        return self._capture_result.warnings
+
+    def to_envelope(self) -> dict[str, Any]:
+        value = self._capture_result.to_envelope()
+        value.update(
+            {
+                "acquisition_envelope_hash": self.acquisition.envelope_hash,
+                "work_context": self.acquisition.work_context.to_dict(),
+                "evidence_reference": self.evidence_reference.to_dict(),
+                "evidence_reference_ref": self.evidence_reference_ref,
+            }
+        )
+        return value
+
+
 class AcquisitionFailed(RuntimeError):
     def __init__(
         self,
@@ -129,7 +185,7 @@ class AcquisitionFailed(RuntimeError):
 
 
 class AcquisitionBroker:
-    """Reusable public-acquisition path shared by the CLI and Lugos callers."""
+    """Context-bound public acquisition plus a private transitional CLI seam."""
 
     def __init__(
         self,
@@ -141,6 +197,7 @@ class AcquisitionBroker:
         trace_sink: TraceSink | None = None,
         allow_test_engine: bool = False,
         timer: Callable[[], float] = time.perf_counter,
+        evidence_id_factory: Callable[[], str] | None = None,
         max_capture_bytes: int = MAX_NORMALIZED_CONTENT_BYTES,
     ) -> None:
         if max_capture_bytes < 256:
@@ -153,9 +210,74 @@ class AcquisitionBroker:
         self.trace_sink = trace_sink if trace_sink is not None else NullTraceSink()
         self.allow_test_engine = allow_test_engine
         self._timer = timer
+        self._evidence_id_factory = evidence_id_factory or (
+            lambda: f"evidence-{uuid.uuid4().hex}"
+        )
         self.max_capture_bytes = max_capture_bytes
 
-    def read(self, request: WebRequest, engine_id: str = "auto") -> AcquisitionResult:
+    def read(
+        self, acquisition: AcquisitionEnvelope, engine_id: str = "auto"
+    ) -> AcquisitionResult:
+        acquisition = self._validate_bound_acquisition(acquisition)
+        result = self._read_request(
+            acquisition.request, engine_id, persistence_required=True
+        )
+        return self._bind_result(acquisition, result)
+
+    def search(self, acquisition: AcquisitionEnvelope) -> AcquisitionResult:
+        acquisition = self._validate_bound_acquisition(acquisition)
+        result = self._search_request(acquisition.request, persistence_required=True)
+        return self._bind_result(acquisition, result)
+
+    def enrich(self, acquisition: AcquisitionEnvelope) -> AcquisitionResult:
+        acquisition = self._validate_bound_acquisition(acquisition)
+        result = self._enrich_request(acquisition.request, persistence_required=True)
+        return self._bind_result(acquisition, result)
+
+    def _legacy_read_for_cli(
+        self, request: WebRequest, engine_id: str = "auto"
+    ) -> _CaptureAcquisitionResult:
+        """Temporary unbound seam reserved for the standalone WEIR CLI."""
+
+        return self._read_request(request, engine_id, persistence_required=False)
+
+    def _legacy_search_for_cli(self, request: WebRequest) -> _CaptureAcquisitionResult:
+        """Temporary unbound seam reserved for the standalone WEIR CLI."""
+
+        return self._search_request(request, persistence_required=False)
+
+    def _legacy_enrich_for_cli(self, request: WebRequest) -> _CaptureAcquisitionResult:
+        """Temporary unbound seam reserved for the standalone WEIR CLI."""
+
+        return self._enrich_request(request, persistence_required=False)
+
+    def _validate_bound_acquisition(
+        self, acquisition: AcquisitionEnvelope
+    ) -> AcquisitionEnvelope:
+        if not isinstance(acquisition, AcquisitionEnvelope):
+            raise TypeError(
+                "public acquisition requires a validated AcquisitionEnvelope; "
+                "bare WebRequest calls are not accepted"
+            )
+        # This performs run/correlation checks before route selection, cache I/O,
+        # policy DNS resolution, or an engine call.
+        acquisition.validate()
+        if self.store is None:
+            raise RuntimeError(
+                "context-bound acquisition requires a durable CaptureStore"
+            )
+        # WebRequest predates the immutable cross-system contracts and is mutable.
+        # Rehydrate a detached copy so caller mutation cannot invalidate a checked
+        # envelope while acquisition is in progress.
+        return AcquisitionEnvelope.from_dict(acquisition.to_dict())
+
+    def _read_request(
+        self,
+        request: WebRequest,
+        engine_id: str,
+        *,
+        persistence_required: bool,
+    ) -> _CaptureAcquisitionResult:
         request.validate()
         if request.mode is not RequestMode.READ:
             raise ValueError("AcquisitionBroker.read requires mode=read")
@@ -166,17 +288,35 @@ class AcquisitionBroker:
             route = None
             candidates = [engine_id]
         candidates, profile = self._prepare(request, candidates)
-        return self._acquire(request, candidates, "read", route, profile)
+        return self._acquire(
+            request,
+            candidates,
+            "read",
+            route,
+            profile,
+            persistence_required=persistence_required,
+        )
 
-    def search(self, request: WebRequest) -> AcquisitionResult:
+    def _search_request(
+        self, request: WebRequest, *, persistence_required: bool
+    ) -> _CaptureAcquisitionResult:
         request.validate()
         if request.mode is not RequestMode.SEARCH:
             raise ValueError("AcquisitionBroker.search requires mode=search")
         route = classify(request)
         candidates, profile = self._prepare(request, list(route.engine_candidates))
-        return self._acquire(request, candidates, "search", route, profile)
+        return self._acquire(
+            request,
+            candidates,
+            "search",
+            route,
+            profile,
+            persistence_required=persistence_required,
+        )
 
-    def enrich(self, request: WebRequest) -> AcquisitionResult:
+    def _enrich_request(
+        self, request: WebRequest, *, persistence_required: bool
+    ) -> _CaptureAcquisitionResult:
         request.validate()
         if request.mode is not RequestMode.READ:
             raise ValueError("AcquisitionBroker.enrich requires mode=read")
@@ -186,7 +326,14 @@ class AcquisitionBroker:
             reasons=["listing enrichment uses the bounded rung-2 compact-reader chain"],
         )
         candidates, profile = self._prepare(request, list(route.engine_candidates))
-        return self._acquire(request, candidates, "read", route, profile)
+        return self._acquire(
+            request,
+            candidates,
+            "read",
+            route,
+            profile,
+            persistence_required=persistence_required,
+        )
 
     def _prepare(
         self, request: WebRequest, candidates: list[str]
@@ -222,7 +369,9 @@ class AcquisitionBroker:
         operation: str,
         route: RouteDecision | None,
         profile: SiteProfile | None,
-    ) -> AcquisitionResult:
+        *,
+        persistence_required: bool,
+    ) -> _CaptureAcquisitionResult:
         warnings: list[str] = []
         route_class = route.route_class if route is not None else "explicit"
         self._trace(
@@ -231,9 +380,8 @@ class AcquisitionBroker:
             request,
             mode=request.mode.value,
             route_class=route_class,
-            engine_candidates=candidates,
-            site_profile=profile.id if profile else None,
-            target_host=_target_host(request.url),
+            engine_ids=candidates,
+            profile_id=profile.id if profile else None,
         )
         try:
             self._check_public_target(request, candidates)
@@ -244,7 +392,7 @@ class AcquisitionBroker:
                 request,
                 outcome="failure",
                 failure_class=exc.failure_class.value,
-                target_host=_target_host(request.url),
+                reason_code=exc.failure_class.value,
             )
             raise
 
@@ -255,10 +403,26 @@ class AcquisitionBroker:
             cache_info = CacheInfo("disabled", "no capture cache is configured")
         elif not cache_decision.enabled:
             cache_info = CacheInfo("bypass", cache_decision.reason)
-            self._trace(warnings, "web.cache.bypass", request, reason=cache_decision.reason)
+            self._trace(
+                warnings,
+                "web.cache.bypass",
+                request,
+                reason_code="cache_policy_bypass",
+            )
         else:
             cache_key = self.cache.key_for(request, candidates, self.max_capture_bytes)
-            cached = self.cache.get(cache_key, cache_decision.ttl_seconds)
+            try:
+                cached = self.cache.get(cache_key, cache_decision.ttl_seconds)
+            except CacheIntegrityError as exc:
+                self._trace(
+                    warnings,
+                    "web.cache.reject",
+                    request,
+                    cache_key=f"sha256:{cache_key}",
+                    outcome="failure",
+                    reason_code=exc.reason_code,
+                )
+                raise
             if cached is not None:
                 cache_info = CacheInfo(
                     "hit", cache_decision.reason, cached.capture.capture_id, cached.age_seconds
@@ -269,8 +433,9 @@ class AcquisitionBroker:
                     request,
                     capture_id=cached.capture.capture_id,
                     age_seconds=round(cached.age_seconds, 3),
+                    cache_key=f"sha256:{cache_key}",
                 )
-                return AcquisitionResult(
+                return _CaptureAcquisitionResult(
                     request=request,
                     capture=cached.capture,
                     attempts=(),
@@ -280,7 +445,13 @@ class AcquisitionBroker:
                     warnings=tuple(warnings),
                 )
             cache_info = CacheInfo("miss", cache_decision.reason)
-            self._trace(warnings, "web.cache.miss", request, ttl_seconds=cache_decision.ttl_seconds)
+            self._trace(
+                warnings,
+                "web.cache.miss",
+                request,
+                ttl_seconds=cache_decision.ttl_seconds,
+                cache_key=f"sha256:{cache_key}",
+            )
 
         attempts: list[EngineAttempt] = []
         capture: WebCapture | None = None
@@ -288,14 +459,17 @@ class AcquisitionBroker:
             started = self._timer()
             try:
                 engine = self.registry.get(engine_id)
+                # Adapters receive their own copy. A buggy adapter cannot broaden
+                # allowlists or rewrite the hashed request used for provenance.
+                engine_request = WebRequest.from_dict(request.to_dict())
                 if operation == "read":
                     if not isinstance(engine, ReaderEngine):
                         raise TypeError(f"engine {engine_id!r} has no read capability")
-                    result = engine.read(request)
+                    result = engine.read(engine_request)
                 else:
                     if not isinstance(engine, SearchEngine):
                         raise TypeError(f"engine {engine_id!r} has no search capability")
-                    result = engine.search(request)
+                    result = engine.search(engine_request)
                 if request.url and not (engine_id == "fake" and self.allow_test_engine):
                     # External readers may follow redirects internally. Revalidate
                     # the returned target before retaining or exposing evidence.
@@ -318,9 +492,10 @@ class AcquisitionBroker:
                     warnings,
                     "web.reader.fetch" if operation == "read" else "web.connector.search",
                     request,
-                    engine=engine_id,
+                    engine_id=engine_id,
                     outcome="failure",
                     failure_class=failure_class.value,
+                    reason_code=getattr(exc, "reason_code", failure_class.value),
                     duration_ms=attempt.duration_ms,
                 )
                 if isinstance(exc, EnginePolicyBlocked):
@@ -332,8 +507,8 @@ class AcquisitionBroker:
                         warnings,
                         "web.engine.fallback",
                         request,
-                        from_engine=engine_id,
-                        to_engine=candidates[index + 1],
+                        from_engine_id=engine_id,
+                        to_engine_id=candidates[index + 1],
                         failure_class=failure_class.value,
                     )
                 continue
@@ -348,7 +523,7 @@ class AcquisitionBroker:
                 warnings,
                 "web.reader.fetch" if operation == "read" else "web.connector.search",
                 request,
-                engine=engine_id,
+                engine_id=engine_id,
                 outcome="success",
                 duration_ms=attempt.duration_ms,
                 content_bytes=content_bytes,
@@ -366,17 +541,31 @@ class AcquisitionBroker:
         if self.store is not None:
             try:
                 capture, persistence = self.store.persist(capture, request)
-            except OSError as exc:
+            except (OSError, ValueError) as exc:
+                self._trace(
+                    warnings,
+                    "web.capture.persist",
+                    request,
+                    capture_id=capture.capture_id,
+                    content_hash=capture.content_hash,
+                    stored=False,
+                    outcome="failure",
+                    reason_code=getattr(exc, "reason_code", "evidence_content_unavailable"),
+                )
+                if persistence_required:
+                    raise
                 warnings.append(f"capture persistence failed: {exc}")
                 persistence = PersistenceInfo(False, None, None, str(exc))
-            self._trace(
-                warnings,
-                "web.capture.persist",
-                request,
-                capture_id=capture.capture_id,
-                content_hash=capture.content_hash,
-                stored=persistence.stored,
-            )
+            else:
+                self._trace(
+                    warnings,
+                    "web.capture.persist",
+                    request,
+                    capture_id=capture.capture_id,
+                    content_hash=capture.content_hash,
+                    stored=persistence.stored,
+                    outcome="success",
+                )
         capture = apply_capture_policy(capture, request)
 
         if self.cache is not None and cache_decision.enabled and cache_key is not None:
@@ -385,7 +574,7 @@ class AcquisitionBroker:
             except OSError as exc:
                 warnings.append(f"capture cache write failed: {exc}")
 
-        return AcquisitionResult(
+        return _CaptureAcquisitionResult(
             request=request,
             capture=capture,
             attempts=tuple(attempts),
@@ -394,6 +583,72 @@ class AcquisitionBroker:
             cache=cache_info,
             persistence=persistence,
             warnings=tuple(warnings),
+        )
+
+    def _bind_result(
+        self,
+        acquisition: AcquisitionEnvelope,
+        result: _CaptureAcquisitionResult,
+    ) -> AcquisitionResult:
+        store = self.store
+        if store is None:  # guarded before acquisition; keep this boundary fail closed
+            raise RuntimeError("context-bound acquisition requires a durable CaptureStore")
+        warnings = list(result.warnings)
+        reference: EvidenceReference | None = None
+        try:
+            # Rehydrate to re-check any in-memory content against content_hash,
+            # including captures that a retention policy deliberately does not store.
+            WebCapture.from_dict(result.capture.to_dict())
+            if (result.persistence is not None and result.persistence.stored) or (
+                result.cache is not None and result.cache.status == "hit"
+            ):
+                store.verify_capture(result.capture)
+            create_reference = (
+                EvidenceReference.create_for_reusable_capture
+                if result.cache is not None and result.cache.status == "hit"
+                else EvidenceReference.create
+            )
+            reference = create_reference(
+                evidence_ref_id=self._evidence_id_factory(),
+                work_context=acquisition.work_context,
+                request=acquisition.request,
+                capture=result.capture,
+            )
+            reference_ref = store.persist_evidence_reference(reference)
+            if reference.artifact_ref is not None:
+                store.materialize_evidence(reference)
+        except (OSError, TypeError, ValueError) as exc:
+            self._trace(
+                warnings,
+                "web.evidence.bind",
+                acquisition.request,
+                envelope_hash=acquisition.envelope_hash,
+                work_context_hash=acquisition.work_context.context_hash,
+                evidence_ref_id=(
+                    None if reference is None else reference.evidence_ref_id
+                ),
+                outcome="failure",
+                reason_code=getattr(exc, "reason_code", "evidence_content_unavailable"),
+            )
+            raise
+        self._trace(
+            warnings,
+            "web.evidence.bind",
+            acquisition.request,
+            envelope_hash=acquisition.envelope_hash,
+            work_context_hash=acquisition.work_context.context_hash,
+            evidence_ref_id=reference.evidence_ref_id,
+            reference_hash=reference.reference_hash,
+            capture_id=reference.capture_id,
+            content_hash=reference.content_hash,
+            capture_policy=reference.capture_policy,
+            outcome="success",
+        )
+        return AcquisitionResult(
+            acquisition=acquisition,
+            evidence_reference=reference,
+            evidence_reference_ref=reference_ref,
+            _capture_result=replace(result, warnings=tuple(warnings)),
         )
 
     def _trace(
@@ -417,15 +672,6 @@ def _failure_class(exc: Exception) -> FailureClass:
     if isinstance(exc, KeyError):
         return FailureClass.ENGINE_UNAVAILABLE
     return FailureClass.UNKNOWN
-
-
-def _target_host(url: str | None) -> str | None:
-    if not url:
-        return None
-    try:
-        return urllib.parse.urlsplit(url).hostname
-    except ValueError:
-        return None
 
 
 def _bound_reader_result(
