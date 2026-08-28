@@ -210,6 +210,9 @@ remaining sibling work is in `docs/remaining-integration-plan.md`. The accepted 
 `docs/contract-freeze.md` and `contracts/fixtures/batch-0-v1.json`.
 The implemented Batch 1A caller, cache, persistence, and telemetry invariants are in
 `docs/context-bound-acquisition.md`.
+RF7 selects Autowork's post-assignment, pre-provider evidence-acquisition phase as the
+first trusted `DispatchContext` provider; its authoritative fields, rejected
+alternatives, and activation tests are in `docs/dispatch-context-provider.md`.
 The disabled-by-default Batch 2 authenticated acquisition/proposal/retirement service
 slices and their remaining Batch 2 work are described in `docs/service-boundary.md`.
 The schema-v2 trust model and offline backup/migration/readback procedure are in

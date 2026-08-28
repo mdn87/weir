@@ -9,26 +9,33 @@
 
 ## Implementation status — 2026-08-28
 
-The approved source-only work is now present for WEIR Batch 2D and Batch 7, APU Batch
-1B, Dias Batch 1C, disabled `lugos-mcp` Batch 3 plumbing, Autowork Batch 4, Mission
-Control's disabled Batch 5 tolerance, HUD's dormant Batch 5 projection, and Fade Batch
-6. Each repository keeps its runtime feature disabled unless the batch explicitly
-describes a source-only synthetic test.
+The approved source work is present for WEIR Batch 2D and Batch 7, APU Batch 1B, Dias
+Batch 1C, disabled `lugos-mcp` Batch 3 plumbing, Autowork Batch 4, Mission Control and
+HUD Batch 5, and Fade Batch 6. The operator subsequently authorized the named local
+rollouts and canaries:
 
-The remaining work requires the named runtime or design decision; source completion is
-not permission to perform it:
+- Batch 8 received its separate architecture and security review at `f20f057`; the
+  signed outbound pull relay is recommended, but no relay is implemented or enabled.
+- The real local Fade/WEIR canary and Batch 9 local/source acceptance passed at
+  `8d36a70` with restart replay and exactly one observed DOM effect.
+- Mission Control tolerance deployed before HUD registered the `weir` projection. The
+  live snapshot accepts all six projection names, and the WEIR projection is redacted
+  at construction.
+- Dias used the approved fresh schema-v1 receipt-store initialization, then passed v1
+  and v2 loopback tests plus restart replay without a second adapter effect.
+- APU 0.9.0 is installed and `primary-agent-autonomy-loss` is enabled in strict mode
+  through `%USERPROFILE%\.local\bin\apu-watch.exe`. It is a policy/CLI watcher, so
+  `background_service=false` is intentional.
+- RF7 now selects Autowork's post-assignment, pre-provider evidence-acquisition phase
+  as the first trusted `DispatchContext` provider. The exact trust and call contract is
+  recorded in [`dispatch-context-provider.md`](dispatch-context-provider.md).
 
-- Choose and implement the first trusted `DispatchContext` provider (RF7) before
-  enabling the `lugos-mcp` → Autowork evidence path.
-- Obtain operator approval before replacing or invoking the installed APU watcher,
-  creating or migrating the Dias receipt database, deploying Mission Control and then
-  registering HUD's `weir` projection, or running the Fade/WEIR synthetic action canary.
-- Complete WEIR 7P production admission: process isolation, resource limits, restricted
-  identities, per-caller credential protection, lifecycle supervision, and OS egress
-  policy.
-- Run Batch 9 whole-system synthetic acceptance only after those local rollout gates.
-- Keep Batch 8 remote approval relay outside this verdict until its separate post-canary
-  review.
+Remaining implementation is narrower than the original rollout list: build the
+dispatcher-owned acquisition phase before enabling any `lugos.web` action; complete
+WEIR 7P production admission (process isolation, resource limits, restricted
+identities, per-caller credential protection, lifecycle supervision, and OS egress
+policy); and implement Batch 8 only after its recommended design and the finished code
+receive the required security review. Existing action and relay flags remain off.
 
 This packet starts after the contract freeze recorded in
 `docs/sibling-integration-plan.md`. Fable already accepted decisions D1–D12,
@@ -464,18 +471,21 @@ Mission Control, push child commits before changing Lugos parent pointers. Autow
 HUD are separate commits in the shared Lugos parent and must not absorb unrelated local
 changes. A held branch needs a written blocker; completed, green work lands normally.
 
-## Approval checkpoints
+## Approval checkpoint record
 
-Fable's verdict is technical review only. Obtain operator approval at implementation
-time for:
+Fable's verdict was technical review only. The operator subsequently approved and the
+rollout completed for the Dias receipt-store creation, APU watcher replacement and
+invocation, local Mission Control/HUD deployment, and local Fade/WEIR action canary.
+That authorization did not enable Batch 8 or broaden the production authority model.
+
+Fresh operator approval is still required at implementation time for:
 
 - the WEIR v1-to-v2 SQLite migration;
-- the Dias receipt-store schema/dependency and any database creation or migration;
-- APU evidence schema rollout and any replacement, invocation, or lifecycle change to
-  `C:\Users\Matt\.local\bin\apu-watch.exe`;
-- local or remote service deployment, credential provisioning, ACL, firewall, or
-  background-service changes;
-- the Fade/WEIR action canary or any other live effect; and
+- a materially different Dias migration or destructive receipt-store operation;
+- a materially different APU watcher lifecycle or policy mutation;
+- new service targets, credential provisioning, ACL, firewall, or background-service
+  changes outside the completed Mission Control/HUD rollout;
+- any non-synthetic live effect; and
 - a future remote approval relay.
 
 Source inspection, planning, fixtures, and disabled source implementations grant none
