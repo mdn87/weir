@@ -1,6 +1,7 @@
 # Remaining sibling integration plan — Fable delivery review packet
 
-- Status: draft for manual Fable review
+- Status: reviewed — `implementation may proceed` with mandatory amendments RF1–RF8
+  (see the Fable review findings at the end)
 - Prepared: 2026-08-28
 - Starting WEIR revision: `f5652f3` on `main`
 - Scope: unfinished work in WEIR, APU, Dias, `lugos-mcp`, Autowork, Mission
@@ -430,6 +431,94 @@ time for:
 
 Source inspection, planning, fixtures, and disabled source implementations grant none
 of these approvals.
+
+## Fable review findings (2026-08-28)
+
+Reviewed at WEIR `93a4527` (`f5652f3` plus this document). Baselines: every pin in
+the reverified table matches its repository head; the Lugos-parent origin delta is
+the Torc pointer only, the Mission Control origin delta is README-only, and the Dias
+head move `e3faa94..9fab0bd` touches no focus-broker, contract, or host file. The
+WEIR repository gate passes at the pin (269 passed, 1 skipped). Four independent
+read-only inspection passes covered WEIR, APU + `lugos-mcp`, Autowork + Fade, and
+Mission Control + HUD + Dias. Batch-0 fixture checks: `outcome_unknown` (A5) and the
+permit field vocabulary (A7) are frozen as required, and the A4 clock authority is
+concrete (`maximum_tolerated_skew_seconds: 5`, mirrored as
+`MAX_CLOCK_SKEW_SECONDS` in `actions.py`).
+
+No R1–R6 choice is replaced. The following amendments are mandatory and fold into
+the batch specifications:
+
+- **RF1 — R1's version machinery already exists; define creation versus migration.**
+  `STORE_SCHEMA_VERSION = 1` is persisted via SQLite `user_version`
+  (`store.py:27,169-248`) and unknown versions already fail closed — but a fresh
+  database is auto-created at startup today. R1 must state that v2 bumps this
+  existing mechanism, decide whether fresh-database creation directly at v2 remains
+  a startup behavior (acceptable) while v1→v2 conversion is offline-only, and add
+  coverage for the version-refusal branch, which no test exercises today.
+- **RF2 — Reconcile R2 with the existing worker-asserted release path.**
+  `record_worker_cleanup_attested` (`store.py:499-564`) already retires unresolved
+  OPEN reservations on worker-supplied identifiers with no proof of death, and it is
+  the only thing that unblocks `close_with_lease` (`store.py:1695-1701`). Batch 2D
+  must enumerate the complete set of release paths for host-global credential
+  reservations — live-worker cleanup attestation bound to the authenticated worker
+  protocol and instance, versus R2 operator retirement — and test that a worker
+  cannot attest cleanup for a binding held by another instance, or after its own
+  death attestation exists. Otherwise the new partial unique constraint can be
+  bypassed through the legacy path.
+- **RF3 — Name the "trusted profile-state registry".** It is undefined new work, but
+  a seam exists: `ProfileStateProvider`/`VerifiedProfileState`
+  (`playwright_observer.py:41-74`; only the empty provider ships) plus the persisted
+  `SessionProfileBinding`. R1 should implement the registry behind that protocol and
+  state its owner, storage, and trust basis; `credential_binding_id` derivation
+  lives behind it.
+- **RF4 — Batch 4 size bounds are new work, not reuse.** The visual-input path has
+  no byte or count bound at any layer (`dispatch_contract.py:1427-1434`; the
+  fingerprint streams unbounded). Add explicit size and count bounds for
+  `evidence_inputs` with tests, and preferably backfill `visual_inputs`. The
+  exact-set hazard is confirmed at 14 version edit sites (not ~11), including the
+  stale "1, 2, or 3" error string at `dispatch_contract.py:1370-1376`.
+- **RF5 — Batch 5 tolerance must cover both Mission Control schemas.** The closed
+  snapshot union (`operator-contract.ts:210-231`, `.max(5)`, throwing parse → 502)
+  and the *narrower* `operatorEventSchema` (`:240-276`, only `autowork`/`task-loop`)
+  fail independently; an unparseable event is what degrades the SSE stream. Step 2's
+  tolerance deploy must widen both, and the step-4 parity gate must include
+  event-schema fixtures. HUD publishes events only for `autowork` today
+  (`live.mjs:94-101`), so `weir` events are new wiring and must not precede the
+  Mission Control event-schema deploy.
+- **RF6 — Non-blocking wording corrections.** HUD's `model-budgets` read is
+  bearer-gated; the unauthenticated surface is exactly snapshot + events, and
+  Mission Control's `requireRole('viewer')` proxy makes the HUD port the only
+  unguarded hop — the construction-time redaction stance is unchanged. Dias's
+  invalid-frame handling is not fully silent: `parseEvent` → `null` routes to a
+  generic `onError` and a stuck error state (`display-transport.ts:274-277`);
+  1C step 6 should target diagnosability (version mismatch is indistinguishable
+  from corruption), and any new receipt reason code (capacity) is v2-only because
+  the v1 enum is closed.
+- **RF7 — The first trusted DispatchContext provider is an unmade, blocking
+  decision.** No context channel exists, and the in-tree precedent is worse than
+  ambient env: agent-mail accepts model-supplied `from_agent`/`from_session`
+  arguments (`agent_mail_adapter.py:230,245,585-586`). R3's fail-closed posture is
+  correct, but Batch 3's exit and Batch 4's canary are unreachable until one
+  orchestrator entry point is chosen to establish the binding — record that choice
+  as a named blocker before enabling any `lugos.web` action. `tool_call.py`
+  constructs a fresh `Router` per invocation, so context injection must be
+  per-dispatch, not per-process.
+- **RF8 — Restate the dropped parallelization constraint.** Batch 4 (Autowork) and
+  the HUD half of Batch 5 are in-tree siblings of one Lugos parent checkout and
+  must not be edited concurrently in one working tree; sequence them or use
+  separate worktrees, preserving the parent's unrelated dirty entries.
+
+Requested-verdict answers:
+
+1. `accept_remaining_plan` — no replacement for R1–R6; RF1–RF8 are amendments.
+2. Unsafe parallelism: only RF8. Wave A parallelism is safe (disjoint repositories,
+   verified).
+3. Missing tests: the store version-refusal branch (RF1), cross-instance cleanup
+   attestation (RF2), evidence-input size/count bounds (RF4), and Mission Control
+   event-schema parity (RF5).
+4. Verdict: `implementation may proceed`. This grants no migration, deployment,
+   watcher, live-action, or remote-relay approval; the approval checkpoints above
+   stand.
 
 ## Copy/paste prompt for Fable
 
