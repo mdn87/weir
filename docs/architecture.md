@@ -145,13 +145,24 @@ result if navigation changes its document generation or URL while the bundle is 
 constructed. The broker therefore never combines a structured observation with a
 separately captured image from a later document.
 
-The in-process `BrowserWorker` interface returns typed Python values. The versioned
-worker-result JSON schema is reserved for a future out-of-process transport and is not
-yet evidence that a remote result channel is wired. The direct Playwright comparison
-worker also shares one thread for library affinity. It rejects declared oversized
-responses, but an absent `Content-Length`, compressed expansion, or wedged browser call
-cannot be safely killed in-process; the roadmap therefore keeps a process-isolated,
-resource-limited worker transport as an explicit P2 requirement.
+`ProcessBrowserWorker` preserves the typed `BrowserWorker` interface while running one
+worker in a spawned child process. Before the worker factory can open a browser, the
+parent places the child in a Windows kill-on-close Job Object or a POSIX process group.
+A POSIX watchdog kills the group if the parent disappears. A missed call or command
+deadline—including time waiting for the serialized worker or framed IPC—terminates the
+group, verifies that it is empty, and produces a hash-bound `WorkerDeathAttestation`.
+Request and response frames have explicit byte limits. The attestation distinguishes a
+clean worker-process exit from confirmed whole-tree death; it is process-death evidence,
+not authority to release an authenticated profile reservation.
+
+This local transport uses an explicit, size-bounded JSON operation/result union, with
+duplicate fields, unknown fields, non-finite numbers, and invalid typed values rejected.
+Decoding and typed reconstruction share the call deadline. It is not the versioned
+cross-host worker-result protocol and is not a sandbox against a malicious same-account
+worker process. Production admission still has to require the process wrapper and add
+OS memory and network-egress limits. The direct Playwright worker's single-thread
+affinity and response-size checks remain defense in depth inside that outer lifecycle
+boundary.
 
 The browser contract family is version `0.2`; the established acquisition request and
 capture contracts remain `0.1`.

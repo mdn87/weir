@@ -19,6 +19,17 @@ from weir.browser.models import (
     SemanticLocator,
     SessionState,
 )
+from weir.browser.process_worker import (
+    ProcessBrowserWorker,
+    WorkerDeathAttestation,
+    WorkerProcessError,
+    WorkerProcessLost,
+    WorkerProcessProtocolError,
+    WorkerProcessRequestError,
+    WorkerProcessStartupError,
+    WorkerProcessTimeout,
+    WorkerRemoteError,
+)
 
 __all__ = [
     "BROWSER_CONTRACT_VERSION",
@@ -32,10 +43,19 @@ __all__ = [
     "NameMatch",
     "Observation",
     "ObservedElement",
+    "ProcessBrowserWorker",
     "ResolvedTarget",
     "SemanticLocator",
     "SessionState",
     "StaleObservationError",
+    "WorkerDeathAttestation",
+    "WorkerProcessError",
+    "WorkerProcessLost",
+    "WorkerProcessProtocolError",
+    "WorkerProcessRequestError",
+    "WorkerProcessStartupError",
+    "WorkerProcessTimeout",
+    "WorkerRemoteError",
     "resolve",
     "resolve_locator",
 ]

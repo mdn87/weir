@@ -65,7 +65,9 @@ serialize effects through the receipt boundary, and takeover fences drain earlie
 effects before acknowledging the handoff. A created worker context without a confirmed
 close keeps the session and worker-local profile ID quarantined. The same applies to an
 OPEN dispatch reserved before the worker response is lost; only exact worker cleanup
-attestation clears it. No dead-worker retirement API exists yet.
+attestation clears it. The process transport can attest that a worker tree has died,
+but that evidence cannot release a reservation; no authorized dead-worker retirement
+API exists yet.
 
 No WEIR API consults the active window, HUD selection, most recent trace, or a global
 "current task." A caller must name the work context and session.

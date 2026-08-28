@@ -477,8 +477,8 @@ compatibility window; make new clients read and write v2 immediately.
 
 Owner: WEIR. Depends on 1A.
 
-Status: acquisition-service slice (Batch 2A) and proposal-store slice (Batch 2B)
-completed in WEIR on 2026-08-27.
+Status: acquisition-service slice (Batch 2A), proposal-store slice (Batch 2B), and
+killable worker-process transport slice (Batch 2C) completed in WEIR on 2026-08-27.
 `WeirClient` now has in-process and authenticated HTTP implementations over one
 validated response shape. The disabled-by-default loopback server exposes scoped
 acquisition, evidence lookup/materialization, and durable command-status reads with
@@ -493,11 +493,18 @@ parameter data classes. Redacted reads load a separately persisted `WeirActionEv
 without opening the full proposal file. This uses the existing SQLite records and a
 new immutable filesystem root; it does not migrate the browser database.
 
-Still required before Batch 2 as a whole is complete: effect routes; a killable
-out-of-process browser-worker supervisor; host-global profile reservation and cleanup
-attestation; authorized dead-worker retirement; and deployment configuration with
-externally provisioned, user-ACL-restricted credentials. These are not implied by the
-acquisition/proposal server. See `docs/service-boundary.md`.
+Batch 2C adds a spawned `BrowserWorker` proxy whose parent establishes a Windows Job
+Object or POSIX process group before the worker factory runs. It propagates deadlines,
+kills and verifies the process tree on timeout, parent death, or wrapper abandonment,
+and exchanges a strict size-bounded JSON operation/result union whose decode and typed
+reconstruction share the deadline. It emits a hash-bound death attestation. The
+attestation is evidence only; it cannot release a quarantined profile.
+
+Still required before Batch 2 as a whole is complete: effect routes; production worker
+admission with OS memory and network-egress limits; host-global profile reservation and
+cleanup attestation; authorized dead-worker retirement; and deployment configuration
+with externally provisioned, user-ACL-restricted credentials. These are not implied by
+the acquisition/proposal server. See `docs/service-boundary.md`.
 
 Create a typed client and loopback service, including:
 
@@ -507,7 +514,8 @@ Create a typed client and loopback service, including:
 - strict payload limits, deadlines, data-class checks, and client identities;
 - the existing SQLite session/lease/command/event store plus immutable filesystem
   capture/artifact store as the durable sources of truth;
-- killable browser worker processes rather than an in-process browser object;
+- killable browser worker processes rather than an in-process browser object
+  (implemented; production admission and resource limits remain);
 - a host-global profile reservation and explicit cleanup attestation; and
 - authorized dead-worker retirement that never frees an unconfirmed profile silently.
 

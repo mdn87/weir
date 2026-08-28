@@ -78,12 +78,20 @@ repository. Creating that credential material and installing a service are separ
 operator-approved actions. The standalone CLI remains on its private legacy seam, and
 no sibling integration is enabled merely because the server class exists.
 
+`ProcessBrowserWorker` is now available as a drop-in broker transport. It starts the
+worker factory only after OS process-tree containment is established, applies the
+earlier transport/command deadline across serialized admission and bounded IPC,
+terminates the full tree on timeout or parent death, and emits a hash-bound death
+attestation. The current server has no browser route or production worker configuration,
+so this capability is not deployed implicitly.
+
 ## Remaining Batch 2 work
 
 Batch 2 is not complete until WEIR also has:
 
 - disabled effect routes that later accept only Fade's exact permit/proposal binding;
-- killable browser worker processes with deadline propagation;
+- production browser admission that requires the process transport and adds OS memory
+  and network-egress limits;
 - host-global profile reservations and explicit cleanup attestations;
 - authorized dead-worker retirement that never silently frees a profile; and
 - deployment lifecycle configuration with externally provisioned credentials.
@@ -98,7 +106,7 @@ client's credential.
 Run the focused gate:
 
 ```bash
-python -m pytest -q tests/test_client_service.py tests/test_proposals.py
+python -m pytest -q tests/test_client_service.py tests/test_proposals.py tests/test_process_worker.py
 ```
 
 The repository gate remains `python -m pytest -q`. The service tests exercise both

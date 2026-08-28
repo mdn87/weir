@@ -64,9 +64,13 @@ immutable persistence, and no authenticated browser dependency.
   quarantine, and fenced manual takeover/return semantics.
 - [ ] Add an authorized, audited dead-worker reservation retirement path; until then,
   unacknowledged OPEN dispatches remain quarantined and direct store edits are unsupported.
-- [ ] Move the Playwright adapter behind a killable worker-process boundary with a
-  broker-enforced wall-clock deadline plus OS memory and egress limits. Declared
-  response-size checks are defense in depth, not a substitute for process containment.
+- [x] Add a drop-in, killable `BrowserWorker` process transport with propagated
+  wall-clock deadlines, Windows Job Object/POSIX process-group termination, verified
+  tree death, parent-death and wrapper-abandonment containment, a strict bounded JSON
+  operation/result union, and hash-bound death attestations.
+- [ ] Require the process transport for production browser admission and add OS memory
+  and egress limits. Declared response-size checks are defense in depth, not a
+  substitute for those resource controls.
 - [x] Add structured observations and deterministic semantic locators.
 - [x] Add immutable browser-observation and screenshot evidence capture.
 - [ ] Add a reversible DOM-interaction worker surface only after it accepts an

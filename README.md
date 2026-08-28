@@ -175,6 +175,14 @@ redacted resource telemetry. The contained `agent-browser` worker is an
 ephemeral protocol comparison only: its allowlist conflicts with profile/state restore,
 so the authenticated broker does not admit it.
 
+The broker can now host either adapter behind `ProcessBrowserWorker`, which establishes
+an OS process tree before constructing the worker, kills that tree when a command
+deadline expires, its parent disappears, or its wrapper is abandoned, exchanges only a
+strict size-bounded JSON operation/result union, and emits hash-bound death evidence.
+Production configuration does not yet require this transport or impose OS
+memory/network-egress limits, and death evidence never authorizes a quarantined profile
+to be reused.
+
 The executable surface still has no DOM action method. WEIR can compile a fresh
 observation into a risk-classified, hash-bound `ActionProposal`, but the built-in
 approval authority denies it and no executor is exposed. Fade/Operator approval,

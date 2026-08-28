@@ -101,8 +101,17 @@ or page-supplied exception. A per-session request budget bounds hostile subresou
 fan-out. Per-response and cumulative `Content-Length` budgets interrupt declared
 oversized transfers after headers arrive. Missing lengths, compressed expansion, a
 wedged browser call, and browser-process memory remain outside what an in-process thread
-can safely terminate. Production admission therefore still requires a separate
-killable worker process with broker-enforced deadlines and OS memory/egress limits.
+can safely terminate. `ProcessBrowserWorker` now supplies a spawned process boundary:
+the parent propagates the earlier broker/transport deadline, terminates the Windows Job
+Object or POSIX process group when it expires, and verifies that the group is empty.
+The deadline covers serialized-worker admission and bounded framed IPC, not just the
+browser call. Windows kill-on-close containment and a POSIX parent-liveness watchdog
+also terminate the tree if the supervising process disappears. It does not yet impose
+OS memory or network-egress limits, and deployments do not yet require workers to use
+it. The IPC channel accepts only a strict, size-bounded JSON operation/result union;
+JSON decoding and typed reconstruction run inside the transport deadline, so it does
+not deserialize executable Python objects after timeout. The process wrapper remains a
+lifecycle boundary, not a privilege boundary against a malicious same-account worker.
 
 Observation contexts run with JavaScript disabled and abort every request method except
 GET and HEAD. Their site profile must attest that the credential itself is read-only;
@@ -116,7 +125,8 @@ are journaled separately from session state. An unacknowledged OPEN dispatch the
 counts as possibly live. If the same worker cannot attest cleanup, the session remains
 nonterminal and its worker-local profile reservation stays quarantined. WEIR does not
 yet provide an authorized dead-worker retirement API; direct database edits are not a
-supported recovery mechanism.
+supported recovery mechanism. A `WorkerDeathAttestation` proves only the observed
+process-tree outcome and cannot by itself authorize reservation release.
 
 The OPEN reservation itself is compare-and-swap fenced by the exact `opening` revision,
 epoch, current command attempt, and owning automation lease. Observation screenshots
