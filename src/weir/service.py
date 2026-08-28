@@ -14,8 +14,10 @@ from threading import Thread
 from typing import Any, Callable, Mapping
 from urllib.parse import unquote, urlsplit
 
+from weir.actions import ActionProposal
 from weir.broker import AcquisitionFailed
 from weir.client import (
+    MAX_EVIDENCE_ROUTE_IDENTIFIER,
     MAX_SERVICE_REQUEST_BYTES,
     MAX_SERVICE_RESPONSE_BYTES,
     AcquisitionResponse,
@@ -28,17 +30,28 @@ from weir.engines.base import EnginePolicyBlocked, WeirEngineError
 from weir.evidence import AcquisitionEnvelope
 from weir.models import DataClass
 from weir.persistence import CacheIntegrityError
+from weir.proposals import ActionProposalStore, ProposalNotFound
 
 ACQUISITION_READ_SCOPE = "acquisition:read"
 EVIDENCE_READ_SCOPE = "evidence:read"
 COMMAND_READ_SCOPE = "command:read"
+PROPOSAL_WRITE_SCOPE = "proposal:write"
+PROPOSAL_READ_FULL_SCOPE = "proposal:read:full"
+PROPOSAL_READ_REDACTED_SCOPE = "proposal:read:redacted"
 SERVICE_SCOPES = frozenset(
-    {ACQUISITION_READ_SCOPE, EVIDENCE_READ_SCOPE, COMMAND_READ_SCOPE}
+    {
+        ACQUISITION_READ_SCOPE,
+        EVIDENCE_READ_SCOPE,
+        COMMAND_READ_SCOPE,
+        PROPOSAL_WRITE_SCOPE,
+        PROPOSAL_READ_FULL_SCOPE,
+        PROPOSAL_READ_REDACTED_SCOPE,
+    }
 )
 MAX_SERVICE_DEADLINE = timedelta(seconds=30)
 _CLIENT_ID = re.compile(r"[a-z][a-z0-9_.-]{0,63}")
 _CREDENTIAL = re.compile(r"[A-Za-z0-9._~-]{32,256}")
-_ROUTE_IDENTIFIER = re.compile(r"[A-Za-z0-9][A-Za-z0-9._:-]{0,127}")
+_ROUTE_IDENTIFIER = re.compile(r"[A-Za-z0-9][A-Za-z0-9._:-]*")
 
 
 @dataclass(frozen=True, slots=True)
@@ -170,6 +183,7 @@ class WeirServiceApplication:
         backend: WeirClient,
         clients: ClientRegistry,
         *,
+        proposal_store: ActionProposalStore | None = None,
         clock: Callable[[], datetime] | None = None,
         max_response_bytes: int = MAX_SERVICE_RESPONSE_BYTES,
     ) -> None:
@@ -177,6 +191,7 @@ class WeirServiceApplication:
             raise ValueError("service response limit must be between 512 bytes and 6 MiB")
         self.backend = backend
         self.clients = clients
+        self.proposal_store = proposal_store
         self.clock = clock or (lambda: datetime.now(timezone.utc))
         self.max_response_bytes = max_response_bytes
 
@@ -246,6 +261,33 @@ class WeirServiceApplication:
                     "WEIR command was not found",
                 )
             result = self._json(command.to_dict())
+        elif route == "proposal_register":
+            principal.require_scope(PROPOSAL_WRITE_SCOPE)
+            proposal = self._parse_proposal(body)
+            data_classes = self._backend_call(
+                self._proposals().registration_data_classes, proposal
+            )
+            for data_class in data_classes:
+                principal.require_data_class(data_class)
+            registered = self._backend_call(
+                self._proposals().register, proposal
+            )
+            result = self._json(registered.to_dict())
+        elif route == "proposal":
+            principal.require_scope(PROPOSAL_READ_FULL_SCOPE)
+            data_classes = self._backend_call(
+                self._proposals().required_data_classes, identifier
+            )
+            for data_class in data_classes:
+                principal.require_data_class(data_class)
+            record = self._backend_call(self._proposals().load_record, identifier)
+            result = self._json(record.proposal.to_dict())
+        elif route == "proposal_projection":
+            principal.require_scope(PROPOSAL_READ_REDACTED_SCOPE)
+            projection = self._backend_call(
+                self._proposals().load_projection, identifier
+            )
+            result = self._json(projection.to_dict())
         else:  # pragma: no cover - _route is exhaustive
             raise AssertionError(route)
 
@@ -280,12 +322,18 @@ class WeirServiceApplication:
         route = acquisition_routes.get((method, path))
         if route is not None:
             return route, ""
+        if method == "POST" and path == "/v1/proposals":
+            return "proposal_register", ""
         segments = path.strip("/").split("/")
         if method == "GET" and len(segments) in {3, 4} and segments[:2] == [
             "v1",
             "evidence",
         ]:
-            identifier = self._identifier(segments[2], "evidence reference")
+            identifier = self._identifier(
+                segments[2],
+                "evidence reference",
+                max_length=MAX_EVIDENCE_ROUTE_IDENTIFIER,
+            )
             if len(segments) == 3:
                 return "evidence", identifier
             if segments[3] == "content":
@@ -294,15 +342,28 @@ class WeirServiceApplication:
             "v1",
             "commands",
         ]:
-            return "command", self._identifier(segments[2], "command")
+            return "command", self._identifier(
+                segments[2], "command", max_length=128
+            )
+        if method == "GET" and len(segments) in {3, 4} and segments[:2] == [
+            "v1",
+            "proposals",
+        ]:
+            identifier = self._identifier(
+                segments[2], "proposal", max_length=128
+            )
+            if len(segments) == 3:
+                return "proposal", identifier
+            if segments[3] == "projection":
+                return "proposal_projection", identifier
         raise ServiceRequestError(
             HTTPStatus.NOT_FOUND, "route_not_found", "WEIR route was not found"
         )
 
     @staticmethod
-    def _identifier(value: str, name: str) -> str:
+    def _identifier(value: str, name: str, *, max_length: int) -> str:
         decoded = unquote(value)
-        if not _ROUTE_IDENTIFIER.fullmatch(decoded):
+        if len(decoded) > max_length or not _ROUTE_IDENTIFIER.fullmatch(decoded):
             raise ServiceRequestError(
                 HTTPStatus.BAD_REQUEST,
                 "invalid_identifier",
@@ -354,6 +415,35 @@ class WeirServiceApplication:
                 "WEIR acquisition envelope was rejected",
             ) from exc
 
+    @staticmethod
+    def _parse_proposal(body: bytes | None) -> ActionProposal:
+        if body is None:
+            raise ServiceRequestError(
+                HTTPStatus.BAD_REQUEST,
+                "request_body_required",
+                "proposal registration body is required",
+            )
+        try:
+            value = json.loads(body)
+            if not isinstance(value, dict):
+                raise ValueError("action proposal must be an object")
+            return ActionProposal.from_dict(value)
+        except (TypeError, ValueError, json.JSONDecodeError) as exc:
+            raise ServiceRequestError(
+                HTTPStatus.BAD_REQUEST,
+                getattr(exc, "reason_code", "invalid_proposal"),
+                "WEIR action proposal was rejected",
+            ) from exc
+
+    def _proposals(self) -> ActionProposalStore:
+        if self.proposal_store is None:
+            raise ServiceRequestError(
+                HTTPStatus.NOT_IMPLEMENTED,
+                "proposal_store_unavailable",
+                "WEIR proposal storage is not configured",
+            )
+        return self.proposal_store
+
     def _backend_call(self, operation: Callable[..., Any], *args: Any) -> Any:
         try:
             return operation(*args)
@@ -395,7 +485,13 @@ class WeirServiceApplication:
             raise ServiceRequestError(
                 HTTPStatus.CONFLICT,
                 getattr(exc, "reason_code", "integrity_check_failed"),
-                "WEIR durable evidence failed an integrity check",
+                "WEIR durable state failed an integrity check",
+            ) from exc
+        except ProposalNotFound as exc:
+            raise ServiceRequestError(
+                HTTPStatus.NOT_FOUND,
+                "proposal_not_found",
+                "WEIR action proposal was not found",
             ) from exc
         except FileNotFoundError as exc:
             raise ServiceRequestError(
@@ -610,6 +706,9 @@ __all__ = [
     "COMMAND_READ_SCOPE",
     "EVIDENCE_READ_SCOPE",
     "MAX_SERVICE_DEADLINE",
+    "PROPOSAL_READ_FULL_SCOPE",
+    "PROPOSAL_READ_REDACTED_SCOPE",
+    "PROPOSAL_WRITE_SCOPE",
     "SERVICE_SCOPES",
     "ClientCredential",
     "ClientPrincipal",

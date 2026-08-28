@@ -141,6 +141,7 @@ def _backend(
     *,
     command_store: SQLiteSessionStore | None = None,
     content_size: int = 8,
+    evidence_id: str | None = None,
 ) -> tuple[InProcessWeirClient, StubReader, StubSearch]:
     oc = StubReader("oc", content_size=content_size)
     agent = StubReader("agent-browser-read", content_size=content_size)
@@ -151,7 +152,11 @@ def _backend(
         registry=EngineRegistry([oc, agent, search]),
         store=store,
         cache=FileCaptureCache(root / "cache"),
-        evidence_id_factory=lambda: f"evidence-service-{next(identifiers)}",
+        evidence_id_factory=(
+            (lambda: evidence_id)
+            if evidence_id is not None
+            else (lambda: f"evidence-service-{next(identifiers)}")
+        ),
     )
     return (
         InProcessWeirClient(broker, store, command_store=command_store),
@@ -268,6 +273,19 @@ class ServiceBoundaryTests(unittest.TestCase):
             HttpWeirClient(
                 "http://127.0.0.1:not-a-port", "lugos-mcp", LUGOS_CREDENTIAL
             )
+
+    @mock.patch("weir.broker.check_target_policy")
+    def test_max_length_evidence_id_and_prefixed_handle_round_trip(self, policy_check):
+        with tempfile.TemporaryDirectory() as temp:
+            backend, _, _ = _backend(Path(temp), evidence_id="e" * 128)
+            application = WeirServiceApplication(backend, _client_registry())
+            with WeirService(application) as service:
+                client = _http_client(service)
+                response = client.read(
+                    _acquisition(_read_request("max-evidence-id"))
+                )
+                loaded = client.get_evidence(response.evidence_reference_ref)
+            self.assertEqual(loaded, response.evidence_reference)
 
     @mock.patch("weir.broker.check_target_policy")
     def test_named_identity_scope_and_data_class_fail_before_engine(self, policy_check):

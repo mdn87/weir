@@ -10,19 +10,24 @@ from datetime import datetime, timedelta, timezone
 from typing import Any, Callable, Protocol
 from urllib.parse import quote, urlsplit
 
+from weir.actions import ActionProposal
 from weir.broker import AcquisitionBroker, AcquisitionResult
 from weir.browser.store import CommandStatus, SQLiteSessionStore
 from weir.contract import canonical_json_bytes, validate_contract_size
+from weir.events import WeirActionEvent
 from weir.evidence import AcquisitionEnvelope, EvidenceReference
 from weir.models import WebCapture
 from weir.persistence import EVIDENCE_REF_PREFIX, CaptureStore
+from weir.proposals import ActionProposalStore
 
 SERVICE_CONTRACT_VERSION = "0.1"
 MAX_SERVICE_REQUEST_BYTES = 256 * 1024
 MAX_SERVICE_RESPONSE_BYTES = 6 * 1024 * 1024
 MAX_ERROR_RESPONSE_BYTES = 64 * 1024
+MAX_EVIDENCE_ROUTE_IDENTIFIER = 128 + len(EVIDENCE_REF_PREFIX)
 _CLIENT_ID = re.compile(r"[a-z][a-z0-9_.-]{0,63}")
 _CREDENTIAL = re.compile(r"[A-Za-z0-9._~-]{32,256}")
+_ROUTE_IDENTIFIER = re.compile(r"[A-Za-z0-9][A-Za-z0-9._:-]*")
 
 
 @dataclass(frozen=True, slots=True)
@@ -166,6 +171,12 @@ class WeirClient(Protocol):
 
     def get_command_status(self, command_id: str) -> CommandStatus | None: ...
 
+    def register_proposal(self, proposal: ActionProposal) -> ActionProposal: ...
+
+    def get_proposal(self, proposal_hash: str) -> ActionProposal: ...
+
+    def get_proposal_projection(self, proposal_hash: str) -> WeirActionEvent: ...
+
 
 class InProcessWeirClient:
     """Trusted local client used by tests and the standalone CLI transition."""
@@ -176,12 +187,14 @@ class InProcessWeirClient:
         store: CaptureStore,
         *,
         command_store: SQLiteSessionStore | None = None,
+        proposal_store: ActionProposalStore | None = None,
     ) -> None:
         if broker.store is not store:
             raise ValueError("in-process client and broker must share one CaptureStore")
         self.broker = broker
         self.store = store
         self.command_store = command_store
+        self.proposal_store = proposal_store
 
     def read(self, acquisition: AcquisitionEnvelope) -> AcquisitionResponse:
         return AcquisitionResponse.from_result(self.broker.read(acquisition))
@@ -206,6 +219,22 @@ class InProcessWeirClient:
                 501, "command_status_unavailable", "command status is not configured"
             )
         return self.command_store.command_status(command_id)
+
+    def register_proposal(self, proposal: ActionProposal) -> ActionProposal:
+        return self._proposal_store().register(proposal)
+
+    def get_proposal(self, proposal_hash: str) -> ActionProposal:
+        return self._proposal_store().load(proposal_hash)
+
+    def get_proposal_projection(self, proposal_hash: str) -> WeirActionEvent:
+        return self._proposal_store().load_projection(proposal_hash)
+
+    def _proposal_store(self) -> ActionProposalStore:
+        if self.proposal_store is None:
+            raise WeirClientError(
+                501, "proposal_store_unavailable", "proposal storage is not configured"
+            )
+        return self.proposal_store
 
 
 class WeirClientError(RuntimeError):
@@ -297,6 +326,9 @@ class HttpWeirClient:
             ) from exc
 
     def get_evidence(self, reference_id: str) -> EvidenceReference:
+        _validate_route_identifier(
+            reference_id, "evidence reference", MAX_EVIDENCE_ROUTE_IDENTIFIER
+        )
         payload, headers = self._request(
             "GET", f"/v1/evidence/{quote(reference_id, safe='')}", None
         )
@@ -310,6 +342,9 @@ class HttpWeirClient:
             ) from exc
 
     def materialize_evidence(self, reference_id: str) -> MaterializedEvidence:
+        _validate_route_identifier(
+            reference_id, "evidence reference", MAX_EVIDENCE_ROUTE_IDENTIFIER
+        )
         reference = self.get_evidence(reference_id)
         payload, headers = self._request(
             "GET", f"/v1/evidence/{quote(reference_id, safe='')}/content", None
@@ -334,6 +369,7 @@ class HttpWeirClient:
             ) from exc
 
     def get_command_status(self, command_id: str) -> CommandStatus | None:
+        _validate_route_identifier(command_id, "command", 128)
         try:
             payload, headers = self._request(
                 "GET", f"/v1/commands/{quote(command_id, safe='')}", None
@@ -349,6 +385,49 @@ class HttpWeirClient:
                 502,
                 "invalid_service_response",
                 "WEIR returned an invalid command status",
+            ) from exc
+
+    def register_proposal(self, proposal: ActionProposal) -> ActionProposal:
+        proposal.validate()
+        payload, headers = self._request(
+            "POST", "/v1/proposals", canonical_json_bytes(proposal.to_dict())
+        )
+        return self._proposal_payload(payload, headers)
+
+    def get_proposal(self, proposal_hash: str) -> ActionProposal:
+        _validate_route_identifier(proposal_hash, "proposal", 128)
+        payload, headers = self._request(
+            "GET", f"/v1/proposals/{quote(proposal_hash, safe='')}", None
+        )
+        return self._proposal_payload(payload, headers)
+
+    def get_proposal_projection(self, proposal_hash: str) -> WeirActionEvent:
+        _validate_route_identifier(proposal_hash, "proposal", 128)
+        payload, headers = self._request(
+            "GET",
+            f"/v1/proposals/{quote(proposal_hash, safe='')}/projection",
+            None,
+        )
+        try:
+            return WeirActionEvent.from_dict(self._json_payload(payload, headers))
+        except (TypeError, ValueError) as exc:
+            raise WeirClientError(
+                502,
+                "invalid_service_response",
+                "WEIR returned an invalid proposal projection",
+            ) from exc
+
+    @staticmethod
+    def _proposal_payload(payload: bytes, headers: Any) -> ActionProposal:
+        try:
+            return ActionProposal.from_dict(
+                HttpWeirClient._json_payload(payload, headers)
+            )
+        except (TypeError, ValueError) as exc:
+            raise WeirClientError(
+                502,
+                "invalid_service_response",
+                "WEIR returned an invalid action proposal",
             ) from exc
 
     @staticmethod
@@ -431,8 +510,18 @@ class HttpWeirClient:
             ) from exc
 
 
+def _validate_route_identifier(value: str, name: str, maximum: int) -> None:
+    if (
+        not isinstance(value, str)
+        or len(value) > maximum
+        or not _ROUTE_IDENTIFIER.fullmatch(value)
+    ):
+        raise ValueError(f"{name} identifier is invalid")
+
+
 __all__ = [
     "MAX_ERROR_RESPONSE_BYTES",
+    "MAX_EVIDENCE_ROUTE_IDENTIFIER",
     "MAX_SERVICE_REQUEST_BYTES",
     "MAX_SERVICE_RESPONSE_BYTES",
     "SERVICE_CONTRACT_VERSION",

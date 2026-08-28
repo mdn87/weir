@@ -186,8 +186,8 @@ negative cases, and Python/TypeScript parity process are in
 `docs/contract-freeze.md` and `contracts/fixtures/batch-0-v1.json`.
 The implemented Batch 1A caller, cache, persistence, and telemetry invariants are in
 `docs/context-bound-acquisition.md`.
-The disabled-by-default Batch 2A authenticated acquisition service and its remaining
-Batch 2 work are described in `docs/service-boundary.md`.
+The disabled-by-default Batch 2 authenticated acquisition/proposal service slices and
+their remaining Batch 2 work are described in `docs/service-boundary.md`.
 
 ## Development
 

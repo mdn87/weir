@@ -1,12 +1,15 @@
 # Authenticated WEIR service boundary
 
-Batch 2A adds the acquisition half of the persistent WEIR boundary. It does not start,
-install, or configure a service, and it does not enable browser effects.
+Batch 2A adds the acquisition half of the persistent WEIR boundary. Batch 2B adds
+observation-bound proposal registration and separates full-authority proposal reads
+from pre-redacted projection reads. Neither slice starts, installs, or configures a
+service, and neither enables browser effects.
 
 ## One typed client contract
 
 `WeirClient` defines `read`, `search`, `enrich`, evidence lookup, evidence
-materialization, and command-status lookup. `InProcessWeirClient` and
+materialization, proposal registration/lookup, and command-status lookup.
+`InProcessWeirClient` and
 `HttpWeirClient` return the same validated `AcquisitionResponse` shape. That response
 binds the full `AcquisitionEnvelope`, reusable `WebCapture`, context-specific
 `EvidenceReference`, opaque reference handle, and cache provenance.
@@ -31,12 +34,21 @@ Every route requires `Authorization: Bearer ...`, `X-Weir-Client-Id`, and an RFC
 | `GET /v1/evidence/{id}` | `evidence:read` | validated `EvidenceReference` |
 | `GET /v1/evidence/{id}/content` | `evidence:read` | exact canonical artifact bytes |
 | `GET /v1/commands/{id}` | `command:read` | durable command status or typed not-found |
+| `POST /v1/proposals` | `proposal:write` | observation-verified `ActionProposal` |
+| `GET /v1/proposals/{hash}` | `proposal:read:full` | full-authority `ActionProposal` |
+| `GET /v1/proposals/{hash}/projection` | `proposal:read:redacted` | prebuilt public-safe `WeirActionEvent` |
 
 Each named client has a unique credential, scopes, and allowed `DataClass` values.
 Shared credentials are rejected at registry construction. Authentication compares all
 registered identities with constant-time comparisons, and the handler suppresses the
 standard request log. Command status returns a result when completed and an
 `error_present` marker when failed; it never returns stored adapter error text.
+
+Full proposal registration and reads enforce both the browser session's `DataClass`
+and the proposal parameter `DataClass`. A redacted read does not open the full proposal
+file: it loads only a construction-time `WeirActionEvent` and nonsensitive immutable
+registration metadata. The public event contract cannot contain parameters, form
+values, DOM/page content, private profile IDs, credentials, cookies, or permits.
 
 The service request limit is 256 KiB and its maximum response limit is 6 MiB. A
 deployment may configure a smaller response cap. `Expect: 100-continue` requests are
@@ -48,9 +60,14 @@ Adapter-specific cancellation remains part of the later worker supervisor.
 
 The service uses the Batch 1A immutable `CaptureStore` for captures, artifacts, and
 evidence references. Command lookup reads the existing SQLite browser command table;
-this slice makes no database schema change. Tests close and reopen that database and
-confirm the same settled status is returned. Cache or artifact corruption remains a
-typed integrity failure and never becomes a network retry.
+proposal registration verifies its named capture against the immutable observation,
+the SQLite session and `WorkContext`, the resolved semantic target, and the current
+session revision. Full proposals, redacted projections, action indexes, and final
+registration markers are then published immutably under a separate proposal root.
+This slice makes no database schema change. Tests close and reopen both durable stores
+and confirm evidence, proposals, projections, and settled command status remain
+readable. Corruption remains a typed integrity failure and never becomes a network
+retry.
 
 ## Disabled-by-default deployment
 
@@ -65,11 +82,11 @@ no sibling integration is enabled merely because the server class exists.
 
 Batch 2 is not complete until WEIR also has:
 
-- a durable proposal store with observation-bound registration;
-- separate full-authority and already-redacted proposal reads;
 - disabled effect routes that later accept only Fade's exact permit/proposal binding;
-- killable browser worker processes with deadline propagation; and
-- authorized dead-worker retirement and deployment lifecycle configuration.
+- killable browser worker processes with deadline propagation;
+- host-global profile reservations and explicit cleanup attestations;
+- authorized dead-worker retirement that never silently frees a profile; and
+- deployment lifecycle configuration with externally provisioned credentials.
 
 Those additions must preserve per-client scope separation. In particular,
 `lugos-mcp` may acquire and read evidence but cannot read command/action authority;
@@ -81,10 +98,11 @@ client's credential.
 Run the focused gate:
 
 ```bash
-python -m pytest -q tests/test_client_service.py
+python -m pytest -q tests/test_client_service.py tests/test_proposals.py
 ```
 
 The repository gate remains `python -m pytest -q`. The service tests exercise both
 client implementations, all acquisition methods, exact materialization, distinct
 credentials, scope and data-class denial before engine access, deadline and size
-limits, fail-closed tampering, loopback-only binding, and status lookup after restart.
+limits, fail-closed tampering, loopback-only binding, proposal-channel separation, and
+evidence/proposal/status lookup after restart.
