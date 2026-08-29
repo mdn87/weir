@@ -132,3 +132,18 @@ def test_failure_state_never_requeries_a_possibly_broken_browser() -> None:
         module._failure_event_state(SimpleNamespace(apply_calls=1)).value
         == "outcome_unknown"
     )
+
+
+def test_authority_event_types_use_the_fade_event_contract() -> None:
+    module = _module()
+
+    assert module._authority_event_types(
+        [
+            {"type": "fade.weir.run.recorded"},
+            {"type": "fade.weir.approval.recorded"},
+            {"type": "fade.weir.run.recorded"},
+        ]
+    ) == ["fade.weir.approval.recorded", "fade.weir.run.recorded"]
+
+    with pytest.raises(RuntimeError, match="invalid Fade authority event"):
+        module._authority_event_types([{"event_type": "fade.weir.run.recorded"}])

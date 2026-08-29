@@ -234,6 +234,16 @@ def _failure_event_state(
     return ActionEventState.BLOCKED
 
 
+def _authority_event_types(events: list[dict[str, object]]) -> list[str]:
+    event_types = [event.get("type") for event in events]
+    if any(
+        not isinstance(event_type, str) or not event_type
+        for event_type in event_types
+    ):
+        raise RuntimeError("remote canary captured an invalid Fade authority event")
+    return sorted(set(event_types))
+
+
 def run_remote_canary(
     run_dir: Path,
     report_path: Path,
@@ -564,7 +574,7 @@ def run_remote_canary(
                     "public_parameter_leak": False,
                     "terminal_projection_event": terminal_published,
                 },
-                "event_types": sorted({str(event.get("event_type")) for event in events}),
+                "event_types": _authority_event_types(events),
                 "raw_artifacts": (
                     run_dir.relative_to(Path.cwd().resolve()).as_posix()
                     if run_dir.is_relative_to(Path.cwd().resolve())
