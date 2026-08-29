@@ -2,8 +2,9 @@
 
 Batch 8 uses a signed outbound pull design. It does not expose Fade or WEIR on the
 network, and it does not route approval through HUD's shared bearer. A workstation
-agent may eventually poll a separate relay service, but every related feature flag
-remains off until the post-implementation review and a separate enablement approval.
+polls a separate relay service only when both Fade ingress flags are explicitly
+enabled. All related flags remain off until deployment approval; the first positive
+activation is the bounded synthetic canary described below.
 
 ## Frozen WEIR contract
 
@@ -44,14 +45,16 @@ Python/TypeScript parity checks are in:
 - `scripts/verify_remote_relay_fixtures.ts`; and
 - `tests/test_remote_decision.py` plus `tests/test_remote_relay_fixtures.py`.
 
-## Disabled source boundary
+## Implemented, disabled deployment boundary
 
-WEIR owns the portable contracts and verification helpers only. It has no remote
-listener, queue server, relay credential, signer key, or production decision route.
-The planned issuer is a separate least-privilege process beside Mission Control, and
-the planned workstation client initiates every cross-host connection before presenting
-a verified capsule to a flag-gated Fade loopback endpoint. Fade remains the permit
-authority and must reload the authoritative proposal before dispatch.
+WEIR still owns only the portable contracts and verification helpers and has no remote
+listener or credential. Mission Control now has a passkey-gated decision route and a
+separate least-privilege relay process. The relay uses an isolated SQLite queue, signs
+with Ed25519, accepts enqueue only on loopback, and exposes only TLS 1.3/mTLS pull to
+the pinned workstation. Fade initiates every cross-host connection, verifies the
+certificate-bound transport principal and signed capsule, reserves it durably, checks
+revocation, and then invokes the existing loopback authority. Fade remains the permit
+authority and reloads the authoritative proposal before dispatch.
 
 These flags default to false across the design:
 
@@ -65,21 +68,33 @@ FADE_WEIR_RELAY_INGRESS_ENABLED=false
 An off-path test must prove that false means no queue write, signature, network call,
 or local dispatch.
 
-## Decisions required before enablement
+## Frozen first-activation decisions
 
-Source fixtures do not choose production operations. Before any positive remote
-canary, the operator and post-implementation security review must approve:
+The first deployment choices are now concrete:
 
-1. the stable Mission Control actor identifier format;
-2. the WebAuthn/passkey identity provider, enrollment, and recovery owner;
-3. the separate relay process placement and operational owner;
-4. the relay hostname, CA, mTLS enrollment, and device-revocation lifecycle;
-5. signer-key custody, rotation overlap, and emergency revocation; and
-6. audit retention plus the exact terminal capsule-body purge deadline.
+1. Mission Control actors use `mc:user:<numeric local user ID>`.
+2. `knot.newman.foo` supplies the HTTPS origin for user-verifying WebAuthn passkeys;
+   password reauthentication owns enrollment and recovery.
+3. `lugos-host` runs the relay as restricted user `lugos-relay`; Mission Control talks
+   to loopback `127.0.0.1:8792` and `4070pc` pulls from `10.0.1.33:8793`.
+4. The workstation generates its P-256 key. The host CA signs one client certificate
+   bound to `workstation-4070pc` / `relay-device:4070pc`; UFW admits only
+   `10.0.1.30`.
+5. The host keeps the Ed25519 signing key root-readable and exposes it to the relay via
+   systemd credentials. Fade accepts one to three pinned public keys for rotation.
+6. Terminal capsule bodies are purged within five minutes. Redacted uniqueness,
+   transition, acknowledgement, and audit anchors remain durable.
 
 The first enabled policy remains limited to the reversible synthetic public-data
 action. Purchases, messages, account changes, uploads, credentials, and production
 forms require a separate authority decision.
+
+The reusable activation runner is `scripts/run_remote_relay_canary.py`. It publishes
+one redacted `proposed` event, waits for an exact passkey decision, verifies the mTLS
+and signed-capsule bindings, executes the workstation-local fixture once, restarts the
+poll loop to prove replay safety, and publishes the terminal event. It also records
+the installed `apu-watch` attribution health; `apu-watch` is not misclassified as a
+generic process supervisor.
 
 ## Verification
 
