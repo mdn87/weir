@@ -159,10 +159,12 @@ This local transport uses an explicit, size-bounded JSON operation/result union,
 duplicate fields, unknown fields, non-finite numbers, and invalid typed values rejected.
 Decoding and typed reconstruction share the call deadline. It is not the versioned
 cross-host worker-result protocol and is not a sandbox against a malicious same-account
-worker process. Production admission still has to require the process wrapper and add
-OS memory and network-egress limits. The direct Playwright worker's single-thread
-affinity and response-size checks remain defense in depth inside that outer lifecycle
-boundary.
+worker process. Production admission now requires the process wrapper, explicit
+resource limits, and current restricted-identity, credential-ACL, lifecycle, and OS
+egress evidence. Windows applies memory/process limits in its Job Object; Linux must
+prove prepared cgroup v2 containment and may not treat the process group as a resource
+boundary. The direct Playwright worker's single-thread affinity and response-size
+checks remain defense in depth inside that outer lifecycle boundary.
 
 The browser contract family is version `0.2`; the established acquisition request and
 capture contracts remain `0.1`.

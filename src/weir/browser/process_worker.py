@@ -16,6 +16,11 @@ from datetime import datetime, timezone
 from multiprocessing.connection import Connection, wait
 from typing import Any, Callable
 
+from weir.browser.admission import (
+    WorkerContainmentEvidence,
+    WorkerResourceLimits,
+    current_platform,
+)
 from weir.browser.models import ObservedElement
 from weir.browser.protocol import (
     BrowserWorker,
@@ -31,6 +36,10 @@ from weir.engines.base import EngineProbe, FailureClass, WeirEngineError
 from weir.models import DataClass
 
 WorkerFactory = Callable[[], BrowserWorker]
+ContainmentVerifier = Callable[
+    [int, WorkerResourceLimits, WorkerContainmentEvidence],
+    WorkerContainmentEvidence,
+]
 DEFAULT_MAX_WORKER_REQUEST_BYTES = 2 * 1024 * 1024
 DEFAULT_MAX_WORKER_RESPONSE_BYTES = 24 * 1024 * 1024
 
@@ -174,6 +183,8 @@ class WorkerDeathAttestation:
 class ProcessBrowserWorker(AbstractContextManager["ProcessBrowserWorker"]):
     """Run one stateful BrowserWorker in a deadline-killable process tree."""
 
+    production_process_transport = True
+
     def __init__(
         self,
         factory: WorkerFactory,
@@ -184,6 +195,8 @@ class ProcessBrowserWorker(AbstractContextManager["ProcessBrowserWorker"]):
         start_method: str = "spawn",
         max_request_bytes: int = DEFAULT_MAX_WORKER_REQUEST_BYTES,
         max_response_bytes: int = DEFAULT_MAX_WORKER_RESPONSE_BYTES,
+        resource_limits: WorkerResourceLimits | None = None,
+        containment_verifier: ContainmentVerifier | None = None,
     ) -> None:
         for name, value in (
             ("start_timeout_seconds", start_timeout_seconds),
@@ -196,6 +209,12 @@ class ProcessBrowserWorker(AbstractContextManager["ProcessBrowserWorker"]):
                 )
         if not callable(factory):
             raise TypeError("worker factory must be callable")
+        if resource_limits is not None:
+            if not isinstance(resource_limits, WorkerResourceLimits):
+                raise TypeError("resource_limits must be WorkerResourceLimits")
+            resource_limits.validate()
+        if containment_verifier is not None and not callable(containment_verifier):
+            raise TypeError("containment_verifier must be callable")
         for name, value in (
             ("max_request_bytes", max_request_bytes),
             ("max_response_bytes", max_response_bytes),
@@ -218,6 +237,7 @@ class ProcessBrowserWorker(AbstractContextManager["ProcessBrowserWorker"]):
         self._death_attestation: WorkerDeathAttestation | None = None
         self._descriptor: WorkerDescriptor | None = None
         self._tree: _ProcessTree | None = None
+        self._containment_evidence: WorkerContainmentEvidence | None = None
         self._watchdog_sender: Connection | None = None
         self._exit_observed = threading.Event()
         self._exit_monitor: threading.Thread | None = None
@@ -274,7 +294,31 @@ class ProcessBrowserWorker(AbstractContextManager["ProcessBrowserWorker"]):
             self._tree = _create_process_tree(
                 self._process_id,
                 watchdog_process_id=watchdog_process_id,
+                resource_limits=resource_limits,
             )
+            containment = self._tree.containment_evidence()
+            if containment_verifier is not None:
+                if resource_limits is None:
+                    raise WorkerProcessStartupError(
+                        "a containment verifier requires explicit resource limits"
+                    )
+                containment = containment_verifier(
+                    self._process_id,
+                    resource_limits,
+                    containment,
+                )
+                _validate_containment_evidence(
+                    containment,
+                    process_id=self._process_id,
+                    resource_limits=resource_limits,
+                )
+            elif resource_limits is not None:
+                _validate_containment_evidence(
+                    containment,
+                    process_id=self._process_id,
+                    resource_limits=resource_limits,
+                )
+            self._containment_evidence = containment
             self._send_message({"kind": "start"}, timeout=self._start_timeout)
             ready = self._receive_startup("ready")
             descriptor = _descriptor_from_wire(ready.get("descriptor"))
@@ -322,6 +366,14 @@ class ProcessBrowserWorker(AbstractContextManager["ProcessBrowserWorker"]):
     @property
     def death_attestation(self) -> WorkerDeathAttestation | None:
         return self._death_attestation
+
+    @property
+    def containment_evidence(self) -> WorkerContainmentEvidence:
+        if self._containment_evidence is None:
+            raise WorkerProcessStartupError(
+                "browser worker containment was not established"
+            )
+        return self._containment_evidence
 
     def probe(self) -> EngineProbe:
         result = self._rpc("probe", timeout=self._call_timeout)
@@ -722,6 +774,9 @@ class _ProcessTree:
     def close(self) -> None:
         raise NotImplementedError
 
+    def containment_evidence(self) -> WorkerContainmentEvidence:
+        raise NotImplementedError
+
 
 class _PosixProcessTree(_ProcessTree):
     def __init__(self, process_group_id: int, watchdog_process_id: int) -> None:
@@ -766,6 +821,18 @@ class _PosixProcessTree(_ProcessTree):
     def close(self) -> None:
         return None
 
+    def containment_evidence(self) -> WorkerContainmentEvidence:
+        evidence = WorkerContainmentEvidence(
+            platform="linux",
+            process_id=self.process_group_id,
+            process_tree_enforced=True,
+            kill_on_supervisor_exit=True,
+            resource_limits=None,
+            resource_limits_enforced=False,
+        )
+        evidence.validate()
+        return evidence
+
     def _known_member_owns_group(self) -> bool:
         for process_id in (self.process_group_id, self.watchdog_process_id):
             try:
@@ -780,7 +847,11 @@ class _PosixProcessTree(_ProcessTree):
 
 
 class _WindowsProcessTree(_ProcessTree):
-    def __init__(self, process_id: int) -> None:
+    def __init__(
+        self,
+        process_id: int,
+        resource_limits: WorkerResourceLimits | None,
+    ) -> None:
         import ctypes
         from ctypes import wintypes
 
@@ -870,6 +941,13 @@ class _WindowsProcessTree(_ProcessTree):
         try:
             limits = ExtendedLimitInformation()
             limits.BasicLimitInformation.LimitFlags = 0x00002000
+            if resource_limits is not None:
+                limits.BasicLimitInformation.LimitFlags |= 0x00000008
+                limits.BasicLimitInformation.LimitFlags |= 0x00000200
+                limits.BasicLimitInformation.ActiveProcessLimit = (
+                    resource_limits.process_count
+                )
+                limits.JobMemoryLimit = resource_limits.memory_bytes
             if not set_information(job, 9, ctypes.byref(limits), ctypes.sizeof(limits)):
                 raise ctypes.WinError(ctypes.get_last_error())
             process = open_process(0x0001 | 0x0100 | 0x1000, False, process_id)
@@ -885,6 +963,8 @@ class _WindowsProcessTree(_ProcessTree):
                 self._close_handle(process)
         self._job = job
         self._accounting_type = BasicAccountingInformation
+        self._process_id = process_id
+        self._resource_limits = resource_limits
 
     def terminate(self) -> bool:
         if self._job is None:
@@ -911,6 +991,18 @@ class _WindowsProcessTree(_ProcessTree):
         self._job = None
         self._close_handle(job)
 
+    def containment_evidence(self) -> WorkerContainmentEvidence:
+        evidence = WorkerContainmentEvidence(
+            platform="windows",
+            process_id=self._process_id,
+            process_tree_enforced=True,
+            kill_on_supervisor_exit=True,
+            resource_limits=self._resource_limits,
+            resource_limits_enforced=self._resource_limits is not None,
+        )
+        evidence.validate()
+        return evidence
+
     def _active_process_count(self) -> int | None:
         import ctypes
 
@@ -932,10 +1024,11 @@ def _create_process_tree(
     process_id: int,
     *,
     watchdog_process_id: int | None,
+    resource_limits: WorkerResourceLimits | None,
 ) -> _ProcessTree:
     try:
         if os.name == "nt":
-            return _WindowsProcessTree(process_id)
+            return _WindowsProcessTree(process_id, resource_limits)
         if watchdog_process_id is None:
             raise WorkerProcessStartupError("POSIX browser worker has no parent-death watchdog")
         return _PosixProcessTree(process_id, watchdog_process_id)
@@ -943,6 +1036,35 @@ def _create_process_tree(
         raise WorkerProcessStartupError(
             "browser worker could not enter an OS-enforced process tree"
         ) from exc
+
+
+def _validate_containment_evidence(
+    evidence: object,
+    *,
+    process_id: int,
+    resource_limits: WorkerResourceLimits,
+) -> None:
+    if not isinstance(evidence, WorkerContainmentEvidence):
+        raise WorkerProcessStartupError(
+            "browser worker containment verifier returned invalid evidence"
+        )
+    try:
+        evidence.validate()
+    except ValueError as exc:
+        raise WorkerProcessStartupError(
+            "browser worker containment evidence failed validation"
+        ) from exc
+    if (
+        evidence.platform != current_platform()
+        or evidence.process_id != process_id
+        or not evidence.process_tree_enforced
+        or not evidence.kill_on_supervisor_exit
+        or not evidence.resource_limits_enforced
+        or evidence.resource_limits != resource_limits
+    ):
+        raise WorkerProcessStartupError(
+            "browser worker did not enter the required production containment"
+        )
 
 
 def _worker_process_main(
@@ -1667,6 +1789,7 @@ _WORKER_OPERATIONS = frozenset(
 
 
 __all__ = [
+    "ContainmentVerifier",
     "ProcessBrowserWorker",
     "WorkerDeathAttestation",
     "WorkerFactory",

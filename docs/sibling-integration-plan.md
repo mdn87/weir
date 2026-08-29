@@ -510,6 +510,12 @@ cleanup attestation; authorized dead-worker retirement; and deployment configura
 with externally provisioned, user-ACL-restricted credentials. These are not implied by
 the acquisition/proposal server. See `docs/service-boundary.md`.
 
+Implementation update (2026-08-28): the effect route, profile reservation/cleanup,
+retirement path, production admission contract, and Windows Job memory/process limits
+are implemented. Creating restricted identities, credential ACLs, lifecycle
+supervision, and OS egress policy remains deployment work and is not implied by source
+completion.
+
 Create a typed client and loopback service, including:
 
 - authenticated `read`, `search`, `enrich`, evidence lookup, and command-status routes;
@@ -519,7 +525,8 @@ Create a typed client and loopback service, including:
 - the existing SQLite session/lease/command/event store plus immutable filesystem
   capture/artifact store as the durable sources of truth;
 - killable browser worker processes rather than an in-process browser object
-  (implemented; production admission and resource limits remain);
+  (implemented with fail-closed admission and Windows resource limits; host-specific
+  identity, ACL, supervisor, and egress provisioning remains);
 - a host-global profile reservation and explicit cleanup attestation; and
 - authorized dead-worker retirement that never frees an unconfirmed profile silently.
 

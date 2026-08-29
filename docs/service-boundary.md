@@ -127,15 +127,28 @@ configured synthetic HTTP loopback IP origin, requires `DataClass.PUBLIC`, and k
 generic proposal risk at `unknown`. It does not enable click, submit, upload, external
 origins, or any existing Playwright recipe path.
 
+An injected action driver is no longer sufficient to enable execution. The service
+also requires an `ActionAdmission`. The explicit local-canary admission accepts only
+the synthetic fixture policy. `ProductionAdmission` reloads short-lived, hash-bound
+host evidence and requires the exact process worker, resource limits, restricted
+identity, per-caller protected credential source, lifecycle supervisor, and enforced
+OS egress policy before it invokes the driver. Missing or stale evidence returns a
+typed service-unavailable response before parsing or executing the action request.
+
 ## Remaining production work
 
-The source contracts remain disabled until deployment work provides:
+The source admission contract and Windows Job resource limits are implemented. Live
+production enablement remains disabled until deployment work provides and attests:
 
-- production browser admission that requires the process transport and adds OS memory
-  and network-egress limits;
 - restricted service identities, externally provisioned per-caller credentials, and
-  lifecycle supervision;
-- an independently reviewed production effect adapter and explicit local canary.
+  lifecycle supervision plus firewall/AppContainer or cgroup/network-namespace
+  controls;
+- an independently reviewed production effect adapter and explicit production-host
+  canary. The approved local synthetic canary does not authorize that rollout.
+
+See `docs/production-admission.md` for the exact evidence contract and rollout
+checklist. WEIR creates none of the required host identities, credentials, ACLs,
+firewall rules, cgroups, namespaces, or supervisors.
 
 Those additions must preserve per-client scope separation. In particular,
 `lugos-mcp` may acquire and read evidence but cannot read command/action authority;

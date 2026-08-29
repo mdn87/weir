@@ -21,6 +21,7 @@ from weir.browser.effect_driver import (
     ActionExecutionStatus,
     BrowserActionDriver,
 )
+from weir.browser.admission import ActionAdmission
 from weir.browser.store import (
     DEAD_WORKER_RETIREMENT_DISPOSITION,
     SessionNotFound,
@@ -213,6 +214,7 @@ class WeirServiceApplication:
         proposal_store: ActionProposalStore | None = None,
         session_store: SQLiteSessionStore | None = None,
         action_driver: BrowserActionDriver | None = None,
+        action_admission: ActionAdmission | None = None,
         clock: Callable[[], datetime] | None = None,
         max_response_bytes: int = MAX_SERVICE_RESPONSE_BYTES,
     ) -> None:
@@ -223,6 +225,7 @@ class WeirServiceApplication:
         self.proposal_store = proposal_store
         self.session_store = session_store
         self.action_driver = action_driver
+        self.action_admission = action_admission
         self.clock = clock or (lambda: datetime.now(timezone.utc))
         self.max_response_bytes = max_response_bytes
 
@@ -358,6 +361,8 @@ class WeirServiceApplication:
             )
         elif route == "action_execute":
             self._require_fade_action_principal(principal, ACTION_EXECUTE_SCOPE)
+            action_driver = self._actions()
+            self._require_action_admission(principal, action_driver)
             request = self._parse_action_execution(body)
             for data_class in self._backend_call(
                 self._proposals().required_data_classes,
@@ -365,7 +370,7 @@ class WeirServiceApplication:
             ):
                 principal.require_data_class(data_class)
             status = self._backend_call(
-                self._actions().execute,
+                action_driver.execute,
                 command_id=request["command_id"],
                 request_digest=request["request_digest"],
                 submitted_proposal=request["proposal"],
@@ -685,6 +690,35 @@ class WeirServiceApplication:
                 "WEIR action execution is disabled",
             )
         return self.action_driver
+
+    def _require_action_admission(
+        self,
+        principal: ClientPrincipal,
+        action_driver: BrowserActionDriver,
+    ) -> None:
+        if self.action_admission is None:
+            raise ServiceRequestError(
+                HTTPStatus.SERVICE_UNAVAILABLE,
+                "action_admission_unavailable",
+                "WEIR action execution has no current host-control admission",
+            )
+        try:
+            self.action_admission.require_external_action(
+                caller_id=principal.client_id,
+                action_driver=action_driver,
+            )
+        except EnginePolicyBlocked as exc:
+            raise ServiceRequestError(
+                HTTPStatus.SERVICE_UNAVAILABLE,
+                "production_admission_denied",
+                "WEIR host controls did not admit action execution",
+            ) from exc
+        except Exception as exc:
+            raise ServiceRequestError(
+                HTTPStatus.SERVICE_UNAVAILABLE,
+                "production_admission_unavailable",
+                "WEIR could not verify current host-control admission",
+            ) from exc
 
     @staticmethod
     def _require_fade_action_principal(

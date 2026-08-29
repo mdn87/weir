@@ -69,17 +69,24 @@ immutable persistence, and no authenticated browser dependency.
   wall-clock deadlines, Windows Job Object/POSIX process-group termination, verified
   tree death, parent-death and wrapper-abandonment containment, a strict bounded JSON
   operation/result union, and hash-bound death attestations.
-- [ ] Require the process transport for production browser admission and add OS memory
-  and egress limits. Declared response-size checks are defense in depth, not a
-  substitute for those resource controls.
+- [x] Add fail-closed production admission that requires the exact process transport,
+  OS memory/process evidence, a restricted identity, per-caller protected credential
+  sources, lifecycle supervision, and enforced egress evidence. Windows Job Objects
+  apply memory/process limits directly; Linux requires a prepared cgroup verifier and
+  cannot downclass a process group into resource evidence.
+- [ ] Provision and attest the deployment-specific service identity, credential ACLs,
+  supervisor, and firewall/AppContainer or network-namespace/nftables policy. Source
+  admission does not authorize or perform those host mutations.
 - [x] Add structured observations and deterministic semantic locators.
 - [x] Add immutable browser-observation and screenshot evidence capture.
-- [ ] Add a reversible DOM-interaction worker surface only after it accepts an
-  authorization permit rather than a raw action request.
+- [x] Add the reversible local synthetic DOM-interaction surface behind a Fade-issued
+  permit, exact durable reservation, private bounded worker command, post-state
+  verification, and explicit local-canary admission.
 
-Gate status: observation passed against a local authenticated Playwright fixture with
-session isolation and durable evidence. DOM interaction remains intentionally closed,
-so the full observe-and-interact gate is not yet met.
+Gate status: observation and the reversible synthetic interaction slice passed against
+a local authenticated Playwright fixture with session isolation and durable evidence.
+General-purpose and production DOM interaction remain intentionally closed until the
+deployment controls and a separately reviewed production effect policy are in place.
 
 ## P3 - Action authority integration
 
@@ -93,13 +100,15 @@ are in `docs/remaining-integration-plan.md`.
 - [x] Compile observations into hash-bound `ActionProposal` objects.
 - [x] Add a non-downclassifiable risk taxonomy.
 - [x] Add a default-deny approval authority interface.
-- [ ] Connect an authenticated Fade/Operator approval authority.
-- [ ] Reacquire state immediately before execution.
+- [x] Connect the separate authenticated Fade authority to the disabled WEIR action
+  route without making Fade the effect engine.
+- [x] Reacquire state immediately before execution.
 - [x] Add deterministic semantic post-action verification and `ExecutionReceipt` contracts.
 - [x] Add durable one-use permit reservations plus atomic `outcome_unknown` receipt,
   session, controller, credential, and operator-clear quarantine records.
-- [ ] Produce receipts from a real authorized executor.
-- [ ] Add bounded recovery patterns.
+- [x] Produce verified receipts from the approved real Playwright synthetic executor.
+- [x] Add response-loss reconciliation, restart replay, durable `outcome_unknown`, and
+  operator-cleared quarantine recovery patterns.
 
 Gate: a staged external action cannot execute without policy evaluation and, when required, explicit approval; success is proven by post-state evidence.
 

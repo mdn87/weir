@@ -30,6 +30,7 @@ from weir.actions import (
     ConditionKind,
     Risk,
 )
+from weir.browser.admission import LocalSyntheticActionAdmission
 from weir.browser.effect_driver import (
     FADE_AUTHORITY_ID,
     BrowserActionDriver,
@@ -563,6 +564,9 @@ def run_canary(run_dir: Path, report_path: Path, fade_source: Path) -> dict[str,
                 proposal_store=proposals,
                 session_store=store,
                 action_driver=driver,
+                action_admission=LocalSyntheticActionAdmission(
+                    "approved-batch9-local-canary"
+                ),
             )
             command = WeirApprovalCommand(
                 command_id=command_id,

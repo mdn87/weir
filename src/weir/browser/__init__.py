@@ -1,3 +1,12 @@
+from weir.browser.admission import (
+    ActionAdmission,
+    CredentialProtectionEvidence,
+    LocalSyntheticActionAdmission,
+    ProductionAdmission,
+    ProductionControlEvidence,
+    WorkerContainmentEvidence,
+    WorkerResourceLimits,
+)
 from weir.browser.locators import (
     LocatorAmbiguousError,
     LocatorNotFoundError,
@@ -40,19 +49,24 @@ from weir.browser.profile_registry import (
 )
 
 __all__ = [
+    "ActionAdmission",
     "BROWSER_CONTRACT_VERSION",
     "BrowserSession",
     "ControllerKind",
     "ControllerLease",
     "ControllerLeaseView",
+    "CredentialProtectionEvidence",
     "EmptyProfileStateProvider",
     "LocatorAmbiguousError",
     "LocatorNotFoundError",
     "LocatorResolutionError",
+    "LocalSyntheticActionAdmission",
     "NameMatch",
     "Observation",
     "ObservedElement",
     "ProcessBrowserWorker",
+    "ProductionAdmission",
+    "ProductionControlEvidence",
     "ProfileBindingProvider",
     "ProfileStateProvider",
     "ResolvedTarget",
@@ -63,6 +77,7 @@ __all__ = [
     "VerifiedProfileBinding",
     "VerifiedProfileState",
     "WorkerDeathAttestation",
+    "WorkerContainmentEvidence",
     "WorkerProcessError",
     "WorkerProcessLost",
     "WorkerProcessProtocolError",
@@ -70,6 +85,7 @@ __all__ = [
     "WorkerProcessStartupError",
     "WorkerProcessTimeout",
     "WorkerRemoteError",
+    "WorkerResourceLimits",
     "resolve",
     "resolve_locator",
 ]

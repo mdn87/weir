@@ -8,6 +8,7 @@ from dataclasses import dataclass, replace
 from datetime import datetime, timedelta, timezone
 from typing import Callable
 
+from weir.browser.admission import ProductionAdmission
 from weir.browser.models import (
     BrowserSession,
     ControllerKind,
@@ -34,6 +35,7 @@ from weir.browser.store import (
     SessionRevisionConflict,
     SQLiteSessionStore,
 )
+from weir.contract import validate_identifier
 from weir.engines.base import (
     ControllerConflict,
     EngineFailure,
@@ -91,6 +93,8 @@ class BrowserSessionBroker:
         command_resume_after: timedelta | None = None,
         max_capture_bytes: int = MAX_BROWSER_CAPTURE_BYTES,
         max_screenshot_bytes: int = MAX_BROWSER_SCREENSHOT_BYTES,
+        production_admission: ProductionAdmission | None = None,
+        production_caller_id: str | None = None,
     ) -> None:
         self.workers = {worker.descriptor.worker_id: worker for worker in workers}
         if len(self.workers) != len(workers):
@@ -107,6 +111,20 @@ class BrowserSessionBroker:
         self.command_resume_after = command_resume_after or (command_timeout * 2)
         self.max_capture_bytes = max_capture_bytes
         self.max_screenshot_bytes = max_screenshot_bytes
+        if (production_admission is None) != (production_caller_id is None):
+            raise ValueError(
+                "production_admission and production_caller_id must be configured together"
+            )
+        if production_admission is not None:
+            if not isinstance(production_admission, ProductionAdmission):
+                raise TypeError("production_admission must be ProductionAdmission")
+            validate_identifier(
+                production_caller_id,
+                "production_caller_id",
+                max_length=64,
+            )
+        self.production_admission = production_admission
+        self.production_caller_id = production_caller_id
         if min(
             session_ttl.total_seconds(),
             controller_ttl.total_seconds(),
@@ -1478,9 +1496,16 @@ class BrowserSessionBroker:
 
     def _worker(self, worker_id: str) -> BrowserWorker:
         try:
-            return self.workers[worker_id]
+            worker = self.workers[worker_id]
         except KeyError as exc:
             raise EnginePolicyBlocked(f"unknown browser worker {worker_id!r}") from exc
+        if self.production_admission is not None:
+            assert self.production_caller_id is not None
+            self.production_admission.require_browser_worker(
+                worker,
+                caller_id=self.production_caller_id,
+            )
+        return worker
 
     @staticmethod
     def _require_capabilities(

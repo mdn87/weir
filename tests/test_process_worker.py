@@ -20,6 +20,7 @@ from unittest.mock import patch
 
 import weir.browser.process_worker as process_worker_module
 from tests.browser_fakes import ScriptedBrowserWorker
+from weir.browser.admission import WorkerContainmentEvidence, WorkerResourceLimits
 from weir.browser.broker import BrowserSessionBroker
 from weir.browser.models import SessionState
 from weir.browser.process_worker import (
@@ -196,6 +197,73 @@ class ProcessBrowserWorkerTests(unittest.TestCase):
                         scripted_factory,
                         call_timeout_seconds=value,
                     )
+
+    def test_explicit_resource_limits_are_attested_before_worker_start(self):
+        limits = WorkerResourceLimits(512 * 1024 * 1024, 8)
+
+        def prepared_containment(
+            process_id: int,
+            requested: WorkerResourceLimits,
+            base: WorkerContainmentEvidence,
+        ) -> WorkerContainmentEvidence:
+            self.assertEqual(requested, limits)
+            self.assertEqual(process_id, base.process_id)
+            return replace(
+                base,
+                resource_limits=requested,
+                resource_limits_enforced=True,
+            )
+
+        with ProcessBrowserWorker(
+            scripted_factory,
+            resource_limits=limits,
+            containment_verifier=prepared_containment,
+        ) as worker:
+            evidence = worker.containment_evidence
+            self.assertTrue(worker.production_process_transport)
+            self.assertEqual(evidence.process_id, worker.process_id)
+            self.assertEqual(evidence.resource_limits, limits)
+            self.assertTrue(evidence.resource_limits_enforced)
+            self.assertTrue(evidence.process_tree_enforced)
+            self.assertTrue(evidence.kill_on_supervisor_exit)
+
+    def test_resource_limits_without_platform_enforcement_fail_closed(self):
+        limits = WorkerResourceLimits(512 * 1024 * 1024, 8)
+        if os.name == "nt":
+            with ProcessBrowserWorker(
+                scripted_factory,
+                resource_limits=limits,
+            ) as worker:
+                self.assertEqual(worker.containment_evidence.resource_limits, limits)
+                self.assertTrue(
+                    worker.containment_evidence.resource_limits_enforced
+                )
+            return
+
+        with self.assertRaises(WorkerProcessStartupError):
+            ProcessBrowserWorker(scripted_factory, resource_limits=limits)
+
+    def test_containment_verifier_cannot_rebind_another_process(self):
+        limits = WorkerResourceLimits(512 * 1024 * 1024, 8)
+
+        def wrong_process(
+            process_id: int,
+            requested: WorkerResourceLimits,
+            base: WorkerContainmentEvidence,
+        ) -> WorkerContainmentEvidence:
+            return replace(
+                base,
+                process_id=process_id + 1,
+                resource_limits=requested,
+                resource_limits_enforced=True,
+            )
+
+        with self.assertRaises(WorkerProcessStartupError):
+            ProcessBrowserWorker(
+                scripted_factory,
+                resource_limits=limits,
+                containment_verifier=wrong_process,
+            )
 
     def test_protocol_round_trip_and_graceful_tree_attestation(self):
         worker = ProcessBrowserWorker(scripted_factory)

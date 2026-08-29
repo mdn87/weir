@@ -106,9 +106,14 @@ the parent propagates the earlier broker/transport deadline, terminates the Wind
 Object or POSIX process group when it expires, and verifies that the group is empty.
 The deadline covers serialized-worker admission and bounded framed IPC, not just the
 browser call. Windows kill-on-close containment and a POSIX parent-liveness watchdog
-also terminate the tree if the supervising process disappears. It does not yet impose
-OS memory or network-egress limits, and deployments do not yet require workers to use
-it. The IPC channel accepts only a strict, size-bounded JSON operation/result union;
+also terminate the tree if the supervising process disappears. Explicit Windows Job
+Object memory/process limits now apply before worker construction. On Linux, a
+resource-limited worker requires injected proof of prepared cgroup v2 containment;
+the process group alone is rejected as insufficient. Production admission requires
+the exact process worker plus current restricted-identity, per-caller credential ACL,
+lifecycle-supervisor, and OS egress-policy evidence. The library does not provision
+those deployment controls. The IPC channel accepts only a strict, size-bounded JSON
+operation/result union;
 JSON decoding and typed reconstruction run inside the transport deadline, so it does
 not deserialize executable Python objects after timeout. The process wrapper remains a
 lifecycle boundary, not a privilege boundary against a malicious same-account worker.

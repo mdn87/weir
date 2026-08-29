@@ -180,8 +180,13 @@ The broker can now host either adapter behind `ProcessBrowserWorker`, which esta
 an OS process tree before constructing the worker, kills that tree when a command
 deadline expires, its parent disappears, or its wrapper is abandoned, exchanges only a
 strict size-bounded JSON operation/result union, and emits hash-bound death evidence.
-Production configuration does not yet require this transport or impose OS
-memory/network-egress limits. Death evidence never grants reuse: only cleanup from the
+Production source admission now requires this exact transport plus current memory,
+process-count, restricted-identity, per-caller credential-protection, lifecycle, and
+OS egress evidence. Windows applies memory and process limits in the Job Object before
+worker construction; Linux requires an injected verifier for prepared cgroup v2 and
+network-namespace controls and fails closed without it. Host accounts, ACLs, firewall
+rules, and supervisors are not provisioned by the library. Death evidence never grants
+reuse: only cleanup from the
 exact live reservation holder or an authenticated, exact operator retirement can
 release a quarantined credential. Existing schema-v1 stores require the separately
 approved offline procedure in `docs/browser-store-v2.md`; no migration runs at startup.
@@ -210,6 +215,8 @@ remaining sibling work is in `docs/remaining-integration-plan.md`. The accepted 
 `docs/contract-freeze.md` and `contracts/fixtures/batch-0-v1.json`.
 The implemented Batch 1A caller, cache, persistence, and telemetry invariants are in
 `docs/context-bound-acquisition.md`.
+The 7P evidence contract, fail-closed gates, and host rollout boundary are in
+`docs/production-admission.md`.
 RF7 selects Autowork's post-assignment, pre-provider evidence-acquisition phase as the
 first trusted `DispatchContext` provider; its authoritative fields, rejected
 alternatives, and activation tests are in `docs/dispatch-context-provider.md`.

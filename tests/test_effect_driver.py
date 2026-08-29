@@ -16,6 +16,7 @@ from weir.actions import (
     ExecutionPermit,
     Risk,
 )
+from weir.browser.admission import LocalSyntheticActionAdmission
 from weir.browser.effect_driver import (
     FADE_AUTHORITY_ID,
     BrowserActionDriver,
@@ -53,6 +54,7 @@ ORIGIN = "http://127.0.0.1:8765"
 URL = ORIGIN + "/fixture-form"
 FADE_CREDENTIAL = "fade-action-authority-" + "a" * 40
 OTHER_CREDENTIAL = "other-action-client-" + "b" * 40
+LOCAL_ACTION_ADMISSION = LocalSyntheticActionAdmission("effect-driver-unit-test")
 
 
 class Clock:
@@ -851,6 +853,7 @@ class ActionServiceTests(unittest.TestCase):
                 proposal_store=fixture.proposals,
                 session_store=fixture.store,
                 action_driver=fixture.driver,
+                action_admission=LOCAL_ACTION_ADMISSION,
                 clock=fixture.clock,
             )
             try:
@@ -891,6 +894,15 @@ class ActionServiceTests(unittest.TestCase):
                 proposal_store=fixture.proposals,
                 session_store=fixture.store,
                 action_driver=fixture.driver,
+                action_admission=LOCAL_ACTION_ADMISSION,
+                clock=fixture.clock,
+            )
+            ungated = WeirServiceApplication(
+                mock.Mock(),
+                self._registry(),
+                proposal_store=fixture.proposals,
+                session_store=fixture.store,
+                action_driver=fixture.driver,
                 clock=fixture.clock,
             )
             try:
@@ -915,6 +927,18 @@ class ActionServiceTests(unittest.TestCase):
                     unavailable.exception.reason_code,
                     "action_driver_unavailable",
                 )
+                with self.assertRaises(ServiceRequestError) as no_admission:
+                    ungated.handle(
+                        "POST",
+                        "/v1/actions/execute",
+                        self._headers(FADE_AUTHORITY_ID, FADE_CREDENTIAL),
+                        self._body(fixture),
+                    )
+                self.assertEqual(no_admission.exception.status, 503)
+                self.assertEqual(
+                    no_admission.exception.reason_code,
+                    "action_admission_unavailable",
+                )
                 self.assertEqual(fixture.worker.apply_calls, 0)
             finally:
                 fixture.close()
@@ -928,6 +952,7 @@ class ActionServiceTests(unittest.TestCase):
                 proposal_store=fixture.proposals,
                 session_store=fixture.store,
                 action_driver=fixture.driver,
+                action_admission=LOCAL_ACTION_ADMISSION,
                 clock=fixture.clock,
             )
             value = json.loads(self._body(fixture))
