@@ -7,7 +7,7 @@
 - Scope: unfinished work in WEIR, APU, Dias, `lugos-mcp`, Autowork, Mission
   Control, HUD, and Fade
 
-## Implementation status — 2026-08-28
+## Implementation status — 2026-08-29
 
 The approved source work is present for WEIR Batch 2D and Batch 7, APU Batch 1B, Dias
 Batch 1C, disabled `lugos-mcp` Batch 3 plumbing, Autowork Batch 4, Mission Control and
@@ -19,9 +19,13 @@ rollouts and canaries:
   layer is now implemented, but no relay service is deployed or enabled.
 - The real local Fade/WEIR canary and Batch 9 local/source acceptance passed at
   `8d36a70` with restart replay and exactly one observed DOM effect.
-- Mission Control tolerance deployed before HUD registered the `weir` projection. The
-  live snapshot accepts all six projection names, and the WEIR projection is redacted
-  at construction.
+- Mission Control tolerance and HUD's `weir` projection are live on `lugos-host` in
+  immutable parent release `d741dd363ff638038ee9a36c03be382a733c9436`, with
+  Mission Control child `203a1989077cc6b5d0f88f57462f6fdb5227f070` and rollback
+  release `91cefb87486bb941d404ad47dea95af7eb8ba4fd`. The producer and
+  authenticated Mission Control proxy both return all six projection names. The live
+  SSE canary `event-hud-projection-canary-mtdwa6ni` was accepted as a redacted
+  `lugos-hud-weir/v1` snapshot with no authority fields.
 - Dias used the approved fresh schema-v1 receipt-store initialization, then passed v1
   and v2 loopback tests plus restart replay without a second adapter effect.
 - APU 0.9.0 is installed and `primary-agent-autonomy-loss` is enabled in strict mode
@@ -31,12 +35,19 @@ rollouts and canaries:
   as the first trusted `DispatchContext` provider. The exact trust and call contract is
   recorded in [`dispatch-context-provider.md`](dispatch-context-provider.md).
 
-Remaining implementation is narrower than the original rollout list: build the
-dispatcher-owned acquisition phase before enabling any `lugos.web` action; complete
-WEIR 7P production admission (process isolation, resource limits, restricted
-identities, per-caller credential protection, lifecycle supervision, and OS egress
-policy); and implement Batch 8 only after its recommended design and the finished code
-receive the required security review. Existing action and relay flags remain off.
+The original local integration and named rollout list is complete. One canary-found
+follow-up requires a separate production-service approval: event-ingest redacted a
+nested `secret` but retained the canary's synthetic top-level `credential` marker in
+its append-only journal. Parent source commit
+`6f0b8cf4de6bd47da30ce8729b37dbedb1e2d392` now redacts credentials and the closed
+WEIR authority-field vocabulary, with 26 event-ingest tests passing, but the live
+event-ingest process has not been replaced or restarted.
+
+Batch 8 positive activation also remains intentionally deferred. The disabled source
+and security review are complete, but the Fade `outcome_unknown` acknowledgement lacks
+the receipt hash required by the frozen relay acknowledgement contract, and the
+identity provider, issuer custody, retention, CA, and mTLS choices remain unmade.
+Existing action and relay flags remain off.
 
 This packet starts after the contract freeze recorded in
 `docs/sibling-integration-plan.md`. Fable already accepted decisions D1–D12,
