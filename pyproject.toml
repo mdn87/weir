@@ -10,7 +10,7 @@ readme = "README.md"
 requires-python = ">=3.11"
 license = "MIT"
 authors = [{name = "Matthew Newman"}]
-dependencies = ["PyYAML>=6.0"]
+dependencies = ["PyYAML>=6.0", "cryptography>=42.0"]
 
 [project.optional-dependencies]
 test = ["jsonschema>=4.21"]

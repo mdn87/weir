@@ -1,0 +1,520 @@
+{
+  "canonical_json": {
+    "encoding": "UTF-8",
+    "hash_algorithm": "SHA-256",
+    "key_order": "recursive lexicographic",
+    "signature_algorithm": "Ed25519",
+    "signature_basis": "complete capsule object except signature",
+    "whitespace": "none"
+  },
+  "clock": {
+    "authority": "relay verifier",
+    "expiry_skew_seconds": 5,
+    "not_before_skew_seconds": 0
+  },
+  "feature_flags": {
+    "FADE_REMOTE_RELAY_ENABLED": false,
+    "FADE_WEIR_RELAY_INGRESS_ENABLED": false,
+    "LUGOS_RELAY_ISSUER_ENABLED": false,
+    "MC_REMOTE_DECISIONS_ENABLED": false
+  },
+  "fixture_version": 1,
+  "limits": {
+    "capsule_canonical_bytes": 8192,
+    "maximum_capsule_lifetime_seconds": 120,
+    "maximum_live_queue_entries": 1024
+  },
+  "negative": [
+    {
+      "document": {
+        "action_id": "action-fixture-1",
+        "actor_id": "mc:user:42",
+        "audience": "fade-weir-remote-decision",
+        "capsule_id": "capsule-fixture-approve",
+        "command_id": "command-fixture-approve",
+        "decision": "approve",
+        "device_id": "workstation-4070pc",
+        "expires_at": "2026-08-28T20:01:00+00:00",
+        "issued_at": "2026-08-28T20:00:00+00:00",
+        "issuer_id": "lugos-relay-issuer",
+        "key_id": "relay-key-2026-08",
+        "nonce": "AAECAwQFBgcICQoLDA0ODw",
+        "parameters": {
+          "value": "forbidden"
+        },
+        "proposal_hash": "sha256:afb0208ce2d6499416fdf686e16b7d21b35440acded688e45b29cfb243239d2f",
+        "schema": "weir.remote-decision-capsule/v1",
+        "signature": "DceZzd4RzTR6jGhNaAvqWgeBYxDGI1KX4zXAyaqs7tmJjjnQK_AEiWi9NLUno9x34rbZYrFfAtnLp0235tE-Bw",
+        "step_up_ref": "sha256:da66321b0c44cfb8ea48938cf1140d52c3f146fece0339afb9c2530998a42074",
+        "work_context_hash": "sha256:677c86008a0e230d6bdc0e4aa41886cc7849be1c5c9255e4bce98c1d989b4158"
+      },
+      "name": "remote_capsule.parameter_channel",
+      "reason_code": "remote_contract_shape_invalid",
+      "schema": "remote-decision-capsule.schema.json",
+      "validator": "schema"
+    },
+    {
+      "document": {
+        "action_id": "action-substituted",
+        "actor_id": "mc:user:42",
+        "audience": "fade-weir-remote-decision",
+        "capsule_id": "capsule-fixture-approve",
+        "command_id": "command-fixture-approve",
+        "decision": "approve",
+        "device_id": "workstation-4070pc",
+        "expires_at": "2026-08-28T20:01:00+00:00",
+        "issued_at": "2026-08-28T20:00:00+00:00",
+        "issuer_id": "lugos-relay-issuer",
+        "key_id": "relay-key-2026-08",
+        "nonce": "AAECAwQFBgcICQoLDA0ODw",
+        "proposal_hash": "sha256:afb0208ce2d6499416fdf686e16b7d21b35440acded688e45b29cfb243239d2f",
+        "schema": "weir.remote-decision-capsule/v1",
+        "signature": "DceZzd4RzTR6jGhNaAvqWgeBYxDGI1KX4zXAyaqs7tmJjjnQK_AEiWi9NLUno9x34rbZYrFfAtnLp0235tE-Bw",
+        "step_up_ref": "sha256:da66321b0c44cfb8ea48938cf1140d52c3f146fece0339afb9c2530998a42074",
+        "work_context_hash": "sha256:677c86008a0e230d6bdc0e4aa41886cc7849be1c5c9255e4bce98c1d989b4158"
+      },
+      "name": "remote_capsule.signature_tamper",
+      "reason_code": "remote_signature_invalid",
+      "schema": "remote-decision-capsule.schema.json",
+      "validation_time": "2026-08-28T20:00:00+00:00",
+      "validator": "capsule_signature"
+    },
+    {
+      "document": {
+        "action_id": "action-fixture-1",
+        "actor_id": "mc:user:42",
+        "audience": "fade-weir-remote-decision",
+        "capsule_id": "capsule-fixture-approve",
+        "command_id": "command-fixture-approve",
+        "decision": "approve",
+        "device_id": "workstation-4070pc",
+        "expires_at": "2026-08-28T20:01:00+00:00",
+        "issued_at": "2026-08-28T20:00:00+00:00",
+        "issuer_id": "lugos-relay-issuer",
+        "key_id": "relay-key-2026-08",
+        "nonce": "AAECAwQFBgcICQoLDA0ODw",
+        "proposal_hash": "sha256:afb0208ce2d6499416fdf686e16b7d21b35440acded688e45b29cfb243239d2f",
+        "schema": "weir.remote-decision-capsule/v1",
+        "signature": "DceZzd4RzTR6jGhNaAvqWgeBYxDGI1KX4zXAyaqs7tmJjjnQK_AEiWi9NLUno9x34rbZYrFfAtnLp0235tE-Bw",
+        "step_up_ref": "sha256:da66321b0c44cfb8ea48938cf1140d52c3f146fece0339afb9c2530998a42074",
+        "work_context_hash": "sha256:677c86008a0e230d6bdc0e4aa41886cc7849be1c5c9255e4bce98c1d989b4158"
+      },
+      "expected_audience": "fade-weir-remote-decision",
+      "expected_device_id": "workstation-4070pc",
+      "expected_issuer_id": "another-issuer",
+      "name": "remote_capsule.wrong_issuer",
+      "reason_code": "remote_issuer_mismatch",
+      "schema": "remote-decision-capsule.schema.json",
+      "validation_time": "2026-08-28T20:00:00+00:00",
+      "validator": "capsule_runtime"
+    },
+    {
+      "document": {
+        "action_id": "action-fixture-1",
+        "actor_id": "mc:user:42",
+        "audience": "fade-weir-remote-decision",
+        "capsule_id": "capsule-fixture-approve",
+        "command_id": "command-fixture-approve",
+        "decision": "approve",
+        "device_id": "workstation-4070pc",
+        "expires_at": "2026-08-28T20:01:00+00:00",
+        "issued_at": "2026-08-28T20:00:00+00:00",
+        "issuer_id": "lugos-relay-issuer",
+        "key_id": "relay-key-2026-08",
+        "nonce": "AAECAwQFBgcICQoLDA0ODw",
+        "proposal_hash": "sha256:afb0208ce2d6499416fdf686e16b7d21b35440acded688e45b29cfb243239d2f",
+        "schema": "weir.remote-decision-capsule/v1",
+        "signature": "DceZzd4RzTR6jGhNaAvqWgeBYxDGI1KX4zXAyaqs7tmJjjnQK_AEiWi9NLUno9x34rbZYrFfAtnLp0235tE-Bw",
+        "step_up_ref": "sha256:da66321b0c44cfb8ea48938cf1140d52c3f146fece0339afb9c2530998a42074",
+        "work_context_hash": "sha256:677c86008a0e230d6bdc0e4aa41886cc7849be1c5c9255e4bce98c1d989b4158"
+      },
+      "expected_audience": "another-audience",
+      "expected_device_id": "workstation-4070pc",
+      "expected_issuer_id": "lugos-relay-issuer",
+      "name": "remote_capsule.wrong_audience",
+      "reason_code": "remote_audience_mismatch",
+      "schema": "remote-decision-capsule.schema.json",
+      "validation_time": "2026-08-28T20:00:00+00:00",
+      "validator": "capsule_runtime"
+    },
+    {
+      "document": {
+        "action_id": "action-fixture-1",
+        "actor_id": "mc:user:42",
+        "audience": "fade-weir-remote-decision",
+        "capsule_id": "capsule-fixture-approve",
+        "command_id": "command-fixture-approve",
+        "decision": "approve",
+        "device_id": "workstation-4070pc",
+        "expires_at": "2026-08-28T20:01:00+00:00",
+        "issued_at": "2026-08-28T20:00:00+00:00",
+        "issuer_id": "lugos-relay-issuer",
+        "key_id": "relay-key-2026-08",
+        "nonce": "AAECAwQFBgcICQoLDA0ODw",
+        "proposal_hash": "sha256:afb0208ce2d6499416fdf686e16b7d21b35440acded688e45b29cfb243239d2f",
+        "schema": "weir.remote-decision-capsule/v1",
+        "signature": "DceZzd4RzTR6jGhNaAvqWgeBYxDGI1KX4zXAyaqs7tmJjjnQK_AEiWi9NLUno9x34rbZYrFfAtnLp0235tE-Bw",
+        "step_up_ref": "sha256:da66321b0c44cfb8ea48938cf1140d52c3f146fece0339afb9c2530998a42074",
+        "work_context_hash": "sha256:677c86008a0e230d6bdc0e4aa41886cc7849be1c5c9255e4bce98c1d989b4158"
+      },
+      "expected_audience": "fade-weir-remote-decision",
+      "expected_device_id": "workstation-other",
+      "expected_issuer_id": "lugos-relay-issuer",
+      "name": "remote_capsule.wrong_device",
+      "reason_code": "remote_device_mismatch",
+      "schema": "remote-decision-capsule.schema.json",
+      "validation_time": "2026-08-28T20:00:00+00:00",
+      "validator": "capsule_runtime"
+    },
+    {
+      "document": {
+        "action_id": "action-fixture-1",
+        "actor_id": "mc:user:42",
+        "audience": "fade-weir-remote-decision",
+        "capsule_id": "capsule-fixture-approve",
+        "command_id": "command-fixture-approve",
+        "decision": "approve",
+        "device_id": "workstation-4070pc",
+        "expires_at": "2026-08-28T20:01:00+00:00",
+        "issued_at": "2026-08-28T20:00:00+00:00",
+        "issuer_id": "lugos-relay-issuer",
+        "key_id": "relay-key-2026-08",
+        "nonce": "AAECAwQFBgcICQoLDA0ODw",
+        "proposal_hash": "sha256:afb0208ce2d6499416fdf686e16b7d21b35440acded688e45b29cfb243239d2f",
+        "schema": "weir.remote-decision-capsule/v1",
+        "signature": "DceZzd4RzTR6jGhNaAvqWgeBYxDGI1KX4zXAyaqs7tmJjjnQK_AEiWi9NLUno9x34rbZYrFfAtnLp0235tE-Bw",
+        "step_up_ref": "sha256:da66321b0c44cfb8ea48938cf1140d52c3f146fece0339afb9c2530998a42074",
+        "work_context_hash": "sha256:677c86008a0e230d6bdc0e4aa41886cc7849be1c5c9255e4bce98c1d989b4158"
+      },
+      "name": "remote_capsule.unknown_key",
+      "reason_code": "remote_key_unknown",
+      "schema": "remote-decision-capsule.schema.json",
+      "validation_time": "2026-08-28T20:00:00+00:00",
+      "validator": "capsule_unknown_key"
+    },
+    {
+      "document": {
+        "action_id": "action-fixture-1",
+        "actor_id": "mc:user:42",
+        "audience": "fade-weir-remote-decision",
+        "capsule_id": "capsule-fixture-approve",
+        "command_id": "command-fixture-approve",
+        "decision": "approve",
+        "device_id": "workstation-4070pc",
+        "expires_at": "2026-08-28T20:01:00+00:00",
+        "issued_at": "2026-08-28T20:00:00+00:00",
+        "issuer_id": "lugos-relay-issuer",
+        "key_id": "relay-key-2026-08",
+        "nonce": "AAECAwQFBgcICQoLDA0ODw",
+        "proposal_hash": "sha256:afb0208ce2d6499416fdf686e16b7d21b35440acded688e45b29cfb243239d2f",
+        "schema": "weir.remote-decision-capsule/v1",
+        "signature": "DceZzd4RzTR6jGhNaAvqWgeBYxDGI1KX4zXAyaqs7tmJjjnQK_AEiWi9NLUno9x34rbZYrFfAtnLp0235tE-Bw",
+        "step_up_ref": "sha256:da66321b0c44cfb8ea48938cf1140d52c3f146fece0339afb9c2530998a42074",
+        "work_context_hash": "sha256:677c86008a0e230d6bdc0e4aa41886cc7849be1c5c9255e4bce98c1d989b4158"
+      },
+      "expected_audience": "fade-weir-remote-decision",
+      "expected_device_id": "workstation-4070pc",
+      "expected_issuer_id": "lugos-relay-issuer",
+      "name": "remote_capsule.expired_beyond_skew",
+      "reason_code": "remote_expired",
+      "schema": "remote-decision-capsule.schema.json",
+      "validation_time": "2026-08-28T20:01:06+00:00",
+      "validator": "capsule_runtime"
+    },
+    {
+      "document": {
+        "action_id": "action-fixture-1",
+        "actor_id": "mc:user:42",
+        "audience": "fade-weir-remote-decision",
+        "capsule_id": "capsule-fixture-approve",
+        "command_id": "command-fixture-approve",
+        "decision": "approve",
+        "device_id": "workstation-4070pc",
+        "expires_at": "2026-08-28T20:01:00+00:00",
+        "issued_at": "2026-08-28T20:00:00+00:00",
+        "issuer_id": "lugos-relay-issuer",
+        "key_id": "relay-key-2026-08",
+        "nonce": "AAECAwQFBgcICQoLDA0ODw",
+        "proposal_hash": "sha256:afb0208ce2d6499416fdf686e16b7d21b35440acded688e45b29cfb243239d2f",
+        "schema": "weir.remote-decision-capsule/v1",
+        "signature": "DceZzd4RzTR6jGhNaAvqWgeBYxDGI1KX4zXAyaqs7tmJjjnQK_AEiWi9NLUno9x34rbZYrFfAtnLp0235tE-Bw",
+        "step_up_ref": "sha256:da66321b0c44cfb8ea48938cf1140d52c3f146fece0339afb9c2530998a42074",
+        "work_context_hash": "sha256:677c86008a0e230d6bdc0e4aa41886cc7849be1c5c9255e4bce98c1d989b4158"
+      },
+      "expected_audience": "fade-weir-remote-decision",
+      "expected_device_id": "workstation-4070pc",
+      "expected_issuer_id": "lugos-relay-issuer",
+      "name": "remote_capsule.not_yet_issued",
+      "reason_code": "remote_not_yet_valid",
+      "schema": "remote-decision-capsule.schema.json",
+      "validation_time": "2026-08-28T19:59:59+00:00",
+      "validator": "capsule_runtime"
+    },
+    {
+      "document": {
+        "action_id": "action-fixture-1",
+        "actor_id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "audience": "fade-weir-remote-decision",
+        "capsule_id": "capsule-fixture-approve",
+        "command_id": "command-fixture-approve",
+        "decision": "approve",
+        "device_id": "workstation-4070pc",
+        "expires_at": "2026-08-28T20:01:00+00:00",
+        "issued_at": "2026-08-28T20:00:00+00:00",
+        "issuer_id": "lugos-relay-issuer",
+        "key_id": "relay-key-2026-08",
+        "nonce": "AAECAwQFBgcICQoLDA0ODw",
+        "proposal_hash": "sha256:afb0208ce2d6499416fdf686e16b7d21b35440acded688e45b29cfb243239d2f",
+        "schema": "weir.remote-decision-capsule/v1",
+        "signature": "DceZzd4RzTR6jGhNaAvqWgeBYxDGI1KX4zXAyaqs7tmJjjnQK_AEiWi9NLUno9x34rbZYrFfAtnLp0235tE-Bw",
+        "step_up_ref": "sha256:da66321b0c44cfb8ea48938cf1140d52c3f146fece0339afb9c2530998a42074",
+        "work_context_hash": "sha256:677c86008a0e230d6bdc0e4aa41886cc7849be1c5c9255e4bce98c1d989b4158"
+      },
+      "name": "remote_capsule.oversized",
+      "reason_code": "contract_too_large",
+      "schema": "remote-decision-capsule.schema.json",
+      "validator": "capsule_parse"
+    },
+    {
+      "document": {
+        "actor_id": "mc:user:42",
+        "audit_hash": "sha256:b92136b1febf6f10314c0d1f478ced6e231b6ec3e1b455bd4337c18d338b82ae",
+        "audit_id": "audit-fixture-1",
+        "capsule_hash": "sha256:78010eaebc33c025695842602d4691712602ae333dde4ebdf438784f1d103f70",
+        "capsule_id": "capsule-fixture-approve",
+        "command_id": "command-fixture-approve",
+        "decision": "approve",
+        "device_id": "workstation-4070pc",
+        "issued_at": "2026-08-28T20:00:00+00:00",
+        "nonce_hash": "sha256:f5380d44d02ac0fddb99b8552fa3f0964fd793b53b5f98200bf7b17c92925d45",
+        "outcome": "completed",
+        "payload": {
+          "parameters": {}
+        },
+        "queue_state": "acknowledged",
+        "recorded_at": "2026-08-28T20:00:03+00:00",
+        "schema": "weir.remote-decision-audit/v1",
+        "terminal_at": "2026-08-28T20:00:02+00:00",
+        "transport_principal": "relay-device:4070pc"
+      },
+      "name": "remote_audit.payload_channel",
+      "reason_code": "remote_contract_shape_invalid",
+      "schema": "remote-decision-audit.schema.json",
+      "validator": "schema"
+    }
+  ],
+  "positive": [
+    {
+      "canonical_sha256": "sha256:78010eaebc33c025695842602d4691712602ae333dde4ebdf438784f1d103f70",
+      "document": {
+        "action_id": "action-fixture-1",
+        "actor_id": "mc:user:42",
+        "audience": "fade-weir-remote-decision",
+        "capsule_id": "capsule-fixture-approve",
+        "command_id": "command-fixture-approve",
+        "decision": "approve",
+        "device_id": "workstation-4070pc",
+        "expires_at": "2026-08-28T20:01:00+00:00",
+        "issued_at": "2026-08-28T20:00:00+00:00",
+        "issuer_id": "lugos-relay-issuer",
+        "key_id": "relay-key-2026-08",
+        "nonce": "AAECAwQFBgcICQoLDA0ODw",
+        "proposal_hash": "sha256:afb0208ce2d6499416fdf686e16b7d21b35440acded688e45b29cfb243239d2f",
+        "schema": "weir.remote-decision-capsule/v1",
+        "signature": "DceZzd4RzTR6jGhNaAvqWgeBYxDGI1KX4zXAyaqs7tmJjjnQK_AEiWi9NLUno9x34rbZYrFfAtnLp0235tE-Bw",
+        "step_up_ref": "sha256:da66321b0c44cfb8ea48938cf1140d52c3f146fece0339afb9c2530998a42074",
+        "work_context_hash": "sha256:677c86008a0e230d6bdc0e4aa41886cc7849be1c5c9255e4bce98c1d989b4158"
+      },
+      "name": "remote_capsule.approve",
+      "schema": "remote-decision-capsule.schema.json"
+    },
+    {
+      "canonical_sha256": "sha256:372ed394c4508d26392e0b200ad7f5c377867059784575f854f149197d51c58c",
+      "document": {
+        "action_id": "action-fixture-1",
+        "actor_id": "mc:user:84",
+        "audience": "fade-weir-remote-decision",
+        "capsule_id": "capsule-fixture-deny",
+        "command_id": "command-fixture-deny",
+        "decision": "deny",
+        "device_id": "workstation-4070pc",
+        "expires_at": "2026-08-28T20:01:00+00:00",
+        "issued_at": "2026-08-28T20:00:00+00:00",
+        "issuer_id": "lugos-relay-issuer",
+        "key_id": "relay-key-2026-08",
+        "nonce": "EBESExQVFhcYGRobHB0eHw",
+        "proposal_hash": "sha256:afb0208ce2d6499416fdf686e16b7d21b35440acded688e45b29cfb243239d2f",
+        "schema": "weir.remote-decision-capsule/v1",
+        "signature": "vLnSAal8XMgvRiXOWo99_e3_7UGu2jZ4XDSk6HUlNlFC06NlaXTacW8UFZIkegqcEGK7G5-0EOBxEQSiEb6TDw",
+        "step_up_ref": "sha256:a98aa318bd4c36c6f73cd8d04cc19e1853e3869f6c55a543d883e611551bb1a4",
+        "work_context_hash": "sha256:677c86008a0e230d6bdc0e4aa41886cc7849be1c5c9255e4bce98c1d989b4158"
+      },
+      "name": "remote_capsule.deny",
+      "schema": "remote-decision-capsule.schema.json"
+    },
+    {
+      "canonical_sha256": "sha256:f4d5b27c185c154d5a209c626a0fdc72c643b75ebe3ade12ffcb4b6c576b28f0",
+      "document": {
+        "capsule_id": "capsule-fixture-approve",
+        "claim_device_id": null,
+        "claim_expires_at": null,
+        "command_id": "command-fixture-approve",
+        "outcome": null,
+        "previous_record_hash": null,
+        "record_hash": "sha256:dae791646bd2f8f7c3310355bffe76b2de83e7d7cf9cf32f0bd44244f0d0662f",
+        "record_id": "queue-fixture-1",
+        "recorded_at": "2026-08-28T20:00:00+00:00",
+        "revision": 1,
+        "schema": "weir.remote-decision-queue-state/v1",
+        "state": "queued"
+      },
+      "name": "remote_queue.queued",
+      "schema": "remote-decision-queue-state.schema.json"
+    },
+    {
+      "canonical_sha256": "sha256:7924c27b194bfca89b60cb825a23f5098c203e0e4f3c088bfb33294bec150d0b",
+      "document": {
+        "capsule_id": "capsule-fixture-approve",
+        "claim_device_id": "workstation-4070pc",
+        "claim_expires_at": "2026-08-28T20:00:10+00:00",
+        "command_id": "command-fixture-approve",
+        "outcome": null,
+        "previous_record_hash": "sha256:dae791646bd2f8f7c3310355bffe76b2de83e7d7cf9cf32f0bd44244f0d0662f",
+        "record_hash": "sha256:b2d0b6745479aa9f1d449f986a481ef1130f206f0518849b966c215ee41b5dfa",
+        "record_id": "queue-fixture-2",
+        "recorded_at": "2026-08-28T20:00:01+00:00",
+        "revision": 2,
+        "schema": "weir.remote-decision-queue-state/v1",
+        "state": "claimed"
+      },
+      "name": "remote_queue.claimed",
+      "schema": "remote-decision-queue-state.schema.json"
+    },
+    {
+      "canonical_sha256": "sha256:beecc8c5e402ce8363f1382e7ec9f5009e07f65ef39c42e2d5ed787a60cb92aa",
+      "document": {
+        "capsule_id": "capsule-fixture-approve",
+        "claim_device_id": null,
+        "claim_expires_at": null,
+        "command_id": "command-fixture-approve",
+        "outcome": "completed",
+        "previous_record_hash": "sha256:b2d0b6745479aa9f1d449f986a481ef1130f206f0518849b966c215ee41b5dfa",
+        "record_hash": "sha256:a3b1656ae80f565c57c95f62c6331e47049f282d40da02b7eb3517c02b29b752",
+        "record_id": "queue-fixture-3",
+        "recorded_at": "2026-08-28T20:00:02+00:00",
+        "revision": 3,
+        "schema": "weir.remote-decision-queue-state/v1",
+        "state": "acknowledged"
+      },
+      "name": "remote_queue.acknowledged",
+      "schema": "remote-decision-queue-state.schema.json"
+    },
+    {
+      "canonical_sha256": "sha256:dd9ed508ca9643084aaa3adc342d6e4050714d40001eda7d2e0855b7fc0fbbff",
+      "document": {
+        "acknowledged_at": "2026-08-28T20:00:02+00:00",
+        "acknowledgement_hash": "sha256:5ccfefef57853f785e03c5a3bfafb0de7e56accef48512e05278b3313d4fbe00",
+        "acknowledgement_id": "ack-fixture-1",
+        "actor_id": "mc:user:42",
+        "capsule_id": "capsule-fixture-approve",
+        "command_id": "command-fixture-approve",
+        "device_id": "workstation-4070pc",
+        "outcome": "completed",
+        "receipt_hash": "sha256:7438785cbff4403848c5db2c4e1f76a60f4e8e0668a9387aa638da65c55721f7",
+        "schema": "weir.remote-decision-ack/v1",
+        "transport_principal": "relay-device:4070pc"
+      },
+      "name": "remote_ack.completed",
+      "schema": "remote-decision-ack.schema.json"
+    },
+    {
+      "canonical_sha256": "sha256:7f65342bd992d45500d337d0fc380029ef2d77221fc0386b2d26fb23a883dd72",
+      "document": {
+        "actor_id": "mc:user:84",
+        "capsule_id": "capsule-fixture-deny",
+        "command_id": "command-fixture-deny",
+        "reason_code": "operator_withdrew",
+        "revocation_hash": "sha256:b01918179e624c37b44fb2c68b46dc8093645a07f4215b62fba638bc4df5d101",
+        "revocation_id": "revocation-fixture-1",
+        "revoked_at": "2026-08-28T20:00:02+00:00",
+        "schema": "weir.remote-decision-revocation/v1"
+      },
+      "name": "remote_revocation.operator",
+      "schema": "remote-decision-revocation.schema.json"
+    },
+    {
+      "canonical_sha256": "sha256:20e75638366eb6dae63f1e87bf24b20fef5365895c7f4daafb2995580c81b9ad",
+      "document": {
+        "actor_id": "mc:user:42",
+        "audit_hash": "sha256:b92136b1febf6f10314c0d1f478ced6e231b6ec3e1b455bd4337c18d338b82ae",
+        "audit_id": "audit-fixture-1",
+        "capsule_hash": "sha256:78010eaebc33c025695842602d4691712602ae333dde4ebdf438784f1d103f70",
+        "capsule_id": "capsule-fixture-approve",
+        "command_id": "command-fixture-approve",
+        "decision": "approve",
+        "device_id": "workstation-4070pc",
+        "issued_at": "2026-08-28T20:00:00+00:00",
+        "nonce_hash": "sha256:f5380d44d02ac0fddb99b8552fa3f0964fd793b53b5f98200bf7b17c92925d45",
+        "outcome": "completed",
+        "queue_state": "acknowledged",
+        "recorded_at": "2026-08-28T20:00:03+00:00",
+        "schema": "weir.remote-decision-audit/v1",
+        "terminal_at": "2026-08-28T20:00:02+00:00",
+        "transport_principal": "relay-device:4070pc"
+      },
+      "name": "remote_audit.redacted",
+      "schema": "remote-decision-audit.schema.json"
+    }
+  ],
+  "redaction": {
+    "audit_retains": [
+      "capsule hash",
+      "nonce hash",
+      "capsule and command IDs",
+      "actor and device IDs",
+      "transport principal when observed",
+      "timestamps",
+      "decision, terminal state, and outcome"
+    ],
+    "capsule_body_purge_deadline": "deployment decision required before enablement",
+    "capsule_forbidden": [
+      "parameters",
+      "generic payload",
+      "DOM",
+      "prompt text",
+      "credentials",
+      "cookies",
+      "private profile IDs",
+      "permits"
+    ]
+  },
+  "schema_digests": {
+    "remote-decision-ack.schema.json": "sha256:ddd9c676323dfd99a35c023e0048970294a3a1e0ca13a2b1f01cfa6dae8d0181",
+    "remote-decision-audit.schema.json": "sha256:790ea405492ff63a17eb9aa0cf56b0262d89b78deeeb98a619b6f0887e852bcb",
+    "remote-decision-capsule.schema.json": "sha256:87dce55a9e76133f291ef2c96ba462a6f6be9857bd9a0dd921e831d02cec5e95",
+    "remote-decision-queue-state.schema.json": "sha256:298f298967e3988bf1015a084690dd7843a4bf61575fa6f7474d135c02cbd140",
+    "remote-decision-revocation.schema.json": "sha256:133a0ce3bb945fb0fa911f1e14b30041bba2361f25e5e78e3193c5447dd85242"
+  },
+  "state_machine": {
+    "claim_is_authority": false,
+    "claim_retry": "claimed may return to queued only while capsule is live",
+    "initial": "queued",
+    "outcome_unknown_replay": false,
+    "terminal": [
+      "acknowledged",
+      "denied",
+      "expired",
+      "revoked"
+    ]
+  },
+  "status": "frozen",
+  "test_public_keys": {
+    "relay-key-2026-08": "ebVWLo_mVPlAeLES6KmLp5AfhTrmlb7X4OORC60ElmQ"
+  },
+  "topology": "signed outbound pull; Fade and WEIR remain loopback-only",
+  "uniqueness": {
+    "capsule_id": "durable global uniqueness",
+    "command_id": "durable global uniqueness and conflicting reuse rejection",
+    "nonce_hash": "durable global uniqueness retained after capsule-body purge"
+  }
+}

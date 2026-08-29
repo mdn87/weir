@@ -45,6 +45,12 @@ the browser to restate action details.
 
 ## Next Decisions
 
+Implementation update (2026-08-28): WEIR now owns the frozen, parameter-free capsule,
+queue, acknowledgement, revocation, and redacted-audit contracts plus deterministic
+Ed25519 Python/TypeScript vectors. This is disabled source scaffolding only; it adds no
+listener, signer deployment, credential, or remote authority. The decisions below and
+the required post-implementation review still gate positive enablement.
+
 - Accept, modify, or reject Option 3 after the local synthetic canary evidence exists.
 - Choose the step-up mechanism; WebAuthn/passkey user verification is preferred.
 - Choose the authenticated outbound transport available on both deployed hosts; HTTPS
@@ -52,4 +58,3 @@ the browser to restate action details.
   application identity.
 - Set measured delivery and retention bounds during implementation; the proposal gives
   initial acceptance thresholds rather than claiming measured performance.
-

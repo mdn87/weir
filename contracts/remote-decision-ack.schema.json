@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://lugos.local/weir/remote-decision-ack.schema.json",
+  "title": "RemoteDecisionAcknowledgement",
+  "description": "A hash-bound terminal workstation acknowledgement that keeps the human actor distinct from the relay transport principal.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema", "acknowledgement_id", "capsule_id", "command_id", "actor_id",
+    "device_id", "transport_principal", "outcome", "receipt_hash",
+    "acknowledged_at", "acknowledgement_hash"
+  ],
+  "properties": {
+    "schema": {"const": "weir.remote-decision-ack/v1"},
+    "acknowledgement_id": {"$ref": "#/$defs/identifier"},
+    "capsule_id": {"$ref": "#/$defs/identifier"},
+    "command_id": {"$ref": "#/$defs/identifier"},
+    "actor_id": {"$ref": "#/$defs/identifier"},
+    "device_id": {"$ref": "#/$defs/identifier"},
+    "transport_principal": {"$ref": "#/$defs/identifier"},
+    "outcome": {"$ref": "#/$defs/outcome"},
+    "receipt_hash": {"anyOf": [{"$ref": "#/$defs/digest"}, {"type": "null"}]},
+    "acknowledged_at": {"type": "string", "format": "date-time"},
+    "acknowledgement_hash": {"$ref": "#/$defs/digest"}
+  },
+  "$defs": {
+    "identifier": {"type": "string", "minLength": 1, "maxLength": 128},
+    "digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "outcome": {"enum": ["completed", "failed", "blocked", "cancelled", "outcome_unknown", "denied", "expired", "revoked"]}
+  }
+}

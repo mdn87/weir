@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://lugos.local/weir/remote-decision-queue-state.schema.json",
+  "title": "RemoteDecisionQueueRecord",
+  "description": "One immutable append-only record in the remote decision queue state chain.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema", "record_id", "capsule_id", "command_id", "state", "revision",
+    "claim_device_id", "claim_expires_at", "outcome", "recorded_at",
+    "previous_record_hash", "record_hash"
+  ],
+  "properties": {
+    "schema": {"const": "weir.remote-decision-queue-state/v1"},
+    "record_id": {"$ref": "#/$defs/identifier"},
+    "capsule_id": {"$ref": "#/$defs/identifier"},
+    "command_id": {"$ref": "#/$defs/identifier"},
+    "state": {"enum": ["queued", "claimed", "acknowledged", "denied", "expired", "revoked"]},
+    "revision": {"type": "integer", "minimum": 1},
+    "claim_device_id": {"anyOf": [{"$ref": "#/$defs/identifier"}, {"type": "null"}]},
+    "claim_expires_at": {"anyOf": [{"type": "string", "format": "date-time"}, {"type": "null"}]},
+    "outcome": {"anyOf": [{"$ref": "#/$defs/outcome"}, {"type": "null"}]},
+    "recorded_at": {"type": "string", "format": "date-time"},
+    "previous_record_hash": {"anyOf": [{"$ref": "#/$defs/digest"}, {"type": "null"}]},
+    "record_hash": {"$ref": "#/$defs/digest"}
+  },
+  "$defs": {
+    "identifier": {"type": "string", "minLength": 1, "maxLength": 128},
+    "digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "outcome": {"enum": ["completed", "failed", "blocked", "cancelled", "outcome_unknown", "denied", "expired", "revoked"]}
+  }
+}

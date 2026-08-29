@@ -1,0 +1,37 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://lugos.local/weir/remote-decision-capsule.schema.json",
+  "title": "RemoteDecisionCapsule",
+  "description": "A short-lived Ed25519-signed, parameter-free remote human decision bound to one exact WEIR proposal and workstation device.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema", "key_id", "issuer_id", "capsule_id", "command_id", "actor_id",
+    "audience", "device_id", "decision", "proposal_hash", "action_id",
+    "work_context_hash", "issued_at", "expires_at", "nonce", "step_up_ref",
+    "signature"
+  ],
+  "properties": {
+    "schema": {"const": "weir.remote-decision-capsule/v1"},
+    "key_id": {"$ref": "#/$defs/identifier"},
+    "issuer_id": {"$ref": "#/$defs/identifier"},
+    "capsule_id": {"$ref": "#/$defs/identifier"},
+    "command_id": {"$ref": "#/$defs/identifier"},
+    "actor_id": {"$ref": "#/$defs/identifier"},
+    "audience": {"$ref": "#/$defs/identifier"},
+    "device_id": {"$ref": "#/$defs/identifier"},
+    "decision": {"enum": ["approve", "deny"]},
+    "proposal_hash": {"$ref": "#/$defs/digest"},
+    "action_id": {"$ref": "#/$defs/identifier"},
+    "work_context_hash": {"$ref": "#/$defs/digest"},
+    "issued_at": {"type": "string", "format": "date-time"},
+    "expires_at": {"type": "string", "format": "date-time"},
+    "nonce": {"type": "string", "pattern": "^[A-Za-z0-9_-]{22}$"},
+    "step_up_ref": {"$ref": "#/$defs/digest"},
+    "signature": {"type": "string", "pattern": "^[A-Za-z0-9_-]{86}$"}
+  },
+  "$defs": {
+    "identifier": {"type": "string", "minLength": 1, "maxLength": 128},
+    "digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"}
+  }
+}

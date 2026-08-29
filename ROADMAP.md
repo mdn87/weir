@@ -109,6 +109,12 @@ are in `docs/remaining-integration-plan.md`.
 - [x] Produce verified receipts from the approved real Playwright synthetic executor.
 - [x] Add response-loss reconciliation, restart replay, durable `outcome_unknown`, and
   operator-cleared quarantine recovery patterns.
+- [x] Freeze the parameter-free Ed25519 remote-decision capsule, queue, acknowledgement,
+  revocation, redacted-audit, and cross-language fixture contracts without adding a
+  remote listener.
+- [ ] Keep the signed outbound pull issuer and workstation consumer disabled until the
+  separate post-implementation security review and operational identity, mTLS, key
+  custody, and retention decisions are accepted.
 
 Gate: a staged external action cannot execute without policy evaluation and, when required, explicit approval; success is proven by post-state evidence.
 

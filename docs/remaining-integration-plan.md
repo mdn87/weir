@@ -15,7 +15,8 @@ HUD Batch 5, and Fade Batch 6. The operator subsequently authorized the named lo
 rollouts and canaries:
 
 - Batch 8 received its separate architecture and security review at `f20f057`; the
-  signed outbound pull relay is recommended, but no relay is implemented or enabled.
+  signed outbound pull relay is recommended. WEIR's portable contract and fixture
+  layer is now implemented, but no relay service is deployed or enabled.
 - The real local Fade/WEIR canary and Batch 9 local/source acceptance passed at
   `8d36a70` with restart replay and exactly one observed DOM effect.
 - Mission Control tolerance deployed before HUD registered the `weir` projection. The

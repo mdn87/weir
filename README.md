@@ -217,6 +217,10 @@ The implemented Batch 1A caller, cache, persistence, and telemetry invariants ar
 `docs/context-bound-acquisition.md`.
 The 7P evidence contract, fail-closed gates, and host rollout boundary are in
 `docs/production-admission.md`.
+The frozen Batch 8 signed-capsule, queue, acknowledgement, revocation, and redacted
+audit contracts are in `docs/remote-decision-contract.md` and
+`contracts/fixtures/remote-relay-v1.json`. They add no remote listener and every relay
+feature remains disabled by default.
 RF7 selects Autowork's post-assignment, pre-provider evidence-acquisition phase as the
 first trusted `DispatchContext` provider; its authoritative fields, rejected
 alternatives, and activation tests are in `docs/dispatch-context-provider.md`.

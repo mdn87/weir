@@ -1,0 +1,36 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://lugos.local/weir/remote-decision-audit.schema.json",
+  "title": "RemoteDecisionAuditRecord",
+  "description": "A redacted hash-bound audit record retained after the signed capsule body is purged.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema", "audit_id", "capsule_hash", "nonce_hash", "capsule_id", "command_id", "actor_id",
+    "device_id", "transport_principal", "decision", "queue_state", "outcome",
+    "issued_at", "terminal_at", "recorded_at", "audit_hash"
+  ],
+  "properties": {
+    "schema": {"const": "weir.remote-decision-audit/v1"},
+    "audit_id": {"$ref": "#/$defs/identifier"},
+    "capsule_hash": {"$ref": "#/$defs/digest"},
+    "nonce_hash": {"$ref": "#/$defs/digest"},
+    "capsule_id": {"$ref": "#/$defs/identifier"},
+    "command_id": {"$ref": "#/$defs/identifier"},
+    "actor_id": {"$ref": "#/$defs/identifier"},
+    "device_id": {"$ref": "#/$defs/identifier"},
+    "transport_principal": {"anyOf": [{"$ref": "#/$defs/identifier"}, {"type": "null"}]},
+    "decision": {"enum": ["approve", "deny"]},
+    "queue_state": {"enum": ["queued", "claimed", "acknowledged", "denied", "expired", "revoked"]},
+    "outcome": {"anyOf": [{"$ref": "#/$defs/outcome"}, {"type": "null"}]},
+    "issued_at": {"type": "string", "format": "date-time"},
+    "terminal_at": {"anyOf": [{"type": "string", "format": "date-time"}, {"type": "null"}]},
+    "recorded_at": {"type": "string", "format": "date-time"},
+    "audit_hash": {"$ref": "#/$defs/digest"}
+  },
+  "$defs": {
+    "identifier": {"type": "string", "minLength": 1, "maxLength": 128},
+    "digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "outcome": {"enum": ["completed", "failed", "blocked", "cancelled", "outcome_unknown", "denied", "expired", "revoked"]}
+  }
+}

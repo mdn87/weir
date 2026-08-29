@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://lugos.local/weir/remote-decision-revocation.schema.json",
+  "title": "RemoteDecisionRevocation",
+  "description": "A durable issuer-side revocation bound to one capsule and command before local dispatch.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema", "revocation_id", "capsule_id", "command_id", "actor_id",
+    "reason_code", "revoked_at", "revocation_hash"
+  ],
+  "properties": {
+    "schema": {"const": "weir.remote-decision-revocation/v1"},
+    "revocation_id": {"$ref": "#/$defs/identifier"},
+    "capsule_id": {"$ref": "#/$defs/identifier"},
+    "command_id": {"$ref": "#/$defs/identifier"},
+    "actor_id": {"$ref": "#/$defs/identifier"},
+    "reason_code": {"enum": ["operator_withdrew", "device_revoked", "proposal_superseded", "policy_changed", "security_response"]},
+    "revoked_at": {"type": "string", "format": "date-time"},
+    "revocation_hash": {"$ref": "#/$defs/digest"}
+  },
+  "$defs": {
+    "identifier": {"type": "string", "minLength": 1, "maxLength": 128},
+    "digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"}
+  }
+}
