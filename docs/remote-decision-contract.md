@@ -3,8 +3,9 @@
 Batch 8 uses a signed outbound pull design. It does not expose Fade or WEIR on the
 network, and it does not route approval through HUD's shared bearer. A workstation
 polls a separate relay service only when both Fade ingress flags are explicitly
-enabled. All related flags remain off until deployment approval; the first positive
-activation is the bounded synthetic canary described below.
+enabled. All related source flags default off. The operator separately approved the
+first production deployment on 2026-08-29, and its bounded synthetic canary passed;
+see [`acceptance/batch8-remote-relay-20260829.md`](acceptance/batch8-remote-relay-20260829.md).
 
 ## Frozen WEIR contract
 
@@ -45,7 +46,7 @@ Python/TypeScript parity checks are in:
 - `scripts/verify_remote_relay_fixtures.ts`; and
 - `tests/test_remote_decision.py` plus `tests/test_remote_relay_fixtures.py`.
 
-## Implemented, disabled deployment boundary
+## Implementation and deployment boundary
 
 WEIR still owns only the portable contracts and verification helpers and has no remote
 listener or credential. Mission Control now has a passkey-gated decision route and a

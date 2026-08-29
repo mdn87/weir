@@ -15,8 +15,10 @@ HUD Batch 5, and Fade Batch 6. The operator subsequently authorized the named lo
 rollouts and canaries:
 
 - Batch 8 received its separate architecture and security review at `f20f057`; the
-  signed outbound pull relay is recommended. WEIR's portable contract and fixture
-  layer is now implemented, but no relay service is deployed or enabled.
+  signed outbound pull relay was selected, implemented, independently scanned, and
+  activated on the reviewed `4070pc`-to-`lugos-host` binding. Its live one-effect
+  acceptance evidence is recorded in
+  [`docs/acceptance/batch8-remote-relay-20260829.md`](acceptance/batch8-remote-relay-20260829.md).
 - The real local Fade/WEIR canary and Batch 9 local/source acceptance passed at
   `8d36a70` with restart replay and exactly one observed DOM effect.
 - Mission Control tolerance and HUD's `weir` projection are live on `lugos-host` in
@@ -44,11 +46,13 @@ closed WEIR authority-field vocabulary are redacted before journal persistence w
 `proposal_hash` and `permit_hash` remain available. The prior runtime source is held
 in a timestamped rollback release.
 
-Batch 8 positive activation also remains intentionally deferred. The disabled source
-and security review are complete, but the Fade `outcome_unknown` acknowledgement lacks
-the receipt hash required by the frozen relay acknowledgement contract, and the
-identity provider, issuer custody, retention, CA, and mTLS choices remain unmade.
-Existing action and relay flags remain off.
+Batch 8 positive activation completed after its separate implementation and security
+reviews closed the earlier acknowledgement, identity, issuer-custody, retention, CA,
+and mTLS decisions. Source defaults remain off, while the reviewed production host
+runtime flags are enabled. Workstation polling still requires explicit process-local
+arming. The only successful activation action was one reversible public synthetic
+fill on an ephemeral workstation loopback page; no production account or generic
+remote action service was introduced.
 
 This packet starts after the contract freeze recorded in
 `docs/sibling-integration-plan.md`. Fable already accepted decisions D1–D12,
@@ -452,6 +456,11 @@ hash are recorded in
 Because this work was requested in reverse order, deployed Mission Control/HUD and
 installed APU readback remain attached to their later rollout steps rather than being
 misreported as part of this local result.
+
+Activation status (2026-08-29): after this plan's local gate and the separate Batch 8
+implementation/security review, the operator explicitly authorized the reviewed
+relay deployment and canary. Production acceptance passed and remains enabled; see
+[`docs/acceptance/batch8-remote-relay-20260829.md`](acceptance/batch8-remote-relay-20260829.md).
 
 WEIR 2D, APU 1B, Dias 1C, and the disabled Mission Control tolerance work are the first
 independent source units. Autowork follows MCP context plumbing. HUD registration

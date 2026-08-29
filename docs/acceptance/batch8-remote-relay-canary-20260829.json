@@ -1,0 +1,58 @@
+{
+  "apu_watch": {
+    "ambiguity_count": 0,
+    "background_service": false,
+    "build_revision": "sha256:26ac333913b6c786e53c714c80408edd10afc995afa93e5adbf4f3e1efb4d8ec",
+    "enabled": true,
+    "last_successful_attribution": "2026-08-29T09:45:09.058628Z",
+    "package_version": "0.9.0",
+    "provider": "codex",
+    "selector_mode": "strict",
+    "service_heartbeat": "2026-08-29T09:45:09.058628Z",
+    "watcher": "primary-agent-autonomy-loss"
+  },
+  "assertions": {
+    "effect_count": 1,
+    "fade_ledger_reserved_before_dispatch": true,
+    "final_revocation_check": true,
+    "mission_control_projection_event": true,
+    "poller_restart_replay_safe": true,
+    "public_parameter_leak": false,
+    "real_playwright_effect": true,
+    "session_state": "active",
+    "signed_capsule_verified": true,
+    "terminal_acknowledgement": true,
+    "terminal_projection_event": true,
+    "tls13_mtls_relay_health": true,
+    "worker_apply_calls": 1
+  },
+  "bindings": {
+    "acknowledgement_hash": "sha256:74c0fcaa92149f79ab9e1c74b02ccb045ae56392c3d7ee08b10a25a9316769eb",
+    "capsule_id": "capsule-5a719e72f31af3064b6b6e5b4069cbb4f263",
+    "command_id": "mc-remote-approve-c9656d0c0207908379d5501887040a3b",
+    "operator_actor": "mc:user:1",
+    "proposal_hash": "sha256:c9656d0c0207908379d5501887040a3b27058fa8f6200f0a9421e4af21a02de3",
+    "receipt_hash": "sha256:9baa8fd79f7317860c689364a1a8d405075715816858ac4d9d1dc12c7787f6e0",
+    "receipt_id": "receipt-afbe9e14ac370f869f34049a45d821f806852fdb",
+    "transport_principal": "relay-device:4070pc",
+    "work_context_hash": "sha256:3ce454d9766c70a38c6d63bdd4ad24340f2af0fa42d2abbb74a58b65cafd4d0b"
+  },
+  "event_types": [
+    "None"
+  ],
+  "finished_at": "2026-08-29T09:49:26.207013+00:00",
+  "raw_artifacts": ".codex-tmp/batch8-remote-relay-20260829T054545Z/canary",
+  "report_sha256": "sha256:d428d933b6b977227b7bc3c3918963b98dc3ddec65b4402171675438e92a1f5e",
+  "result": "passed",
+  "run_id": "batch8-remote-canary-1d6d687b2770630f",
+  "schema": "weir-fade-remote-relay-canary/v1",
+  "scope": {
+    "action_type": "fill",
+    "data_class": "public",
+    "origin_class": "http_loopback_ip",
+    "production_account": false,
+    "risk": "unknown",
+    "target_device": "workstation-4070pc"
+  },
+  "started_at": "2026-08-29T09:45:46.383938+00:00"
+}

@@ -219,14 +219,18 @@ The 7P evidence contract, fail-closed gates, and host rollout boundary are in
 `docs/production-admission.md`.
 The frozen Batch 8 signed-capsule, queue, acknowledgement, revocation, and redacted
 audit contracts are in `docs/remote-decision-contract.md` and
-`contracts/fixtures/remote-relay-v1.json`. They add no remote listener and every relay
-feature remains disabled by default.
-The disabled-by-default Batch 8 transport is now implemented across Mission Control
-and Fade. The reviewed first target uses a passkey decision at `knot.newman.foo`, a
-least-privilege relay on `lugos-host`, and outbound TLS 1.3/mTLS pull from `4070pc`.
+`contracts/fixtures/remote-relay-v1.json`. Source flags remain disabled by default;
+the separately reviewed first production server deployment is active on the exact
+`4070pc`-to-`lugos-host` binding, while workstation pulls still require explicit
+arming.
+The Batch 8 transport is implemented across Mission Control and Fade. The reviewed
+first target uses a passkey decision at `knot.newman.foo`, a least-privilege relay on
+`lugos-host`, and outbound TLS 1.3/mTLS pull from `4070pc`.
 `scripts/run_remote_relay_canary.py` keeps the first positive activation to one
 reversible public-data fill on an ephemeral loopback page; action parameters never
-leave the workstation.
+leave the workstation. The live activation, one-effect canary, terminal
+acknowledgement, redacted event readback, and capsule-body purge are recorded in
+`docs/acceptance/batch8-remote-relay-20260829.md`.
 RF7 selects Autowork's post-assignment, pre-provider evidence-acquisition phase as the
 first trusted `DispatchContext` provider; its authoritative fields, rejected
 alternatives, and activation tests are in `docs/dispatch-context-provider.md`.
