@@ -35,13 +35,14 @@ rollouts and canaries:
   as the first trusted `DispatchContext` provider. The exact trust and call contract is
   recorded in [`dispatch-context-provider.md`](dispatch-context-provider.md).
 
-The original local integration and named rollout list is complete. One canary-found
-follow-up requires a separate production-service approval: event-ingest redacted a
-nested `secret` but retained the canary's synthetic top-level `credential` marker in
-its append-only journal. Parent source commit
-`6f0b8cf4de6bd47da30ce8729b37dbedb1e2d392` now redacts credentials and the closed
-WEIR authority-field vocabulary, with 26 event-ingest tests passing, but the live
-event-ingest process has not been replaced or restarted.
+The original local integration and named rollout list is complete. The canary-found
+event-journal follow-up is also closed: parent source commit
+`6f0b8cf4de6bd47da30ce8729b37dbedb1e2d392` is live on `lugos-host`, and
+`lugos-event-ingest.service` was restarted successfully. Authenticated canary
+`event-event-ingest-redaction-20260829T045917Z` proved that credentials and the
+closed WEIR authority-field vocabulary are redacted before journal persistence while
+`proposal_hash` and `permit_hash` remain available. The prior runtime source is held
+in a timestamped rollback release.
 
 Batch 8 positive activation also remains intentionally deferred. The disabled source
 and security review are complete, but the Fade `outcome_unknown` acknowledgement lacks

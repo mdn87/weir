@@ -5,7 +5,8 @@ remains disabled.
 
 ## Release identity and activation order
 
-- Target: SSH alias `lugos-host`, confirmed as `matt@10.0.1.33` for this session.
+- Target: known-good SSH alias `lugos-host`, corroborated by SSH config and
+  `lugos-link` inventory as `matt@10.0.1.33`.
 - Lugos parent release: `d741dd363ff638038ee9a36c03be382a733c9436`.
 - Mission Control child: `203a1989077cc6b5d0f88f57462f6fdb5227f070`.
 - Rollback release: `91cefb87486bb941d404ad47dea95af7eb8ba4fd`.
@@ -43,7 +44,7 @@ snapshot retained `state=cancelled`, and neither carried the synthetic authority
 marker or its field names. An authenticated POST to
 `/api/lugos/remote-decisions` returned HTTP 404, proving Batch 8 remained disabled.
 
-## Canary-found event-journal follow-up
+## Canary-found event-journal follow-up — closed
 
 The generic event-ingest redactor removed the nested `secret` but did not remove the
 synthetic top-level `credential` marker before writing the append-only journal. This
@@ -52,7 +53,26 @@ upstream custody gap.
 
 Parent commit `6f0b8cf4de6bd47da30ce8729b37dbedb1e2d392` fixes the source redactor for
 credentials plus WEIR's authority-only fields while preserving `proposal_hash` and
-`permit_hash`; all 26 event-ingest tests pass. The live event-ingest service still
-runs the prior copied source. Deploying and restarting that separate production
-service requires its own operator approval. The retained marker is synthetic test
-data, not a credential, and remains in the journal as audit evidence.
+`permit_hash`; all 26 event-ingest tests pass. The operator approved its separate
+production rollout, and the copied runtime source on `lugos-host` was replaced and
+`lugos-event-ingest.service` restarted at 2026-08-29 00:57:54 EDT.
+
+The live runtime digest is
+`e0301a1fd71ed2e2830c93f2968d589780572a56afbf4fe5b6b2c3c714e3b4df`.
+The prior source is recoverable at
+`/srv/lugos/releases/lugos-event-ingest/20260829T045754Z-pre-6f0b8cf4de6bd47da30ce8729b37dbedb1e2d392/redaction.py`.
+The service is active and enabled, `/health` reports the primary node healthy, and
+the journal contains no error-priority entries after the successful restart.
+
+Authenticated synthetic event
+`event-event-ingest-redaction-20260829T045917Z` then exercised the live HTTP and
+append-only journal path. Its ten authority or credential fields were all persisted
+as `[REDACTED]`; the unique marker prefix was absent from the stored record; and its
+`proposal_hash` and `permit_hash` remained intact. The canary was already in the
+terminal `cancelled` state and invoked no browser action, permit, or effect.
+
+An initial guarded restart attempt automatically restored the prior file because its
+health probe used loopback while this service intentionally binds only to
+`10.0.1.33:8787`. The corrected rollout used the configured bind address and passed.
+The earlier retained marker is synthetic test data, not a credential, and remains in
+the journal as audit evidence.
