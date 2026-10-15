@@ -395,12 +395,18 @@ class EbayConnector(ReaderEngine, SearchEngine):
         if request.source != "ebay":
             raise EngineFailure(f"EbayConnector cannot search source {request.source!r}")
 
+        sort = request.constraints.get("sort")
+        if sort is not None and sort not in ("newlyListed", "endingSoonest", "price", "-price"):
+            raise EngineFailure("unsupported ebay search sort constraint")
         token, host = self._access_token(request.profile_id)
         marketplace_id = self._marketplace_id(request.profile_id)
         observed_at = datetime.now(timezone.utc).isoformat()
         max_pages = min(request.maximum_depth + 1, MAX_PAGES_HARD_CAP)
 
-        params = urllib.parse.urlencode({"q": request.query, "limit": PAGE_LIMIT})
+        search_params = {"q": request.query, "limit": PAGE_LIMIT}
+        if sort is not None:
+            search_params["sort"] = sort
+        params = urllib.parse.urlencode(search_params)
         url: str | None = f"{host}/buy/browse/v1/item_summary/search?{params}"
         first_url = url
         listings: list[dict[str, Any]] = []

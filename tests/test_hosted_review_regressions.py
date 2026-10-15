@@ -5,6 +5,7 @@ import io
 import json
 import unittest
 import urllib.error
+import urllib.parse
 from unittest import mock
 
 from tests.test_ebay_connector import ENV, ITEM_FULL, _search_request
@@ -103,3 +104,22 @@ class HostedReviewRegressions(unittest.TestCase):
                         engine._access_token("ebay-app")
                     self.assertEqual(raised.exception.failure_class, FailureClass.NETWORK_FAILURE)
                     self.assertEqual(send.call_count, 3)
+
+
+class SearchOrderTests(unittest.TestCase):
+    def test_newly_listed_constraint_reaches_browse_api(self):
+        urls = []
+        def transport(req):
+            urls.append(req.full_url)
+            payload = {"access_token":"token","expires_in":7200} if "/oauth2/token" in req.full_url else {"total":0}
+            return 200, json.dumps(payload).encode()
+        request = _search_request()
+        request.constraints = {"sort":"newlyListed"}
+        EbayConnector(transport=transport,environ=ENV).search(request)
+        self.assertEqual(urllib.parse.parse_qs(urllib.parse.urlsplit(urls[-1]).query)["sort"], ["newlyListed"])
+
+    def test_unsupported_sort_fails_before_requesting_credentials(self):
+        request = _search_request()
+        request.constraints = {"sort":"unexpected"}
+        with self.assertRaisesRegex(EngineFailure,"sort"):
+            EbayConnector(environ={}).search(request)
