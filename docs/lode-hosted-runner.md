@@ -136,3 +136,11 @@ A configured reader does not guarantee site access or useful listing evidence.
   real search with schema validation, a re-read of the first item, a no-match query
   that must report `total: 0`, and a check that `enrich` fails cleanly when no reader
   is installed.
+
+## Search ordering
+
+Lode passes `--constraints '{"sort":"newlyListed"}'` for its newest-first watches.
+The eBay adapter forwards this supported sort to Browse, so a bounded watch does
+not repeatedly inspect only relevance-ranked listings. Supported explicit sorts
+are `newlyListed`, `endingSoonest`, `price`, and `-price`; omitting the constraint
+preserves eBay's default order. Unsupported values fail before acquisition.

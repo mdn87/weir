@@ -127,7 +127,7 @@ class _StubPageReader(ReaderEngine):
 
 
 def _search_argv(pages: int = 1, query: str = QUERY) -> list[str]:
-    return ["search", query, "--source", "ebay", "--pages", str(pages), "--run-id", RUN_ID]
+    return ["search", query, "--source", "ebay", "--pages", str(pages), "--constraints", json.dumps({"sort": "newlyListed"}), "--run-id", RUN_ID]
 
 
 ENRICH_ARGV = ["enrich", ITEM_URL, "--run-id", RUN_ID]
