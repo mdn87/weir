@@ -213,6 +213,37 @@ class EbaySearchTests(unittest.TestCase):
         self.assertEqual(len(result.content["listings"]), 1)
         self.assertEqual(result.diagnostics["invalid_listings"], 1)
 
+    def test_reported_matches_without_returned_listings_fail(self):
+        def missing_summaries(req):
+            if "/oauth2/token" in req.full_url:
+                return 200, TOKEN_RESPONSE
+            return 200, json.dumps({"total": 3}).encode()
+
+        engine = EbayConnector(transport=missing_summaries, environ=ENV)
+        with self.assertRaises(EngineFailure) as raised:
+            engine.search(_search_request())
+        self.assertIn("no usable listings", str(raised.exception))
+
+    def test_browse_calls_carry_the_configured_marketplace(self):
+        seen = []
+
+        def recording_transport(req):
+            if "/oauth2/token" not in req.full_url:
+                seen.append(req.get_header("X-ebay-c-marketplace-id"))
+            return fake_transport(req)
+
+        EbayConnector(transport=recording_transport, environ=ENV).search(_search_request())
+        gb = dict(ENV, EBAY_MARKETPLACE_ID="EBAY_GB")
+        EbayConnector(transport=recording_transport, environ=gb).search(_search_request())
+        self.assertEqual(seen, ["EBAY_US", "EBAY_GB"])
+
+        bad = EbayConnector(
+            transport=recording_transport, environ=dict(ENV, EBAY_MARKETPLACE_ID="us")
+        )
+        with self.assertRaises(EngineUnavailable):
+            bad.search(_search_request())
+        self.assertFalse(bad.probe().available)
+
 
 class EbayReadTests(unittest.TestCase):
     def setUp(self):

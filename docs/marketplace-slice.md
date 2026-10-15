@@ -238,6 +238,16 @@ invoked npm `.cmd` shims (BatBadBut class). Adapters now unwrap shims to
 direct node invocations, and the eBay connector emits bare canonical item
 URLs with tracking parameters confined to the raw payload.
 
+## Hosted Lode runner (2026-10-14)
+
+Install, configuration, and the CLI failure contract for Lode's GitHub Actions
+scout live in [`lode-hosted-runner.md`](lode-hosted-runner.md). For that pass,
+search started sending `X-EBAY-C-MARKETPLACE-ID` (Lode's collector already did),
+an empty result became a success only when eBay reports `total: 0`, and dropped
+connections became retried `network_failure`s. `weir enrich` stays a page-text
+capture: it verifies no availability or price, and it is unavailable on the
+reader-less runner.
+
 ## Relationship to the roadmap
 
 This slice is the concrete driver for the P1 "connector/API adapter interface",

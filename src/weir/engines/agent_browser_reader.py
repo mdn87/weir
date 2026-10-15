@@ -6,7 +6,13 @@ import subprocess
 import tempfile
 from pathlib import Path
 
-from weir.engines.base import EngineFailure, EngineProbe, EngineUnavailable, ReaderEngine
+from weir.engines.base import (
+    EngineCannotRead,
+    EngineFailure,
+    EngineProbe,
+    EngineUnavailable,
+    ReaderEngine,
+)
 from weir.engines.shims import safe_argv
 from weir.models import ReaderResult, RequestMode, WebRequest
 
@@ -84,6 +90,10 @@ class AgentBrowserReader(ReaderEngine):
             raise EngineFailure(str(error) if error else "agent-browser reported success=false")
         if not isinstance(data, dict):
             data = payload if isinstance(payload, dict) else {}
+        content = data.get("content", data.get("text"))
+        if isinstance(content, str) and not content.strip():
+            # A blank read is a failed acquisition, never an empty success.
+            raise EngineCannotRead("agent-browser returned an empty page")
 
         final_url = data.get("finalUrl") or data.get("url")
         return ReaderResult(

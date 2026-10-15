@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import base64
 import hashlib
+import http.client
 import json
 import os
 import re
@@ -38,6 +39,8 @@ RETRY_BASE_SECONDS = 0.25
 ITEM_PATH_PATTERN = re.compile(r"/itm/(?:[^/]+/)?(\d+)(?:/|$)")
 MONEY_PATTERN = re.compile(r"(?:0|[1-9][0-9]*)(?:\.[0-9]+)?")
 CURRENCY_PATTERN = re.compile(r"[A-Z]{3}")
+MARKETPLACE_PATTERN = re.compile(r"EBAY_[A-Z_]+")
+DEFAULT_MARKETPLACE = "EBAY_US"
 
 # Profile indirection: credentials are resolved from the environment by
 # profile id and never travel inside a WebRequest (authority-boundaries.md).
@@ -48,6 +51,7 @@ PROFILES = {
         "client_id": ("WEIR_EBAY_CLIENT_ID", "EBAY_CLIENT_ID"),
         "client_secret": ("WEIR_EBAY_CLIENT_SECRET", "EBAY_CLIENT_SECRET"),
         "environment": ("WEIR_EBAY_ENV",),
+        "marketplace_id": ("WEIR_EBAY_MARKETPLACE_ID", "EBAY_MARKETPLACE_ID"),
     },
 }
 
@@ -65,6 +69,12 @@ def _default_transport(req: urllib.request.Request) -> tuple[int, bytes]:
         raise EngineFailure(str(exc.reason), FailureClass.NETWORK_FAILURE) from exc
     except TimeoutError as exc:
         raise EngineFailure("timeout", FailureClass.NETWORK_FAILURE) from exc
+    except (ConnectionError, http.client.HTTPException) as exc:
+        # Resets and truncated bodies surface outside URLError once the
+        # response has started; they are transient network failures too.
+        raise EngineFailure(
+            f"connection failed: {type(exc).__name__}", FailureClass.NETWORK_FAILURE
+        ) from exc
 
 
 def listing_hash(listing: dict[str, Any]) -> str:
@@ -210,16 +220,9 @@ class EbayConnector(ReaderEngine, SearchEngine):
                 f"unknown ebay profile {profile_id!r}; known: {sorted(PROFILES)}"
             )
 
-        def resolve(names: tuple[str, ...]) -> str:
-            for name in names:
-                value = self._environ.get(name, "")
-                if value:
-                    return value
-            return ""
-
-        client_id = resolve(profile["client_id"])
-        client_secret = resolve(profile["client_secret"])
-        environment = resolve(profile["environment"]) or "production"
+        client_id = self._resolve(profile["client_id"])
+        client_secret = self._resolve(profile["client_secret"])
+        environment = self._resolve(profile["environment"]) or "production"
         if environment not in API_HOSTS:
             raise EngineUnavailable(f"unsupported ebay environment {environment!r}")
         if not client_id or not client_secret:
@@ -229,13 +232,31 @@ class EbayConnector(ReaderEngine, SearchEngine):
             raise EngineUnavailable(f"ebay credentials not configured: set {wanted}")
         return client_id, client_secret, environment
 
+    def _resolve(self, names: tuple[str, ...]) -> str:
+        for name in names:
+            value = self._environ.get(name, "")
+            if value:
+                return value
+        return ""
+
+    def _marketplace_id(self, profile_id: str) -> str:
+        """Marketplace sent on every Browse call; Lode's own collector sends the same header."""
+        marketplace = self._resolve(PROFILES[profile_id]["marketplace_id"]) or DEFAULT_MARKETPLACE
+        if not MARKETPLACE_PATTERN.fullmatch(marketplace):
+            raise EngineUnavailable(f"unsupported ebay marketplace {marketplace!r}")
+        return marketplace
+
     def probe(self) -> EngineProbe:
         try:
             _, _, environment = self._credentials("ebay-app")
+            marketplace = self._marketplace_id("ebay-app")
         except EngineUnavailable as exc:
             return EngineProbe(self.id, False, detail=str(exc))
         return EngineProbe(
-            self.id, True, version="browse-v1", detail=f"credentials configured ({environment})"
+            self.id,
+            True,
+            version="browse-v1",
+            detail=f"credentials configured ({environment}, {marketplace})",
         )
 
     def _access_token(self, profile_id: str | None) -> tuple[str, str]:
@@ -330,9 +351,15 @@ class EbayConnector(ReaderEngine, SearchEngine):
             )
         return candidate
 
-    def _api_get(self, url: str, token: str, host: str) -> dict[str, Any]:
+    def _api_get(self, url: str, token: str, host: str, marketplace_id: str) -> dict[str, Any]:
         url = self._validated_api_url(url, host)
-        req = urllib.request.Request(url, headers={"Authorization": f"Bearer {token}"})
+        req = urllib.request.Request(
+            url,
+            headers={
+                "Authorization": f"Bearer {token}",
+                "X-EBAY-C-MARKETPLACE-ID": marketplace_id,
+            },
+        )
         status, payload = self._send_with_retry(req, "ebay Browse API")
         if status in {401, 403}:
             raise EngineCannotRead(
@@ -358,6 +385,7 @@ class EbayConnector(ReaderEngine, SearchEngine):
             raise EngineFailure(f"EbayConnector cannot search source {request.source!r}")
 
         token, host = self._access_token(request.profile_id)
+        marketplace_id = self._marketplace_id(request.profile_id)
         observed_at = datetime.now(timezone.utc).isoformat()
         max_pages = min(request.maximum_depth + 1, MAX_PAGES_HARD_CAP)
 
@@ -369,7 +397,7 @@ class EbayConnector(ReaderEngine, SearchEngine):
         pages = 0
         total: int | None = None
         while url and pages < max_pages:
-            page = self._api_get(url, token, host)
+            page = self._api_get(url, token, host, marketplace_id)
             reported_total = page.get("total")
             if type(reported_total) is int and reported_total >= 0:
                 total = reported_total
@@ -389,6 +417,15 @@ class EbayConnector(ReaderEngine, SearchEngine):
                 raise EngineFailure("ebay Browse API returned a non-string pagination URL")
             url = next_url
             pages += 1
+
+        # An empty set is a real answer only when eBay said there were no
+        # matches. Anything else (every summary unusable, or a reported total
+        # with nothing returned) is a malformed acquisition, not "zero deals".
+        if not listings and (invalid_listings or total != 0):
+            raise EngineFailure(
+                "ebay Browse API returned no usable listings "
+                f"(total_reported={total}, invalid_listings={invalid_listings})"
+            )
 
         return ReaderResult(
             engine=self.id,
@@ -433,6 +470,7 @@ class EbayConnector(ReaderEngine, SearchEngine):
             f"{host}/buy/browse/v1/item/get_item_by_legacy_id?legacy_item_id={legacy_id}",
             token,
             host,
+            self._marketplace_id(request.profile_id),
         )
         observed_at = datetime.now(timezone.utc).isoformat()
         try:
