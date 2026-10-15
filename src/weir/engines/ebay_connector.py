@@ -39,7 +39,15 @@ RETRY_BASE_SECONDS = 0.25
 ITEM_PATH_PATTERN = re.compile(r"/itm/(?:[^/]+/)?(\d+)(?:/|$)")
 MONEY_PATTERN = re.compile(r"(?:0|[1-9][0-9]*)(?:\.[0-9]+)?")
 CURRENCY_PATTERN = re.compile(r"[A-Z]{3}")
-MARKETPLACE_PATTERN = re.compile(r"EBAY_[A-Z_]+")
+# Browse marketplaces: https://developer.ebay.com/api-docs/buy/ref-marketplace-supported.html
+MARKETPLACE_DOMAINS = {
+    "EBAY_AT": "ebay.at", "EBAY_AU": "ebay.com.au", "EBAY_BE": "ebay.com.be",
+    "EBAY_CA": "ebay.ca", "EBAY_CH": "ebay.ch", "EBAY_DE": "ebay.de",
+    "EBAY_ES": "ebay.es", "EBAY_FR": "ebay.fr", "EBAY_GB": "ebay.co.uk",
+    "EBAY_HK": "ebay.com.hk", "EBAY_IE": "ebay.ie", "EBAY_IT": "ebay.it",
+    "EBAY_NL": "ebay.nl", "EBAY_PL": "ebay.pl", "EBAY_SG": "ebay.sg",
+    "EBAY_US": "ebay.com",
+}
 DEFAULT_MARKETPLACE = "EBAY_US"
 
 # Profile indirection: credentials are resolved from the environment by
@@ -61,10 +69,13 @@ Sleeper = Callable[[float], None]
 
 def _default_transport(req: urllib.request.Request) -> tuple[int, bytes]:
     try:
-        with urllib.request.urlopen(req, timeout=60) as response:
-            return response.status, response.read()
-    except urllib.error.HTTPError as exc:
-        return exc.code, exc.read()
+        try:
+            with urllib.request.urlopen(req, timeout=60) as response:
+                return response.status, response.read()
+        except urllib.error.HTTPError as exc:
+            # Reading an error response can fail after headers, just like a 200 body.
+            with exc:
+                return exc.code, exc.read()
     except urllib.error.URLError as exc:
         raise EngineFailure(str(exc.reason), FailureClass.NETWORK_FAILURE) from exc
     except TimeoutError as exc:
@@ -133,7 +144,7 @@ def ebay_legacy_item_id(raw_url: str) -> str | None:
         or parts.username
         or parts.password
         or port not in {None, 443}
-        or (host != "ebay.com" and not host.endswith(".ebay.com"))
+        or not any(host == domain or host.endswith("." + domain) for domain in MARKETPLACE_DOMAINS.values())
     ):
         return None
     match = ITEM_PATH_PATTERN.search(parts.path)
@@ -242,7 +253,7 @@ class EbayConnector(ReaderEngine, SearchEngine):
     def _marketplace_id(self, profile_id: str) -> str:
         """Marketplace sent on every Browse call; Lode's own collector sends the same header."""
         marketplace = self._resolve(PROFILES[profile_id]["marketplace_id"]) or DEFAULT_MARKETPLACE
-        if not MARKETPLACE_PATTERN.fullmatch(marketplace):
+        if marketplace not in MARKETPLACE_DOMAINS:
             raise EngineUnavailable(f"unsupported ebay marketplace {marketplace!r}")
         return marketplace
 
@@ -401,7 +412,7 @@ class EbayConnector(ReaderEngine, SearchEngine):
             reported_total = page.get("total")
             if type(reported_total) is int and reported_total >= 0:
                 total = reported_total
-            summaries = page.get("itemSummaries") or []
+            summaries = page.get("itemSummaries", [])
             if not isinstance(summaries, list):
                 raise EngineFailure("ebay Browse API returned non-list itemSummaries")
             for item in summaries:

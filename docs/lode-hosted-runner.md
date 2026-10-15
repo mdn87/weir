@@ -114,10 +114,11 @@ listing re-check before an actionable alert should use the Browse item read:
 `weir read <canonical_url> --engine ebay`. Lode owns interpreting
 `estimatedAvailabilities`, `itemEndDate` and the verification timestamp.
 
-On the hosted runner, `enrich` always fails with `engine_unavailable`. `oc` and
-`agent-browser` are local tools, and installing them on a CI runner would add a page
-scraper, which this integration does not do. Keep `enrich_candidates = false` for
-hosted veins.
+A runner without a page reader returns `engine_unavailable` for `enrich`. Lode's
+reader-install follow-up pins `agent-browser` and enables its public URL text-read
+path; this does not launch Chrome or reuse authenticated browser state. Keep
+`enrich_candidates = false` until a permitted listing read succeeds on that runner.
+A configured reader does not guarantee site access or useful listing evidence.
 
 ## Tests
 
