@@ -15,3 +15,20 @@ jobs:
       - run: python -m pip install -e .[test]
       - run: python -m unittest discover -s tests -v
       - run: weir engines
+
+  lode-contract:
+    # What Lode's hosted scout installs: a non-editable build on the runner's
+    # Python, with the CLI exercised from outside the checkout.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python -m pip install ".[test]"
+      - run: python -m unittest -v tests.test_lode_cli_contract tests.test_ebay_connector tests.test_hosted_review_regressions
+      - name: Packaged CLI runs outside the checkout
+        working-directory: ${{ runner.temp }}
+        run: |
+          weir engines
+          weir route https://www.ebay.com/itm/316000000001
