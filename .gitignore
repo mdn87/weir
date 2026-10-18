@@ -20,3 +20,6 @@ benchmarks/results/
 .claude/handoff-history/
 .Codex/handoff.md
 .Codex/handoff-history/
+
+# Local dias agent state
+.dias/
