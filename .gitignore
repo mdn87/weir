@@ -23,3 +23,6 @@ benchmarks/results/
 
 # Local dias agent state
 .dias/
+
+# Autowork isolated worktrees
+.worktrees/
