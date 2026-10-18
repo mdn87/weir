@@ -22,7 +22,9 @@ def _unwrap_npm_shim(shim_path: str) -> list[str] | None:
     match = _SHIM_SCRIPT_PATTERN.search(text)
     if not match:
         return None
-    script = (Path(shim_path).parent / match.group(1)).resolve()
+    # npm shims use backslash separators; normalize so POSIX resolves them too.
+    relative = match.group(1).replace(chr(92), "/")
+    script = (Path(shim_path).parent / relative).resolve()
     node = shutil.which("node")
     if not node or not script.is_file():
         return None
