@@ -1,0 +1,407 @@
+{
+  "schemaVersion": 1,
+  "projectId": "weir",
+  "projectLabel": "WEIR",
+  "chips": [
+    {
+      "schemaVersion": 1,
+      "chipId": "weir:add-durable-capture-persistence",
+      "projectId": "weir",
+      "title": "Add durable capture persistence",
+      "summary": "Persist normalized acquisitions and evidence so results survive process and schedule boundaries.",
+      "stage": "done",
+      "sequence": 10,
+      "prereqs": [],
+      "linkedRunIds": [],
+      "confidence": "inferred",
+      "aheadOfPrereqs": null,
+      "timestamps": {
+        "createdAt": "2026-08-27T07:12:00.000Z",
+        "updatedAt": "2026-09-27T22:07:55.000Z"
+      },
+      "evidence": [
+        {
+          "entryId": "ev:a824b2f47bab",
+          "at": "2026-08-27T07:12:00.000Z",
+          "kind": "created",
+          "message": "Derived from the 2026-08-27 milestone report; operator review required before commit."
+        },
+        {
+          "entryId": "ev:2609040w0001",
+          "at": "2026-09-04T02:15:47.000Z",
+          "kind": "stage-change",
+          "message": "ready -> done."
+        },
+        {
+          "entryId": "ev:2609040w0002",
+          "at": "2026-09-04T02:15:47.000Z",
+          "kind": "note",
+          "message": "ROADMAP P1 checked: capture hashing and artifact persistence boundary with immutable manifests and content-addressed artifacts; P1 gate met 2026-08-27."
+        },
+        {
+          "entryId": "ev:2609270w0001",
+          "at": "2026-09-27T22:07:55.000Z",
+          "kind": "note",
+          "message": "Reverified 2026-09-27: ROADMAP P1 box still checked, no commits since 2026-08-29, full test suite passes (336 passed, 1 skipped)."
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "chipId": "weir:define-cache-policy",
+      "projectId": "weir",
+      "title": "Define and implement cache policy",
+      "summary": "Specify freshness, invalidation, reuse, and failure behavior for supported acquisition paths.",
+      "stage": "done",
+      "sequence": 20,
+      "prereqs": [
+        "weir:add-durable-capture-persistence"
+      ],
+      "linkedRunIds": [],
+      "confidence": "inferred",
+      "aheadOfPrereqs": null,
+      "timestamps": {
+        "createdAt": "2026-08-27T07:12:00.000Z",
+        "updatedAt": "2026-09-27T22:07:55.000Z"
+      },
+      "evidence": [
+        {
+          "entryId": "ev:12e5cb1d8158",
+          "at": "2026-08-27T07:12:00.000Z",
+          "kind": "created",
+          "message": "Derived from the 2026-08-27 milestone report; operator review required before commit."
+        },
+        {
+          "entryId": "ev:2609040w0003",
+          "at": "2026-09-04T02:15:47.000Z",
+          "kind": "stage-change",
+          "message": "planned -> done."
+        },
+        {
+          "entryId": "ev:2609040w0004",
+          "at": "2026-09-04T02:15:47.000Z",
+          "kind": "note",
+          "message": "ROADMAP P1 checked: cache policy by data class, shared cache only for unauthenticated public evidence; P1 gate met 2026-08-27."
+        },
+        {
+          "entryId": "ev:2609270w0002",
+          "at": "2026-09-27T22:07:55.000Z",
+          "kind": "note",
+          "message": "Reverified 2026-09-27: ROADMAP P1 box still checked, no commits since 2026-08-29, full test suite passes (336 passed, 1 skipped)."
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "chipId": "weir:add-supported-site-profiles",
+      "projectId": "weir",
+      "title": "Add supported site profiles",
+      "summary": "Implement and validate bounded public acquisition profiles for the approved target sites.",
+      "stage": "done",
+      "sequence": 30,
+      "prereqs": [
+        "weir:define-cache-policy"
+      ],
+      "linkedRunIds": [],
+      "confidence": "inferred",
+      "aheadOfPrereqs": null,
+      "timestamps": {
+        "createdAt": "2026-08-27T07:12:00.000Z",
+        "updatedAt": "2026-09-27T22:07:55.000Z"
+      },
+      "evidence": [
+        {
+          "entryId": "ev:a7ced9276cb2",
+          "at": "2026-08-27T07:12:00.000Z",
+          "kind": "created",
+          "message": "Derived from the 2026-08-27 milestone report; operator review required before commit."
+        },
+        {
+          "entryId": "ev:2609040w0005",
+          "at": "2026-09-04T02:15:47.000Z",
+          "kind": "stage-change",
+          "message": "planned -> done."
+        },
+        {
+          "entryId": "ev:2609040w0006",
+          "at": "2026-09-04T02:15:47.000Z",
+          "kind": "note",
+          "message": "ROADMAP P1 checked: site profiles added only where benchmark evidence supports them (GitHub public + live eBay slice); P1 gate met 2026-08-27."
+        },
+        {
+          "entryId": "ev:2609270w0003",
+          "at": "2026-09-27T22:07:55.000Z",
+          "kind": "note",
+          "message": "Reverified 2026-09-27: ROADMAP P1 box still checked, no commits since 2026-08-29, full test suite passes (336 passed, 1 skipped)."
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "chipId": "weir:add-aitu-spans",
+      "projectId": "weir",
+      "title": "Add AITU spans",
+      "summary": "Emit the required acquisition, interpretation, transport, and usage spans across the broker path.",
+      "stage": "done",
+      "sequence": 40,
+      "prereqs": [
+        "weir:add-supported-site-profiles"
+      ],
+      "linkedRunIds": [],
+      "confidence": "inferred",
+      "aheadOfPrereqs": null,
+      "timestamps": {
+        "createdAt": "2026-08-27T07:12:00.000Z",
+        "updatedAt": "2026-09-27T22:07:55.000Z"
+      },
+      "evidence": [
+        {
+          "entryId": "ev:06c7c5e792a5",
+          "at": "2026-08-27T07:12:00.000Z",
+          "kind": "created",
+          "message": "Derived from the 2026-08-27 milestone report; operator review required before commit."
+        },
+        {
+          "entryId": "ev:2609040w0007",
+          "at": "2026-09-04T02:15:47.000Z",
+          "kind": "stage-change",
+          "message": "planned -> done."
+        },
+        {
+          "entryId": "ev:2609040w0008",
+          "at": "2026-09-04T02:15:47.000Z",
+          "kind": "note",
+          "message": "ROADMAP P1 checked: metadata-only AITU-compatible spans (web.route, fetch/search, fallback, cache, persistence); P1 gate met 2026-08-27."
+        },
+        {
+          "entryId": "ev:2609270w0004",
+          "at": "2026-09-27T22:07:55.000Z",
+          "kind": "note",
+          "message": "Reverified 2026-09-27: ROADMAP P1 box still checked, no commits since 2026-08-29, full test suite passes (336 passed, 1 skipped)."
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "chipId": "weir:gate-browser-session-work",
+      "projectId": "weir",
+      "title": "Gate browser-session work",
+      "summary": "Reassess browser-session automation after P1 proof, then build the contained observers, killable workers, fail-closed admission, and reversible synthetic effect slice.",
+      "stage": "done",
+      "sequence": 50,
+      "prereqs": [
+        "weir:add-aitu-spans"
+      ],
+      "linkedRunIds": [],
+      "confidence": "reported",
+      "aheadOfPrereqs": null,
+      "timestamps": {
+        "createdAt": "2026-08-27T07:12:00.000Z",
+        "updatedAt": "2026-09-27T22:07:55.000Z"
+      },
+      "evidence": [
+        {
+          "entryId": "ev:0674b5a05f7b",
+          "at": "2026-08-27T07:12:00.000Z",
+          "kind": "created",
+          "message": "Derived from the 2026-08-27 milestone report; operator review required before commit."
+        },
+        {
+          "entryId": "ev:2609040w0009",
+          "at": "2026-09-04T02:15:47.000Z",
+          "kind": "stage-change",
+          "message": "vague -> active."
+        },
+        {
+          "entryId": "ev:2609040w0010",
+          "at": "2026-09-04T02:15:47.000Z",
+          "kind": "note",
+          "message": "P1 prereqs proven (gate met 2026-08-27); P2 browser broker underway: killable worker transport, fail-closed production admission, Batch 8 remote approval relay activated."
+        },
+        {
+          "entryId": "ev:2609270w0005",
+          "at": "2026-09-27T22:07:55.000Z",
+          "kind": "stage-change",
+          "message": "active -> done."
+        },
+        {
+          "entryId": "ev:2609270w0006",
+          "at": "2026-09-27T22:07:55.000Z",
+          "kind": "note",
+          "message": "ROADMAP P2 source items all checked; local Batch 9 canary passed 2026-08-28 with restart replay and exactly one observed DOM effect."
+        },
+        {
+          "entryId": "ev:2609270w0007",
+          "at": "2026-09-27T22:07:55.000Z",
+          "kind": "note",
+          "message": "Only the deployment-controls provisioning box remains open in P2; it is tracked as its own chip."
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "chipId": "weir:activate-remote-approval-relay",
+      "projectId": "weir",
+      "title": "Activate the remote approval relay",
+      "summary": "Review, implement, scan, and activate the signed outbound pull relay for Fade decisions, then prove it with one bounded production canary.",
+      "stage": "done",
+      "sequence": 60,
+      "prereqs": [
+        "weir:gate-browser-session-work"
+      ],
+      "linkedRunIds": [],
+      "confidence": "reported",
+      "aheadOfPrereqs": null,
+      "timestamps": {
+        "createdAt": "2026-09-27T22:07:55.000Z",
+        "updatedAt": "2026-09-27T22:07:55.000Z"
+      },
+      "evidence": [
+        {
+          "entryId": "ev:2609270w0008",
+          "at": "2026-09-27T22:07:55.000Z",
+          "kind": "created",
+          "message": "Added 2026-09-27 from the Batch 8 acceptance record and remaining-integration plan; it was folded into the gate chip before."
+        },
+        {
+          "entryId": "ev:2609270w0009",
+          "at": "2026-09-27T22:07:55.000Z",
+          "kind": "stage-change",
+          "message": "planned -> done."
+        },
+        {
+          "entryId": "ev:2609270w0010",
+          "at": "2026-09-27T22:07:55.000Z",
+          "kind": "note",
+          "message": "Batch 8 production acceptance passed 2026-08-29: one reversible synthetic fill, single-use permit, no duplicate effect after poller restart, zero scan findings."
+        },
+        {
+          "entryId": "ev:2609270w0011",
+          "at": "2026-09-27T22:07:55.000Z",
+          "kind": "note",
+          "message": "Source defaults stay off and workstation polling still needs explicit process-local arming; the P3 roadmap box for this is stale but the acceptance record closes it."
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "chipId": "weir:provision-deployment-controls",
+      "projectId": "weir",
+      "title": "Provision and attest deployment controls",
+      "summary": "Provision the service identity, credential ACLs, lifecycle supervisor, and egress policy on the deployed host so fail-closed production admission can pass for real.",
+      "stage": "ready",
+      "sequence": 70,
+      "prereqs": [
+        "weir:activate-remote-approval-relay"
+      ],
+      "linkedRunIds": [],
+      "confidence": "reported",
+      "aheadOfPrereqs": null,
+      "timestamps": {
+        "createdAt": "2026-09-27T22:07:55.000Z",
+        "updatedAt": "2026-09-27T22:07:55.000Z"
+      },
+      "evidence": [
+        {
+          "entryId": "ev:2609270w0012",
+          "at": "2026-09-27T22:07:55.000Z",
+          "kind": "created",
+          "message": "Added 2026-09-27 from the one open ROADMAP P2 box and Wave E step 5 of the remaining-integration plan."
+        },
+        {
+          "entryId": "ev:2609270w0013",
+          "at": "2026-09-27T22:07:55.000Z",
+          "kind": "note",
+          "message": "Source admission already demands this evidence and refuses without it; the host mutations themselves are not done and need operator approval."
+        },
+        {
+          "entryId": "ev:2609270w0014",
+          "at": "2026-09-27T22:07:55.000Z",
+          "kind": "note",
+          "message": "No commits since 2026-08-29, so nothing is in flight; marked ready rather than active."
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "chipId": "weir:review-production-effect-policy",
+      "projectId": "weir",
+      "title": "Review the production effect policy",
+      "summary": "Write and separately review the production effect policy that would let general-purpose DOM interaction open beyond the local synthetic canary slice.",
+      "stage": "planned",
+      "sequence": 80,
+      "prereqs": [
+        "weir:provision-deployment-controls"
+      ],
+      "linkedRunIds": [],
+      "confidence": "inferred",
+      "aheadOfPrereqs": null,
+      "timestamps": {
+        "createdAt": "2026-09-27T22:07:55.000Z",
+        "updatedAt": "2026-09-27T22:07:55.000Z"
+      },
+      "evidence": [
+        {
+          "entryId": "ev:2609270w0015",
+          "at": "2026-09-27T22:07:55.000Z",
+          "kind": "created",
+          "message": "Added 2026-09-27 from the ROADMAP P2 gate note: production DOM interaction stays closed until deployment controls and a reviewed effect policy exist."
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "chipId": "weir:integrate-lugos-seats",
+      "projectId": "weir",
+      "title": "Integrate Lugos seats",
+      "summary": "Expose the MCP surface, task-router and run-profile policy, Autowork campaigns, Sulis records, AETA handoff, and HUD views so seats request web capabilities by intent.",
+      "stage": "vague",
+      "sequence": 90,
+      "prereqs": [
+        "weir:review-production-effect-policy"
+      ],
+      "linkedRunIds": [],
+      "confidence": "unknown",
+      "aheadOfPrereqs": null,
+      "timestamps": {
+        "createdAt": "2026-09-27T22:07:55.000Z",
+        "updatedAt": "2026-09-27T22:07:55.000Z"
+      },
+      "evidence": [
+        {
+          "entryId": "ev:2609270w0016",
+          "at": "2026-09-27T22:07:55.000Z",
+          "kind": "created",
+          "message": "Added 2026-09-27 from ROADMAP P4; only the hashed work context and the metadata-only session journal are checked so far."
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "chipId": "weir:add-visual-fallback",
+      "projectId": "weir",
+      "title": "Add visual fallback",
+      "summary": "Add the targeted crop adapter, Argus interpretation contract, visual verifier, and ambiguity classification so browser failures can escalate without bypassing policy.",
+      "stage": "vague",
+      "sequence": 100,
+      "prereqs": [
+        "weir:integrate-lugos-seats"
+      ],
+      "linkedRunIds": [],
+      "confidence": "unknown",
+      "aheadOfPrereqs": null,
+      "timestamps": {
+        "createdAt": "2026-09-27T22:07:55.000Z",
+        "updatedAt": "2026-09-27T22:07:55.000Z"
+      },
+      "evidence": [
+        {
+          "entryId": "ev:2609270w0017",
+          "at": "2026-09-27T22:07:55.000Z",
+          "kind": "created",
+          "message": "Added 2026-09-27 from ROADMAP P5; screenshot retention and the manual takeover path are already checked."
+        }
+      ]
+    }
+  ]
+}

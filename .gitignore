@@ -22,7 +22,9 @@ benchmarks/results/
 .Codex/handoff-history/
 
 # Local dias agent state
-.dias/
+/.dias/*
+!/.dias/chips.json
+!/.dias/status.json
 
 # Autowork isolated worktrees
 .worktrees/
