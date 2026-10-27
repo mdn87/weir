@@ -62,6 +62,11 @@ It seals every runtime file in `runtime-manifest.json`. Run the explicit install
 `-Mode Prepare -Bundle <absolute-bundle> -ManifestSha256 <manifest-sha256>` for read-only
 validation; use `-Mode Apply` from an elevated PowerShell for host changes.
 
+Installation and verification require PowerShell 7.3 or later with `Windows` or
+`Standard` native argument passing, which preserves embedded quotes in the SCM
+command and Python verifier arguments ([Microsoft reference](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_parsing#passing-arguments-that-contain-quote-characters)).
+The read-only service inspector uses the built-in Windows PowerShell 5.1.
+
 The installer verifies the manifest before and after copying. It creates the service disabled,
 protects code and credentials, installs the account-scoped block, and only then starts
 the service with manual start for denial-only acceptance. SCM permits two bounded

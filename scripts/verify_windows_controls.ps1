@@ -1,3 +1,4 @@
+#requires -Version 7.3
 [CmdletBinding()]
 param(
     [Parameter(Mandatory = $true)][string]$Root,
@@ -6,6 +7,7 @@ param(
 )
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
+if ($PSNativeCommandArgumentPassing -eq 'Legacy') { throw 'This verifier requires Standard or Windows native argument passing' }
 $configPath = Join-Path $Root 'deployment.json'
 $healthPath = Join-Path $Root 'status/health.json'
 $config = Get-Content -Raw -LiteralPath $configPath | ConvertFrom-Json

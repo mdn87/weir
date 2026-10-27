@@ -1,3 +1,4 @@
+#requires -Version 7.3
 [CmdletBinding()]
 param(
     [ValidateSet('Prepare', 'Apply', 'Verify', 'Rollback')][string]$Mode = 'Prepare',
@@ -7,6 +8,7 @@ param(
 )
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
+if ($PSNativeCommandArgumentPassing -eq 'Legacy') { throw 'This installer requires Standard or Windows native argument passing' }
 $serviceName = 'WeirAdmission'
 $ruleName = 'WeirAdmission-DenyOutbound'
 $bundlePath = $null
