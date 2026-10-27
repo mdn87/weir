@@ -45,10 +45,15 @@ try {
     $manifest = Get-Content -Raw -LiteralPath $manifestPath | ConvertFrom-Json
     if ($manifest.schema_version -ne 1 -or $manifest.files.Count -lt 1 -or $manifest.files.Count -gt 20000) { throw 'Invalid runtime manifest' }
     $requiredPaths = @($root, (Join-Path $root 'deployment.json'), $manifestPath, $config.python_executable, $runtime)
+    $intermediate = [IO.Directory]::GetParent($runtime)
+    while (-not $intermediate.FullName.Equals($root, [StringComparison]::OrdinalIgnoreCase)) {
+        $requiredPaths += $intermediate.FullName
+        $intermediate = $intermediate.Parent
+    }
     $paths = @($requiredPaths | Select-Object -Unique | ForEach-Object { $entry = Read-AclRecord $_; Assert-ReadOnly $entry; $entry })
     $ancestors = @()
     $ancestor = [IO.Directory]::GetParent($root)
-    while ($null -ne $ancestor -and $null -ne $ancestor.Parent) {
+    while ($null -ne $ancestor) {
         $ancestors += Read-AclRecord $ancestor.FullName
         $ancestor = $ancestor.Parent
     }

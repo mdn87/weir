@@ -32,7 +32,9 @@ _WRITE_RIGHTS = 0x40000000 | 0x10000000 | 0x000D0156
 _READ_RIGHTS = 0x80000000 | 0x10000000 | 1
 
 
-def _path(value: object) -> str:
+def _path(value: object, *, allow_drive_root: bool = False) -> str:
+    if allow_drive_root and isinstance(value, str) and re.fullmatch(r"[A-Za-z]:\\", value):
+        return ntpath.normcase(value)
     if not isinstance(value, str) or not re.match(r"^[A-Za-z]:\\", value):
         raise ValueError("deployment paths must be local absolute Windows paths")
     if any(c in value for c in ('\0', '\r', '\n', '"')) or ":" in value[2:]:
@@ -86,6 +88,8 @@ class WindowsDeployment:
             raise ValueError("the service executable must be in its protected deployment")
         if not _within(value["base_python_root"], value["root"]):
             raise ValueError("external base Python dependencies are not permitted")
+        if _path(value["python_executable"]) != _path(ntpath.join(value["base_python_root"], "python.exe")):
+            raise ValueError("the interpreter must belong to the sealed runtime")
         WorkerResourceLimits(value["memory_bytes"], value["process_count"]).validate()
         sources = value["credentials"]
         if not isinstance(sources, list) or not 1 <= len(sources) <= 16:
@@ -138,8 +142,9 @@ def _check_acl(record: dict, service_sid: str, *, credential: bool) -> None:
         _deny(type(ace.get("allow")) is bool and type(ace.get("inherit_only")) is bool, "invalid ACE")
         if ace["inherit_only"]:
             continue
-        # Reject service deny ACEs rather than attempting a second AccessCheck engine.
+        # Credential ACLs accept only allow ACEs; avoid approximating group AccessCheck.
         if not ace["allow"]:
+            _deny(not credential, "credential has an unsupported deny ACE")
             _deny(ace.get("sid") not in {service_sid, "S-1-1-0", "S-1-5-11"}, "service access denied")
             continue
         sid, rights = ace.get("sid"), ace["rights"]
@@ -193,19 +198,26 @@ def validate_host_snapshot(
             observed_paths.add(key)
             _check_acl(record, config.service_sid, credential=False)
         required = {config.root, ntpath.join(config.root, "deployment.json"), config.python_executable, config.base_python_root}
+        intermediate = ntpath.dirname(config.base_python_root)
+        while _path(intermediate) != _path(config.root):
+            required.add(intermediate)
+            intermediate = ntpath.dirname(intermediate)
         _deny({_path(item) for item in required} <= observed_paths, "incomplete runtime inspection")
         ancestors = facts["ancestors"]
         expected_ancestors = []
         ancestor = ntpath.dirname(config.root)
-        while ancestor != ntpath.dirname(ancestor):
-            expected_ancestors.append(_path(ancestor))
-            ancestor = ntpath.dirname(ancestor)
-        _deny([_path(item["path"]) for item in ancestors] == expected_ancestors, "missing path ancestors")
+        while True:
+            expected_ancestors.append(_path(ancestor, allow_drive_root=True))
+            parent = ntpath.dirname(ancestor)
+            if ancestor == parent:
+                break
+            ancestor = parent
+        _deny([_path(item["path"], allow_drive_root=True) for item in ancestors] == expected_ancestors, "missing path ancestors")
         for ancestor in ancestors:
             _deny(ancestor["reparse"] is False and ancestor["owner"] in _ADMIN_SIDS, "untrusted path ancestor")
             for ace in ancestor["aces"]:
                 if ace["allow"] and not ace["inherit_only"] and ace["sid"] not in _ADMIN_SIDS:
-                    _deny(not ace["rights"] & 0x000D0040, "replaceable path ancestor")
+                    _deny(not ace["rights"] & 0x100D0040, "replaceable path ancestor")
         credentials = facts["credentials"]
         _deny(isinstance(credentials, list) and len(credentials) == len(config.credentials), "missing credential source")
         lookup = {_path(item["path"]): item for item in credentials}

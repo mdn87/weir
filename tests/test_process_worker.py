@@ -43,6 +43,12 @@ from weir.work_context import WorkContext, WorkContextSource
 from weir.profiles import SiteProfile, SiteProfileRegistry
 
 
+def _write_pid_marker(path: Path, process_id: int) -> None:
+    temporary = path.with_suffix(".tmp")
+    temporary.write_text(str(process_id), encoding="ascii")
+    temporary.replace(path)
+
+
 class FailingWorker(ScriptedBrowserWorker):
     def open_session(self, spec: SessionSpec, command: WorkerCommand) -> str:
         raise RuntimeError("secret child failure detail")
@@ -65,7 +71,7 @@ class ProcessTreeWorker(ScriptedBrowserWorker):
             [sys.executable, "-c", "import time; time.sleep(30)"],
             creationflags=creation_flags,
         )
-        self.marker.write_text(str(child.pid), encoding="ascii")
+        _write_pid_marker(self.marker, child.pid)
         time.sleep(30)
         return super().observe(
             session_id,
@@ -149,7 +155,7 @@ def _parent_death_host(worker_marker: str, descendant_marker: str) -> None:
         call_timeout_seconds=30,
         shutdown_timeout_seconds=2,
     )
-    Path(worker_marker).write_text(str(worker.process_id), encoding="ascii")
+    _write_pid_marker(Path(worker_marker), worker.process_id)
     worker.observe(
         "session-process-1",
         _command("observe", {"session_id": "session-process-1"}, seconds=30),

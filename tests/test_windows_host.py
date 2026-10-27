@@ -71,7 +71,7 @@ def snapshot() -> dict:
         "supervisor": {**process, "pid": 100, "parent_pid": 88},
         "worker": {**process, "pid": 101, "parent_pid": 100, "appcontainer_sid": APP, "integrity": "S-1-16-4096"},
         "paths": [acl(ROOT), acl(ROOT + r"\deployment.json"), acl(PYTHON), acl(ROOT + r"\runtime")],
-        "ancestors": [acl(r"C:\ProgramData\Lugos"), acl(r"C:\ProgramData")],
+        "ancestors": [acl(r"C:\ProgramData\Lugos"), acl(r"C:\ProgramData"), acl("C:\\")],
         "closure": {"manifest_sha256": "d" * 64, "verified_files": 50},
         "loopback_exemptions": [],
         "credentials": [acl(item["path"]) for item in spec.credentials],
@@ -202,6 +202,24 @@ class WindowsHostTests(unittest.TestCase):
                 run_supervisor(deployment(), threading.Event())
             process.assert_not_called()
             profile.assert_not_called()
+
+    def test_intermediate_runtime_directories_cannot_be_omitted(self):
+        data = deployment().to_dict()
+        data["base_python_root"] = ROOT + r"\releases\sealed\runtime"
+        data["python_executable"] = data["base_python_root"] + r"\python.exe"
+        config = WindowsDeployment.from_dict(data)
+        facts = snapshot()
+        facts["service"]["command"] = config.command
+        for kind in ("supervisor", "worker"):
+            facts[kind]["executable"] = config.python_executable
+        facts["paths"] = [acl(ROOT), acl(ROOT + r"\deployment.json"), acl(config.python_executable), acl(config.base_python_root)]
+        with self.assertRaises(EnginePolicyBlocked):
+            validate_host_snapshot(config, facts, supervisor_pid=100, worker_pid=101)
+        facts["paths"].extend([acl(ROOT + r"\releases"), acl(ROOT + r"\releases\sealed")])
+        validate_host_snapshot(config, facts, supervisor_pid=100, worker_pid=101)
+        facts["paths"][-1]["aces"].append({"sid": SID, "rights": FULL, "allow": True, "inherit_only": False})
+        with self.assertRaises(EnginePolicyBlocked):
+            validate_host_snapshot(config, facts, supervisor_pid=100, worker_pid=101)
 
     def test_deployment_rejects_escape_and_duplicate_callers(self):
         original = deployment().to_dict()
