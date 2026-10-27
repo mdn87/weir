@@ -289,7 +289,7 @@
       "projectId": "weir",
       "title": "Provision and attest deployment controls",
       "summary": "Provision the service identity, credential ACLs, lifecycle supervisor, and egress policy on the deployed host so fail-closed production admission can pass for real.",
-      "stage": "active",
+      "stage": "done",
       "sequence": 70,
       "prereqs": [
         "weir:activate-remote-approval-relay"
@@ -299,7 +299,7 @@
       "aheadOfPrereqs": null,
       "timestamps": {
         "createdAt": "2026-09-27T22:07:55.000Z",
-        "updatedAt": "2026-10-27T00:19:40.640Z"
+        "updatedAt": "2026-10-27T02:29:30.820Z"
       },
       "evidence": [
         {
@@ -331,6 +331,18 @@
           "at": "2026-10-27T00:19:40.640Z",
           "kind": "note",
           "message": "Native AppContainer, named Job limits, credential/supervisor denial, zero IPv4/IPv6 TCP/UDP delivery and descendant cleanup passed. Elevated SCM acceptance remains."
+        },
+        {
+          "entryId": "ev:2610267p0004",
+          "at": "2026-10-27T02:29:30.820Z",
+          "kind": "stage-change",
+          "message": "active -> done. Windows host acceptance passed on 4070pc; dedicated service remains deny-only."
+        },
+        {
+          "entryId": "ev:2610267p0005",
+          "at": "2026-10-27T02:29:30.820Z",
+          "kind": "note",
+          "message": "Independent readback, four zero-operation tamper denials, worker/descendant cleanup and SCM restart passed; see batch7p-windows-controls-20261026.json."
         }
       ]
     },
@@ -340,7 +352,7 @@
       "projectId": "weir",
       "title": "Review the production effect policy",
       "summary": "Write and separately review the production effect policy that would let general-purpose DOM interaction open beyond the local synthetic canary slice.",
-      "stage": "planned",
+      "stage": "ready",
       "sequence": 80,
       "prereqs": [
         "weir:provision-deployment-controls"
@@ -350,7 +362,7 @@
       "aheadOfPrereqs": null,
       "timestamps": {
         "createdAt": "2026-09-27T22:07:55.000Z",
-        "updatedAt": "2026-09-27T22:07:55.000Z"
+        "updatedAt": "2026-10-27T02:29:30.820Z"
       },
       "evidence": [
         {
@@ -358,6 +370,12 @@
           "at": "2026-09-27T22:07:55.000Z",
           "kind": "created",
           "message": "Added 2026-09-27 from the ROADMAP P2 gate note: production DOM interaction stays closed until deployment controls and a reviewed effect policy exist."
+        },
+        {
+          "entryId": "ev:2610267p0006",
+          "at": "2026-10-27T02:29:30.820Z",
+          "kind": "stage-change",
+          "message": "planned -> ready. Windows deployment controls passed; production effect policy and browser compatibility remain separate work."
         }
       ]
     },

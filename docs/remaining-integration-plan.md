@@ -9,10 +9,11 @@
 
 ## Implementation status — 2026-08-29
 
-Update 2026-10-26: Batch 7P Windows source and native sandbox proof are implemented.
-The explicit deny-only installer and elevated host acceptance procedure are recorded
-in [Windows deployment](windows-deployment.md). A production effect policy/adapter
-remains separate work. The roadmap now distinguishes the shipped MCP, Autowork and
+Update 2026-10-26: Batch 7P Windows deployment controls passed independent live host,
+tamper and restart acceptance on `4070pc`. The deny-only service and acceptance record
+are documented in [Windows deployment](windows-deployment.md). Production effect
+policy, browser compatibility and Linux deployment remain separate work.
+The roadmap now distinguishes the shipped MCP, Autowork and
 HUD action projection from broader unimplemented seat integration.
 
 The approved source work is present for WEIR Batch 2D and Batch 7, APU Batch 1B, Dias

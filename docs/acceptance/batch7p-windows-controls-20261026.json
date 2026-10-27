@@ -1,0 +1,85 @@
+{
+  "state": "passed",
+  "started_at": "2026-10-27T02:20:36.2262322Z",
+  "completed_at": "2026-10-27T02:27:04.8644275Z",
+  "action_endpoint_enabled": false,
+  "denial_canaries_exercised": true,
+  "checks": {
+    "baseline": {
+      "action_endpoint_enabled": false,
+      "checked_at": "2026-10-26T22:21:22.667448-04:00",
+      "delivered_packets": 0,
+      "descendant_created": 134375412736935379,
+      "descendant_pid": 93832,
+      "job": {
+        "flags": 8712,
+        "member": true,
+        "memory_bytes": 536870912,
+        "process_count": 8
+      },
+      "manifest_sha256": "1c8c3d1147c5b2ce1e4439971ccccc8b58a2540f26c12ca8409c9823ec1883b4",
+      "positive_controls": 4,
+      "process_binding": {
+        "host_id": "MATT",
+        "isolation_id": "S-1-15-2-1321981134-495591124-1804494895-798593616-2527888119-2170330349-847074576",
+        "supervisor_created": 134375412359861525,
+        "supervisor_pid": 44180,
+        "worker_created": 134375412537015583
+      },
+      "state": "verified",
+      "worker_pid": 46384
+    },
+    "disabled_firewall": {
+      "state": "denied",
+      "worker_operations_while_denied": 0,
+      "checked_at": "2026-10-26T22:22:05.309031-04:00"
+    },
+    "narrowed_firewall": {
+      "state": "denied",
+      "worker_operations_while_denied": 0,
+      "checked_at": "2026-10-26T22:23:14.93394-04:00"
+    },
+    "inaccessible_credential": {
+      "state": "denied",
+      "worker_operations_while_denied": 0,
+      "checked_at": "2026-10-26T22:24:15.2894-04:00"
+    },
+    "writable_runtime_fixture": {
+      "state": "denied",
+      "worker_operations_while_denied": 0,
+      "checked_at": "2026-10-26T22:24:58.375217-04:00"
+    },
+    "parent_death": {
+      "worker_and_descendant_dead": true
+    },
+    "restart": {
+      "new_worker_instance": true,
+      "old_binding_differs": true,
+      "new_supervisor_instance": true
+    },
+    "final": {
+      "action_endpoint_enabled": false,
+      "checked_at": "2026-10-26T22:26:48.593545-04:00",
+      "delivered_packets": 0,
+      "descendant_created": 134375415825056464,
+      "descendant_pid": 98296,
+      "job": {
+        "flags": 8712,
+        "member": true,
+        "memory_bytes": 536870912,
+        "process_count": 8
+      },
+      "manifest_sha256": "1c8c3d1147c5b2ce1e4439971ccccc8b58a2540f26c12ca8409c9823ec1883b4",
+      "positive_controls": 4,
+      "process_binding": {
+        "host_id": "MATT",
+        "isolation_id": "S-1-15-2-1321981134-495591124-1804494895-798593616-2527888119-2170330349-847074576",
+        "supervisor_created": 134375415507351629,
+        "supervisor_pid": 39184,
+        "worker_created": 134375415670881644
+      },
+      "state": "verified",
+      "worker_pid": 11332
+    }
+  }
+}

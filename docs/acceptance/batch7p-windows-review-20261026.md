@@ -43,13 +43,30 @@ administrator/SYSTEM-only DACL counted zero, and restoration reproduced the orig
 SDDL exactly. Acceptance now checks the installed denial fixture before observing the
 service, so a fixture that failed to remove access cannot pass unnoticed.
 
+All four denial checks and parent-death cleanup passed before the commissioning run
+hit an exhausted SCM restart counter (event 7034 recorded 11 startup failures).
+Independent recovery review `20261027-021526-e18d08e3c2a3` concurred with recreating
+only the stopped, disabled, task-owned service registration. The recovery preserved
+files, caller credentials, firewall and AppContainer profile, and independently
+confirmed the same virtual SID, exact service policy and unchanged configuration.
+The full acceptance sequence was then restarted with a fresh SCM registration.
+This one-time recovery is outside the installer's automatic behavior.
+
 ## Verification status
 
-The real AppContainer worker and descendant passed credential-read and supervisor-
-modification denial. Four reachable IPv4/IPv6 TCP/UDP controls received zero worker
-packets. Independent Job Object query confirmed membership, 512 MiB memory and eight
-processes; the descendant exited on worker closure. These are native sandbox proofs,
-not an SCM deployment acceptance record.
+Full elevated host acceptance passed at 2026-10-27 02:27 UTC (2026-10-26 locally).
+The [native report](batch7p-windows-controls-20261026.json) records independent live
+SCM/ACL/firewall/runtime readback; disabled and narrowed firewall, inaccessible
+credential and writable-runtime denial with zero worker operations; worker and
+descendant death on supervisor exit; and SCM restart with new process bindings.
 
-The full Windows suite completed 368 tests with four platform skips. Elevated service
-installation and automatic host tamper/restart acceptance are being checked separately.
+The real AppContainer worker and descendant passed credential-read and each tested
+supervisor modification-right denial. Four reachable IPv4/IPv6 TCP/UDP controls
+received zero worker packets. Independent Job Object query confirmed membership,
+512 MiB memory and eight processes. SCM event 7031 recorded the accepted crash as
+failure 1 and restarted the service after five seconds; one configured recovery
+remains in the current 24-hour window.
+
+The full Windows suite completed 368 tests with four platform skips. Packaged CLI
+checks outside the checkout and both GitHub CI jobs passed. Production effects,
+GUI/browser compatibility and Linux host admission remain outside this acceptance.

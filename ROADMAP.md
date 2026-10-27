@@ -74,10 +74,11 @@ immutable persistence, and no authenticated browser dependency.
   sources, lifecycle supervision, and enforced egress evidence. Windows Job Objects
   apply memory/process limits directly; Linux requires a prepared cgroup verifier and
   cannot downclass a process group into resource evidence.
-- [ ] Provision and attest the deployment-specific service identity, credential ACLs,
-  supervisor, and firewall/AppContainer or network-namespace/nftables policy. Windows
-  source, installer and native AppContainer proof are implemented in 0.4.0;
-  elevated host acceptance is tracked in `docs/windows-deployment.md`.
+- [x] Provision and attest the Windows deployment's service identity, credential ACLs,
+  supervisor, and firewall/AppContainer policy. Version 0.4.0 passed independent
+  host, tamper and restart acceptance on `4070pc` on 2026-10-26; see
+  `docs/acceptance/batch7p-windows-controls-20261026.json`.
+  Linux host admission and deployment remain unimplemented.
 - [x] Add structured observations and deterministic semantic locators.
 - [x] Add immutable browser-observation and screenshot evidence capture.
 - [x] Add the reversible local synthetic DOM-interaction surface behind a Fade-issued

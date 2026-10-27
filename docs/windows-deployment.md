@@ -1,6 +1,6 @@
 # Windows production controls (Batch 7P)
 
-Status: source implemented; elevated host acceptance remains pending. No production website actions are authorized by
+Status: independent native host acceptance passed on 2026-10-26. No production website actions are authorized by
 this deployment. The target is the inventoried Windows 11 workstation `4070pc`
 (Windows computer name `MATT`). Linux needs a production process-binding and host provider.
 
@@ -127,11 +127,22 @@ Unit tests additionally cover wrong process generations and evidence expiry. Res
 5. The full repository suite and packaged-wheel checks pass. An independent review
    resolves in-scope findings before deployment is accepted.
 
-Native development proof passed on `4070pc`: a real low-integrity AppContainer worker
-and descendant could neither read a credential canary nor modify the supervisor;
-four reachable endpoint controls saw zero attempted worker packets. Independent named
-Job Object query confirmed 512 MiB and eight-process limits, and the descendant died
-on worker closure. Full SCM/ACL/firewall acceptance is a separate elevated check.
+Native host acceptance passed on `4070pc` at 2026-10-27 02:27 UTC (2026-10-26 locally).
+The [recorded report](acceptance/batch7p-windows-controls-20261026.json) contains the
+independent baseline/final readbacks, four zero-operation tamper denials, worker and
+descendant death, and SCM restart with new process creation times. The low-integrity,
+zero-capability AppContainer probes could not read caller credentials, obtain any of
+the four tested supervisor modification rights, or deliver packets to four reachable
+IPv4/IPv6 TCP/UDP endpoints. Named Job Object readback confirmed 512 MiB and eight
+processes. Acceptance took about seven minutes including staging and deliberately
+consumed one of the two configured crash restarts. The service remains running with
+manual startup and no action endpoint.
+
+The sealed runtime manifest SHA-256 is
+`1c8c3d1147c5b2ce1e4439971ccccc8b58a2540f26c12ca8409c9823ec1883b4`.
+The full Windows suite ran 368 tests with four platform skips; packaged CLI checks and
+both GitHub CI jobs passed. [Review and recovery details](acceptance/batch7p-windows-review-20261026.md)
+record the independent reviews and commissioning corrections.
 
 The independent design review identified same-identity credential access, startup
 ordering, PID reuse, incomplete runtime closure, narrowed firewall filters and SCM

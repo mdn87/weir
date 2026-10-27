@@ -4,17 +4,17 @@
   "projectLabel": "WEIR",
   "assessmentState": "scored",
   "assessmentScope": "current-milestone",
-  "percentComplete": 90,
+  "percentComplete": 100,
   "milestonePhase": "operational-proof",
   "portfolioGroup": "acquisition",
   "displayPriority": 50,
-  "assessedAt": "2026-10-27T00:19:40.640Z",
+  "assessedAt": "2026-10-27T02:29:30.820Z",
   "confidence": "reported",
-  "currentMilestone": "Batch 7P Windows admission source and native sandbox proof implemented; elevated SCM/ACL/firewall acceptance is next. Production DOM effects remain disabled.",
-  "remainingSummary": "Complete elevated host acceptance, then separately implement and review a production effect policy. Broader seat integration and visual fallback remain.",
-  "nextChipId": "weir:provision-deployment-controls",
+  "currentMilestone": "Batch 7P Windows deployment controls passed independent live acceptance on 4070pc. Production website actions remain disabled.",
+  "remainingSummary": "Define and review the production effect policy and browser deployment. Broader seat integration, Linux host admission and visual fallback remain.",
+  "nextChipId": "weir:review-production-effect-policy",
   "source": {
-    "label": "907a552, native AppContainer proof, full unittest run, and accepted sibling rollout records",
+    "label": "PR #3; native Windows acceptance; 368 unittest cases with four skips; green CI",
     "updatedAt": "2026-10-27"
   }
 }
