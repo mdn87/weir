@@ -273,14 +273,17 @@ class ProcessBrowserWorker(AbstractContextManager["ProcessBrowserWorker"]):
         )
         try:
             self._process.start()
-        except Exception:
+        except Exception as exc:
             parent_connection.close()
             child_connection.close()
             if watchdog_receiver is not None:
                 watchdog_receiver.close()
             self._close_watchdog()
+            detail = type(exc).__name__
+            if isinstance(exc, OSError):
+                detail += f" winerror={getattr(exc, 'winerror', None)} errno={exc.errno}"
             raise WorkerProcessStartupError(
-                "WEIR could not start the browser worker process"
+                "WEIR could not start the browser worker process: " + detail
             ) from None
         child_connection.close()
         if watchdog_receiver is not None:
@@ -612,12 +615,29 @@ class ProcessBrowserWorker(AbstractContextManager["ProcessBrowserWorker"]):
             raise WorkerProcessStartupError(
                 f"browser worker did not complete {expected_kind} before its deadline"
             ) from None
-        except (EOFError, OSError, TypeError, ValueError):
+        except (EOFError, OSError, TypeError, ValueError) as exc:
+            self._process.join(timeout=0.05)
+            detail = type(exc).__name__
+            if isinstance(exc, OSError):
+                detail += f" winerror={getattr(exc, 'winerror', None)} errno={exc.errno}"
             raise WorkerProcessStartupError(
-                f"browser worker exited during {expected_kind}"
+                f"browser worker startup failed during {expected_kind}: {detail} (exitcode={self._process.exitcode})"
             ) from None
         if not isinstance(message, dict):
             raise WorkerProcessStartupError("browser worker startup message is invalid")
+        if message.get("kind") == "bootstrap_error":
+            import builtins
+            name = message.get("error_type")
+            error_class = getattr(builtins, name, None) if isinstance(name, str) else None
+            safe_name = name if isinstance(error_class, type) and issubclass(error_class, BaseException) else "BootstrapFailure"
+            codes = [message.get(key) for key in ("winerror", "errno")]
+            codes = [code if type(code) is int and -(2**31) <= code < 2**32 else None for code in codes]
+            import sys
+            module = message.get("module")
+            module = module if isinstance(module, str) and module in sys.stdlib_module_names | {"weir", "yaml", "cryptography", "cffi", "_cffi_backend", "pycparser"} else "unknown"
+            loader = message.get("loader_error")
+            loader = loader if type(loader) is int and loader in (5, 126, 127, 1114) else None
+            raise WorkerProcessStartupError(f"sandbox bootstrap failed: {safe_name} winerror={codes[0]} errno={codes[1]} module={module} loader_error={loader}")
         if message.get("kind") == "startup_error":
             raise WorkerProcessStartupError("browser worker factory failed safely")
         if message.get("kind") != expected_kind:
@@ -1201,6 +1221,9 @@ def _worker_process_main(
         start = _child_receive(connection, max_request_bytes)
         if not isinstance(start, dict) or start.get("kind") != "start":
             return
+        if os.name == "nt":
+            from weir.browser.windows_sandbox import finish_bootstrap_diagnostics
+            finish_bootstrap_diagnostics()
         try:
             worker = factory()
             descriptor = worker.descriptor

@@ -13,7 +13,7 @@ import threading
 import time
 
 from weir.browser.admission import ProductionAdmission, WorkerResourceLimits
-from weir.browser.process_worker import ProcessBrowserWorker
+from weir.browser.process_worker import ProcessBrowserWorker, WorkerProcessStartupError
 from weir.browser.windows_host import (
     WindowsDeployment, WindowsHostInspector, read_host_snapshot,
     validate_host_snapshot, validate_worker_isolation,
@@ -46,7 +46,7 @@ def _write_status(config: WindowsDeployment, payload: dict) -> None:
 
 
 def _failure_detail(exc: BaseException) -> str:
-    if isinstance(exc, EnginePolicyBlocked):
+    if isinstance(exc, (EnginePolicyBlocked, WorkerProcessStartupError)):
         return str(exc)
     if isinstance(exc, OSError):
         return f"{type(exc).__name__}: winerror={getattr(exc, 'winerror', None)}, errno={exc.errno}"

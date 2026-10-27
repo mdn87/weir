@@ -15,6 +15,11 @@ A worker with no browser/action capabilities
 proves the controls. It never serves the WEIR HTTP action endpoint, polls the relay,
 loads a browser profile, or enables external effects.
 
+The service runs in noninteractive Session 0. Its kernel-only denial probe does not
+import the supervisor's SCM entrypoint or `ctypes`, whose DLL initialization failed
+in this AppContainer during native acceptance. GUI/browser compatibility is not
+claimed by this probe and remains part of a future browser/effect deployment.
+
 The service uses the existing Windows Service Control Manager, not a new scheduler.
 The account has no administrator membership. Its executable/configuration and caller
 credential files live in an administrator-owned deployment directory. SYSTEM and
@@ -79,8 +84,11 @@ The read-only service inspector uses the built-in Windows PowerShell 5.1 with
 process-scoped `RemoteSigned` for its locally installed, manifest-verified scripts.
 Machine and group policies retain their normal precedence. This avoids depending on
 the interactive operator's per-user execution policy when running as a service.
+The inspector uses only the built-in Windows PowerShell module directory, avoiding
+incompatible or user-controlled modules inherited from an operator's PowerShell 7 shell.
 
 The installer verifies the manifest before and after copying. It creates the service disabled,
+stages each new release privately until validation and AppContainer access are applied,
 protects code and credentials, installs the account-scoped block, and only then starts
 the service with manual start for denial-only acceptance. SCM permits two bounded
 automatic crash restarts (5 and 30 seconds, reset after a day). The service token has

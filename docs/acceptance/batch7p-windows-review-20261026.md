@@ -26,6 +26,17 @@ The primary review also found omitted intermediate release directories and the d
 root; both now participate in live ACL validation. CI exposed a pre-existing PID-file
 publication race in the parent-death test; PID markers now publish atomically.
 
+Focused correction review `20261027-004019-37629aa583a9` examined `907a552..30ea6ba`
+and reported no blocking findings. It verified protected directory creation, rejection
+of unsafe existing objects, credential deny-ACE handling and recoverable installation.
+
+Native service acceptance then identified and corrected operator/service execution
+policy differences, PowerShell 7 module-path inheritance, numeric firewall enforcement
+arrays, the virtual account's high-integrity supervisor token, and Session 0 bootstrap
+DLL initialization. The worker probe remains headless; this does not establish GUI or
+browser compatibility. Bootstrap diagnostics return only bounded exception types,
+known module names and numeric codes, never exception text or credential values.
+
 ## Verification status
 
 The real AppContainer worker and descendant passed credential-read and supervisor-
@@ -34,5 +45,5 @@ packets. Independent Job Object query confirmed membership, 512 MiB memory and e
 processes; the descendant exited on worker closure. These are native sandbox proofs,
 not an SCM deployment acceptance record.
 
-Elevated service installation and automatic host tamper/restart acceptance remain
-pending. The implementation corrections receive a focused review before installation.
+The full Windows suite completed 368 tests with four platform skips. Elevated service
+installation and automatic host tamper/restart acceptance are being checked separately.

@@ -97,6 +97,7 @@ function Set-DirectoryPolicy([string]$Path, [string]$ServiceSid, [switch]$Creden
 }
 
 function Assert-Runtime([string]$Runtime, [object]$Manifest) {
+    Assert-NoReparse $Runtime
     $items = @(Get-ChildItem -LiteralPath $Runtime -Recurse -Force)
     foreach ($item in $items) {
         if ($item.Attributes -band [IO.FileAttributes]::ReparsePoint) { throw 'Runtime contains a reparse point' }
@@ -107,7 +108,6 @@ function Assert-Runtime([string]$Runtime, [object]$Manifest) {
     foreach ($entry in $Manifest.files) {
         $path = [IO.Path]::GetFullPath((Join-Path $Runtime $entry.path))
         if (-not $path.StartsWith($Runtime + '\', [StringComparison]::OrdinalIgnoreCase) -or $seen.ContainsKey($path)) { throw 'Invalid manifest path' }
-        Assert-NoReparse $path
         $seen[$path] = $true
         if ((Get-FileHash -LiteralPath $path -Algorithm SHA256).Hash.ToLowerInvariant() -cne $entry.sha256) { throw 'Runtime hash differs from reviewed manifest' }
     }
@@ -192,6 +192,7 @@ try {
     $release = Join-Path (Join-Path $rootPath 'releases') ($ManifestSha256 + '-' + [guid]::NewGuid().ToString('N'))
     $runtime = Join-Path $release 'runtime'
     New-Item -ItemType Directory -Path $release | Out-Null
+    Set-DirectoryPolicy $release $serviceSid -Credentials
     Copy-Item -LiteralPath $sourceRuntime -Destination $runtime -Recurse
     Assert-Runtime $runtime $manifest
     $python = Join-Path $runtime 'python.exe'

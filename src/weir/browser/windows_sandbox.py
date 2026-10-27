@@ -9,6 +9,67 @@ import os
 import subprocess
 import sys
 
+_bootstrap_diagnostics = None
+_bootstrap_stderr = None
+
+
+def finish_bootstrap_diagnostics() -> None:
+    global _bootstrap_diagnostics, _bootstrap_stderr
+    if _bootstrap_diagnostics is not None:
+        _bootstrap_diagnostics.close()
+        _bootstrap_diagnostics = None
+        sys.stderr = _bootstrap_stderr
+
+
+def sandbox_spawn_main(*, pipe_handle: int, diagnostic_handle: int) -> None:
+    """Report bounded native/bootstrap failures before the worker factory starts."""
+    import json
+    from multiprocessing import connection, spawn
+    global _bootstrap_diagnostics, _bootstrap_stderr
+
+    _bootstrap_diagnostics = connection.PipeConnection(diagnostic_handle, readable=False, writable=True)
+    _bootstrap_stderr = sys.stderr
+    reported = False
+
+    def report(exc):
+        nonlocal reported
+        if reported or _bootstrap_diagnostics is None or exc is None:
+            return
+        reported = True
+        name = type(exc).__name__ if type(exc).__module__ == "builtins" else "BootstrapFailure"
+        codes = {key: getattr(exc, key, None) for key in ("winerror", "errno")}
+        codes = {key: value if type(value) is int and -(2**31) <= value < 2**32 else None for key, value in codes.items()}
+        payload = {"kind": "bootstrap_error", "error_type": name, **codes}
+        if isinstance(exc, ImportError):
+            root = (exc.name or "").split(".")[0]
+            payload["module"] = root if root in sys.stdlib_module_names | {"weir", "yaml", "cryptography", "cffi", "_cffi_backend", "pycparser"} else "unknown"
+            payload["loader_error"] = next((code for text, code in (
+                ("Access is denied", 5), ("specified module could not be found", 126),
+                ("specified procedure could not be found", 127), ("initialization routine failed", 1114),
+            ) if text in str(exc)), None)
+        try:
+            _bootstrap_diagnostics.send_bytes(json.dumps(payload).encode("ascii"))
+        except (OSError, ValueError):
+            pass
+
+    class ErrorSink:
+        def write(self, text):
+            report(sys.exc_info()[1])
+            return len(text)
+
+        def flush(self):
+            pass
+
+    sys.stderr = ErrorSink()
+    try:
+        spawn.spawn_main(pipe_handle=pipe_handle)
+    except BaseException as exc:
+        if not isinstance(exc, SystemExit) or exc.code not in (None, 0):
+            report(exc)
+        raise
+    finally:
+        finish_bootstrap_diagnostics()
+
 
 def ensure_appcontainer_profile(name: str) -> str:
     """Explicit deployment operation; never called by an admission request."""
@@ -150,16 +211,30 @@ def sandbox_process_type(sid: str):
     class SandboxPopen(BasePopen):
         def __init__(self, process_obj):
             prep = spawn.get_preparation_data(process_obj._name)
+            if prep.get("init_main_from_name") == "weir.windows_service":
+                # The SCM entrypoint belongs only to the supervisor. Its factory
+                # and transport target are module-qualified and need no main import.
+                del prep["init_main_from_name"]
             prep["dir"] = os.path.dirname(sys.executable)
             prep["orig_dir"] = prep["dir"]
             read_handle, write_handle = _winapi.CreatePipe(None, 0)
             os.set_handle_inheritable(read_handle, True)
+            # The diagnostic handle references only the existing child RPC pipe.
+            diagnostic_handle = None
             write_fd = msvcrt.open_osfhandle(write_handle, 0)
             self.pid = self.returncode = self._handle = None
             try:
                 with open(write_fd, "wb", closefd=True) as to_child:
+                    diagnostic_handle = _winapi.DuplicateHandle(
+                        _winapi.GetCurrentProcess(), process_obj._args[0].fileno(),
+                        _winapi.GetCurrentProcess(), 0, True, _winapi.DUPLICATE_SAME_ACCESS,
+                    )
                     argv = spawn.get_command_line(pipe_handle=read_handle)
-                    self._handle, self.pid = create_appcontainer_process(argv, sid, (read_handle,))
+                    argv[argv.index("-c") + 1] = (
+                        "from weir.browser.windows_sandbox import sandbox_spawn_main;"
+                        f"sandbox_spawn_main(pipe_handle={read_handle}, diagnostic_handle={diagnostic_handle})"
+                    )
+                    self._handle, self.pid = create_appcontainer_process(argv, sid, (read_handle, diagnostic_handle))
                     self.sentinel = self._handle
                     self.finalizer = util.Finalize(self, _winapi.CloseHandle, (self._handle,))
 
@@ -187,6 +262,8 @@ def sandbox_process_type(sid: str):
                 raise
             finally:
                 _winapi.CloseHandle(read_handle)
+                if diagnostic_handle is not None:
+                    _winapi.CloseHandle(diagnostic_handle)
 
     class SandboxProcess(context.SpawnProcess):
         @staticmethod

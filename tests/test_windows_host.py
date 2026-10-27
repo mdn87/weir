@@ -1,7 +1,10 @@
 from __future__ import annotations
 
 import copy
+import json
 import os
+import subprocess
+import sys
 import threading
 import unittest
 from unittest import mock
@@ -93,6 +96,36 @@ def snapshot() -> dict:
 
 
 class WindowsHostTests(unittest.TestCase):
+    def test_supervisor_probe_rejects_any_individually_granted_right(self):
+        from weir.windows_probe import _supervisor_access_denied
+        denied = OSError("access denied")
+        denied.winerror = 5
+        for allowed in range(4):
+            api = mock.Mock()
+            outcomes = [denied] * 4
+            outcomes[allowed] = 123
+            api.OpenProcess.side_effect = outcomes
+            with self.subTest(allowed=allowed), mock.patch.dict(sys.modules, {"_winapi": api}):
+                self.assertFalse(_supervisor_access_denied(100))
+                self.assertEqual(api.OpenProcess.call_count, 4)
+                api.CloseHandle.assert_called_once_with(123)
+
+    def test_service_probe_import_does_not_load_ctypes(self):
+        result = subprocess.run([sys.executable, "-c", "import sys; import weir.windows_probe; sys.exit(int('_ctypes' in sys.modules))"], capture_output=True, timeout=15)
+        self.assertEqual(result.returncode, 0)
+
+    def test_bootstrap_diagnostic_never_sends_exception_text(self):
+        from weir.browser.windows_sandbox import sandbox_spawn_main
+        error = ImportError("private-token-value must stay local", name="_ctypes")
+        with mock.patch("multiprocessing.spawn.spawn_main", side_effect=error), \
+             mock.patch("multiprocessing.connection.PipeConnection", create=True) as pipe:
+            with self.assertRaises(ImportError):
+                sandbox_spawn_main(pipe_handle=1, diagnostic_handle=2)
+            payload = pipe.return_value.send_bytes.call_args.args[0]
+            self.assertNotIn(b"private-token-value", payload)
+            self.assertEqual(json.loads(payload), {"kind": "bootstrap_error", "error_type": "ImportError", "winerror": None, "errno": None, "module": "_ctypes", "loader_error": None})
+            pipe.return_value.close.assert_called_once()
+
     def check(self, value: dict):
         return validate_host_snapshot(deployment(), value, supervisor_pid=100, worker_pid=101)
 

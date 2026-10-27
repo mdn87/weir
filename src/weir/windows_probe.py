@@ -3,8 +3,6 @@ from __future__ import annotations
 
 import argparse
 from contextlib import contextmanager
-import ctypes
-from ctypes import wintypes
 import json
 import functools
 import os
@@ -18,16 +16,26 @@ from weir.browser.protocol import WorkerDescriptor
 from weir.engines.base import EngineProbe
 
 
+def _supervisor_access_denied(supervisor_pid: int) -> bool:
+    # _winapi uses kernel APIs without ctypes' GUI-related DLL initialization.
+    # The service's Session 0 AppContainer intentionally has no interactive desktop.
+    import _winapi
+    denied = True
+    # Test write, VM operation, thread creation and handle duplication separately:
+    # denial of a combined request establishes only that at least one bit failed.
+    for access in (0x20, 0x8, 0x2, 0x40):
+        try:
+            handle = _winapi.OpenProcess(access, False, supervisor_pid)
+        except OSError as exc:
+            denied = denied and exc.winerror == 5
+        else:
+            _winapi.CloseHandle(handle)
+            denied = False
+    return denied
+
+
 def isolation_probe(supervisor_pid: int, credential_paths: list[str], ports: dict[str, int]) -> dict:
-    kernel = ctypes.WinDLL("kernel32", use_last_error=True)
-    kernel.OpenProcess.argtypes = [wintypes.DWORD, wintypes.BOOL, wintypes.DWORD]
-    kernel.OpenProcess.restype = wintypes.HANDLE
-    kernel.CloseHandle.argtypes = [wintypes.HANDLE]
-    kernel.CloseHandle.restype = wintypes.BOOL
-    handle = kernel.OpenProcess(0x20 | 0x8 | 0x2 | 0x40, False, supervisor_pid)
-    denied = not handle and ctypes.get_last_error() == 5
-    if handle:
-        kernel.CloseHandle(handle)
+    denied = _supervisor_access_denied(supervisor_pid)
     result = {"supervisor_access_denied": denied, "credential_access_denied": bool(credential_paths),
               "network_attempts_complete": True, "socket_errors": {}}
     for path in credential_paths:

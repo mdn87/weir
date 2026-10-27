@@ -284,6 +284,9 @@ def read_host_snapshot(config: WindowsDeployment, worker_pid: int | None = None,
             [str(powershell), "-NoLogo", "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "RemoteSigned", "-File", str(_inspector_script())],
             input=json.dumps(request), capture_output=True, text=True, encoding="utf-8",
             timeout=45, creationflags=subprocess.CREATE_NO_WINDOW, check=False,
+            # A verifier launched from PowerShell 7 inherits incompatible module
+            # paths. Use only the OS-owned Windows PowerShell modules in either role.
+            env={**os.environ, "PSModulePath": str(powershell.parent / "Modules")},
         )
         if result.returncode or len(result.stdout) > 16 * 1024 * 1024:
             match = re.search(r"Windows control inspection denied: (runtime|credentials|service|firewall)\b", result.stderr)
