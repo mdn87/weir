@@ -75,11 +75,18 @@ deletes files, rotates credentials, or migrates a database.
 and lifecycle tests through `scripts/verify_windows_controls.ps1 -ExerciseDenials`.
 `-Mode Rollback` stops/disables the service and retains its restricted files, firewall block,
 and evidence. A retry reuses verified credentials and never replaces them silently.
+The root is created with its protected owner/DACL in one OS call. Existing child
+objects must already be protected and cannot be reparse points. Each attempt copies
+to a fresh release directory and publishes configuration atomically after verification;
+an interrupted copy remains inert. Rollback needs only the recognized installed
+deployment and accepts `-Mode Rollback` without an external bundle.
 The native acceptance tests remove service read access from a credential, disable and
 narrow the firewall block, grant write access to a public nonexecuted runtime canary,
 and terminate the owned supervisor. The tests require zero worker operations during
 denial, new process creation times after SCM restart, and death of the old worker and
 its persistent descendant. Real credential contents are never exposed by a tamper test.
+The intentional supervisor crash consumes one recovery in the current 24-hour SCM
+window; verification does not claim to replenish the remaining restart budget.
 Unit tests additionally cover wrong process generations and evidence expiry. Restoration is required in
 `finally` blocks. No test weakens protection while an action endpoint is available.
 

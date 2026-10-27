@@ -215,11 +215,18 @@ class WindowsHostTests(unittest.TestCase):
         facts["paths"] = [acl(ROOT), acl(ROOT + r"\deployment.json"), acl(config.python_executable), acl(config.base_python_root)]
         with self.assertRaises(EnginePolicyBlocked):
             validate_host_snapshot(config, facts, supervisor_pid=100, worker_pid=101)
+
         facts["paths"].extend([acl(ROOT + r"\releases"), acl(ROOT + r"\releases\sealed")])
         validate_host_snapshot(config, facts, supervisor_pid=100, worker_pid=101)
         facts["paths"][-1]["aces"].append({"sid": SID, "rights": FULL, "allow": True, "inherit_only": False})
         with self.assertRaises(EnginePolicyBlocked):
             validate_host_snapshot(config, facts, supervisor_pid=100, worker_pid=101)
+
+    def test_credential_group_deny_cannot_attest_service_read_access(self):
+        facts = snapshot()
+        facts["credentials"][0]["aces"].insert(0, {"sid": "S-1-5-6", "rights": READ, "allow": False, "inherit_only": False})
+        with self.assertRaises(EnginePolicyBlocked):
+            self.check(facts)
 
     def test_deployment_rejects_escape_and_duplicate_callers(self):
         original = deployment().to_dict()
