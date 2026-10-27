@@ -7,6 +7,7 @@ import math
 import multiprocessing
 import os
 import signal
+import socket
 import threading
 import time
 import weakref
@@ -15,6 +16,7 @@ from dataclasses import dataclass, replace
 from datetime import datetime, timezone
 from multiprocessing.connection import Connection, wait
 from typing import Any, Callable
+from uuid import uuid4
 
 from weir.browser.admission import (
     WorkerContainmentEvidence,
@@ -197,6 +199,7 @@ class ProcessBrowserWorker(AbstractContextManager["ProcessBrowserWorker"]):
         max_response_bytes: int = DEFAULT_MAX_WORKER_RESPONSE_BYTES,
         resource_limits: WorkerResourceLimits | None = None,
         containment_verifier: ContainmentVerifier | None = None,
+        windows_appcontainer_sid: str | None = None,
     ) -> None:
         for name, value in (
             ("start_timeout_seconds", start_timeout_seconds),
@@ -215,6 +218,13 @@ class ProcessBrowserWorker(AbstractContextManager["ProcessBrowserWorker"]):
             resource_limits.validate()
         if containment_verifier is not None and not callable(containment_verifier):
             raise TypeError("containment_verifier must be callable")
+        if windows_appcontainer_sid is not None:
+            if os.name != "nt" or resource_limits is None or containment_verifier is None:
+                raise ValueError("AppContainer workers require Windows, resource limits, and a pre-start verifier")
+            from weir.browser.windows_sandbox import sandbox_process_type
+            process_type = sandbox_process_type(windows_appcontainer_sid)
+        else:
+            process_type = None
         for name, value in (
             ("max_request_bytes", max_request_bytes),
             ("max_response_bytes", max_response_bytes),
@@ -248,7 +258,7 @@ class ProcessBrowserWorker(AbstractContextManager["ProcessBrowserWorker"]):
         if os.name != "nt":
             watchdog_receiver, self._watchdog_sender = context.Pipe(duplex=False)
         self._connection = parent_connection
-        self._process = context.Process(
+        self._process = (process_type or context.Process)(
             target=_worker_process_main,
             args=(
                 child_connection,
@@ -295,6 +305,7 @@ class ProcessBrowserWorker(AbstractContextManager["ProcessBrowserWorker"]):
                 self._process_id,
                 watchdog_process_id=watchdog_process_id,
                 resource_limits=resource_limits,
+                job_name=(f"Global\\WeirAdmission-{os.getpid()}-{uuid4().hex}" if windows_appcontainer_sid else None),
             )
             containment = self._tree.containment_evidence()
             if containment_verifier is not None:
@@ -374,6 +385,32 @@ class ProcessBrowserWorker(AbstractContextManager["ProcessBrowserWorker"]):
                 "browser worker containment was not established"
             )
         return self._containment_evidence
+
+    def refresh_containment_evidence(self) -> WorkerContainmentEvidence:
+        """Read live controls from the owned job rather than reuse startup evidence."""
+        with self._lock:
+            if not self.is_alive or self._tree is None:
+                raise WorkerProcessLost("browser worker is no longer alive")
+            evidence = self._tree.containment_evidence()
+            if evidence != self.containment_evidence:
+                raise WorkerProcessLost("browser worker containment controls changed")
+            return evidence
+
+    @property
+    def production_binding(self):
+        from weir.browser.admission import ProductionProcessBinding
+        from weir.browser.windows_process import inspect_process
+
+        if os.name != "nt" or not self.is_alive:
+            raise WorkerProcessLost("a live Windows process binding is unavailable")
+        supervisor, worker = inspect_process(os.getpid()), inspect_process(self.process_id)
+        if not worker["appcontainer_sid"] or worker["capabilities"] or worker["integrity"] != "S-1-16-4096":
+            raise WorkerProcessLost("production worker lacks no-capability AppContainer isolation")
+        return ProductionProcessBinding(socket.gethostname().upper(), os.getpid(), supervisor["created"], worker["created"], worker["appcontainer_sid"])
+
+    @property
+    def production_job_name(self) -> str | None:
+        return getattr(self._tree, "job_name", None)
 
     def probe(self) -> EngineProbe:
         result = self._rpc("probe", timeout=self._call_timeout)
@@ -851,6 +888,7 @@ class _WindowsProcessTree(_ProcessTree):
         self,
         process_id: int,
         resource_limits: WorkerResourceLimits | None,
+        job_name: str | None = None,
     ) -> None:
         import ctypes
         from ctypes import wintypes
@@ -918,6 +956,10 @@ class _WindowsProcessTree(_ProcessTree):
         assign_process = kernel32.AssignProcessToJobObject
         assign_process.argtypes = [wintypes.HANDLE, wintypes.HANDLE]
         assign_process.restype = wintypes.BOOL
+        self._is_process_in_job = kernel32.IsProcessInJob
+        self._is_process_in_job.argtypes = [wintypes.HANDLE, wintypes.HANDLE, ctypes.POINTER(wintypes.BOOL)]
+        self._is_process_in_job.restype = wintypes.BOOL
+        self._open_process = open_process
         self._terminate_job = kernel32.TerminateJobObject
         self._terminate_job.argtypes = [wintypes.HANDLE, wintypes.UINT]
         self._terminate_job.restype = wintypes.BOOL
@@ -934,9 +976,35 @@ class _WindowsProcessTree(_ProcessTree):
         self._close_handle.argtypes = [wintypes.HANDLE]
         self._close_handle.restype = wintypes.BOOL
 
-        job = create_job(None, None)
+        security_pointer = ctypes.c_void_p()
+        security_attributes = None
+        if job_name is not None:
+            from weir.browser.windows_process import inspect_process
+            owner_sid = inspect_process(os.getpid())["sid"]
+            class SecurityAttributes(ctypes.Structure):
+                _fields_ = [("length", wintypes.DWORD), ("descriptor", ctypes.c_void_p), ("inherit", wintypes.BOOL)]
+            advapi = ctypes.WinDLL("advapi32", use_last_error=True)
+            convert = advapi.ConvertStringSecurityDescriptorToSecurityDescriptorW
+            convert.argtypes = [wintypes.LPCWSTR, wintypes.DWORD, ctypes.POINTER(ctypes.c_void_p), ctypes.c_void_p]
+            convert.restype = wintypes.BOOL
+            sddl = f"D:(A;;GA;;;SY)(A;;GA;;;BA)(A;;GA;;;{owner_sid})"
+            if not convert(sddl, 1, ctypes.byref(security_pointer), None):
+                raise ctypes.WinError(ctypes.get_last_error())
+            security_attributes = SecurityAttributes(ctypes.sizeof(SecurityAttributes), security_pointer, False)
+        try:
+            ctypes.set_last_error(0)
+            job = create_job(None if security_attributes is None else ctypes.byref(security_attributes), job_name)
+            already_exists = ctypes.get_last_error() == 183
+        finally:
+            if security_pointer:
+                kernel32.LocalFree.argtypes = [ctypes.c_void_p]
+                kernel32.LocalFree.restype = ctypes.c_void_p
+                kernel32.LocalFree(security_pointer)
         if not job:
             raise ctypes.WinError(ctypes.get_last_error())
+        if already_exists:
+            self._close_handle(job)
+            raise WorkerProcessStartupError("worker Job Object already exists")
         process = None
         try:
             limits = ExtendedLimitInformation()
@@ -957,12 +1025,14 @@ class _WindowsProcessTree(_ProcessTree):
                 raise ctypes.WinError(ctypes.get_last_error())
         except Exception:
             self._close_handle(job)
-            raise
-        finally:
             if process:
                 self._close_handle(process)
+            raise
         self._job = job
+        self._process_handle = process
+        self.job_name = job_name
         self._accounting_type = BasicAccountingInformation
+        self._extended_type = ExtendedLimitInformation
         self._process_id = process_id
         self._resource_limits = resource_limits
 
@@ -990,8 +1060,34 @@ class _WindowsProcessTree(_ProcessTree):
         job = self._job
         self._job = None
         self._close_handle(job)
+        if self._process_handle:
+            self._close_handle(self._process_handle)
+            self._process_handle = None
 
     def containment_evidence(self) -> WorkerContainmentEvidence:
+        import ctypes
+        from ctypes import wintypes
+
+        if self._job is None:
+            raise WorkerProcessLost("browser worker Job Object was closed")
+        limits = self._extended_type()
+        if not self._query_information(self._job, 9, ctypes.byref(limits), ctypes.sizeof(limits), None):
+            raise WorkerProcessLost("browser worker Job Object cannot be inspected")
+        flags = limits.BasicLimitInformation.LimitFlags
+        if not flags & 0x2000 or flags & (0x800 | 0x1000):
+            raise WorkerProcessLost("browser worker Job Object allows escape or survives parent death")
+        if self._resource_limits is not None and (
+            flags & 0x208 != 0x208
+            or limits.BasicLimitInformation.ActiveProcessLimit != self._resource_limits.process_count
+            or limits.JobMemoryLimit != self._resource_limits.memory_bytes
+        ):
+            raise WorkerProcessLost("browser worker Job Object resource limits changed")
+        process = self._process_handle
+        if not process:
+            raise WorkerProcessLost("browser worker process cannot be inspected")
+        member = wintypes.BOOL()
+        if not self._is_process_in_job(process, self._job, ctypes.byref(member)) or not member.value:
+            raise WorkerProcessLost("browser worker left its Job Object")
         evidence = WorkerContainmentEvidence(
             platform="windows",
             process_id=self._process_id,
@@ -1025,10 +1121,11 @@ def _create_process_tree(
     *,
     watchdog_process_id: int | None,
     resource_limits: WorkerResourceLimits | None,
+    job_name: str | None = None,
 ) -> _ProcessTree:
     try:
         if os.name == "nt":
-            return _WindowsProcessTree(process_id, resource_limits)
+            return _WindowsProcessTree(process_id, resource_limits, job_name)
         if watchdog_process_id is None:
             raise WorkerProcessStartupError("POSIX browser worker has no parent-death watchdog")
         return _PosixProcessTree(process_id, watchdog_process_id)

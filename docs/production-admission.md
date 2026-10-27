@@ -6,11 +6,10 @@ credential, or effect driver exists. The host must supply current evidence for e
 control in this document, and that evidence must bind the exact worker process and
 caller.
 
-The source implementation does not create service accounts, credentials, ACLs,
-firewall rules, cgroups, network namespaces, or background services. Those are host
-deployment changes with their own operator approval. It also does not add a production
-effect adapter; the only supplied positive action policy remains the reversible local
-synthetic fixture.
+Library construction does not mutate host controls. The explicit Windows installer
+and deny-only service are described in [Windows deployment](windows-deployment.md).
+They provision controls only when invoked for the authorized host. The only supplied
+positive action policy remains the reversible local synthetic fixture.
 
 ## Admission contract
 
@@ -18,11 +17,16 @@ synthetic fixture.
 control metadata:
 
 - the platform, restricted service identity, worker ID, worker instance, and PID;
+- schema-v2 host identity, supervisor PID and creation time, worker creation time,
+  and isolation identity, compared with the live transport before use;
 - process-tree, parent-death, memory-limit, and process-count evidence;
 - one ACL-policy digest and opaque protected-source ID per caller identity;
 - the lifecycle supervisor and its current healthy instance;
 - an OS egress-policy ID, digest, and enforcement result; and
 - a bounded verification and expiry window.
+
+Version 0.4.0 requires evidence schema 2; saved schema-1 attestations are rejected.
+This changes no database schema. Caller source IDs must be distinct.
 
 It never contains a credential value, cookie, browser storage state, profile ID, URL,
 action parameter, or reusable authority. A caller must have exactly one protected
@@ -51,6 +55,13 @@ to the existing Fade identity.
   namespace. Resource-limited startup requires a trusted prepared-containment verifier
   that proves the exact child PID inherited the requested cgroup v2 controls. Missing
   evidence fails startup.
+
+The concrete Windows provider also requires a no-capability, low-integrity
+AppContainer. Its inspector runs before worker creation, verifies the child token
+before the factory, and refreshes live controls at admission. A protected named Job
+Object lets an independent verifier read limits and membership. Linux production
+process binding and host inspection still require implementation; prepared cgroup
+containment alone does not enable production admission.
 
 The containment record alone is insufficient. Production admission also requires
 current restricted-identity, credential-protection, lifecycle, and OS egress evidence.

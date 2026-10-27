@@ -1,0 +1,2 @@
+Public fixture for the runtime ACL denial test. This file contains no credentials
+and is never imported or executed.

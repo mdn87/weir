@@ -14,7 +14,7 @@ from weir.contract import (
 )
 from weir.engines.base import EnginePolicyBlocked
 
-PRODUCTION_ADMISSION_SCHEMA_VERSION = 1
+PRODUCTION_ADMISSION_SCHEMA_VERSION = 2
 ADMISSION_CLOCK_SKEW_SECONDS = 5
 MAX_PRODUCTION_ATTESTATION_LIFETIME = timedelta(minutes=5)
 MIN_WORKER_MEMORY_BYTES = 64 * 1024 * 1024
@@ -176,6 +176,36 @@ class CredentialProtectionEvidence:
 
 
 @dataclass(frozen=True, slots=True)
+class ProductionProcessBinding:
+    host_id: str
+    supervisor_pid: int
+    supervisor_created: int
+    worker_created: int
+    isolation_id: str
+
+    def validate(self) -> None:
+        validate_identifier(self.host_id, "host_id")
+        validate_identifier(self.isolation_id, "isolation_id")
+        for field in ("supervisor_pid", "supervisor_created", "worker_created"):
+            if type(getattr(self, field)) is not int or getattr(self, field) <= 0:
+                raise ValueError("process binding has an invalid process lifetime")
+        if self.worker_created < self.supervisor_created:
+            raise ValueError("worker predates its supervisor")
+
+    def to_dict(self) -> dict[str, object]:
+        self.validate()
+        return {name: getattr(self, name) for name in self.__dataclass_fields__}
+
+    @classmethod
+    def from_dict(cls, value: object) -> ProductionProcessBinding:
+        if not isinstance(value, dict) or set(value) != set(cls.__dataclass_fields__):
+            raise ValueError("process binding has missing or unknown fields")
+        result = cls(**value)
+        result.validate()
+        return result
+
+
+@dataclass(frozen=True, slots=True)
 class ProductionControlEvidence:
     attestation_id: str
     platform: str
@@ -184,6 +214,7 @@ class ProductionControlEvidence:
     worker_id: str
     worker_instance_id: str
     containment: WorkerContainmentEvidence
+    process_binding: ProductionProcessBinding
     restricted_identity: bool
     credential_protection: tuple[CredentialProtectionEvidence, ...]
     lifecycle_supervisor: str
@@ -208,6 +239,7 @@ class ProductionControlEvidence:
         worker_id: str,
         worker_instance_id: str,
         containment: WorkerContainmentEvidence,
+        process_binding: ProductionProcessBinding,
         restricted_identity: bool,
         credential_protection: tuple[CredentialProtectionEvidence, ...],
         lifecycle_supervisor: str,
@@ -227,6 +259,7 @@ class ProductionControlEvidence:
             worker_id=worker_id,
             worker_instance_id=worker_instance_id,
             containment=containment,
+            process_binding=process_binding,
             restricted_identity=restricted_identity,
             credential_protection=credential_protection,
             lifecycle_supervisor=lifecycle_supervisor,
@@ -259,6 +292,9 @@ class ProductionControlEvidence:
         if not isinstance(self.containment, WorkerContainmentEvidence):
             raise ValueError("production-control containment evidence is invalid")
         self.containment.validate()
+        if not isinstance(self.process_binding, ProductionProcessBinding):
+            raise ValueError("production process binding is required")
+        self.process_binding.validate()
         if self.containment.platform != self.platform:
             raise ValueError("worker containment platform does not match the host")
         if type(self.restricted_identity) is not bool:
@@ -275,6 +311,9 @@ class ProductionControlEvidence:
         caller_ids = [item.caller_id for item in self.credential_protection]
         if len(set(caller_ids)) != len(caller_ids):
             raise ValueError("per-caller credential evidence must be unique")
+        source_ids = [item.source_id for item in self.credential_protection]
+        if len(set(source_ids)) != len(source_ids):
+            raise ValueError("per-caller credential sources must be distinct")
         validate_identifier(self.lifecycle_supervisor, "lifecycle_supervisor")
         validate_identifier(self.lifecycle_instance_id, "lifecycle_instance_id")
         if type(self.lifecycle_healthy) is not bool:
@@ -346,6 +385,7 @@ class ProductionControlEvidence:
             "worker_id": self.worker_id,
             "worker_instance_id": self.worker_instance_id,
             "containment": self.containment.to_dict(),
+            "process_binding": self.process_binding.to_dict(),
             "restricted_identity": self.restricted_identity,
             "credential_protection": [
                 item.to_dict() for item in self.credential_protection
@@ -371,6 +411,7 @@ class ProductionControlEvidence:
             "worker_id",
             "worker_instance_id",
             "containment",
+            "process_binding",
             "restricted_identity",
             "credential_protection",
             "lifecycle_supervisor",
@@ -399,6 +440,7 @@ class ProductionControlEvidence:
             worker_id=value["worker_id"],
             worker_instance_id=value["worker_instance_id"],
             containment=WorkerContainmentEvidence.from_dict(value["containment"]),
+            process_binding=ProductionProcessBinding.from_dict(value["process_binding"]),
             restricted_identity=value["restricted_identity"],
             credential_protection=tuple(
                 CredentialProtectionEvidence.from_dict(item)
@@ -452,6 +494,7 @@ class ProductionAdmission:
             or evidence.worker_id != getattr(descriptor, "worker_id", None)
             or evidence.worker_instance_id != getattr(descriptor, "instance_id", None)
             or evidence.containment.to_dict() != containment.to_dict()
+            or not self._matches_process_binding(worker, evidence)
         ):
             raise EnginePolicyBlocked(
                 "production browser admission requires the attested process transport"
@@ -473,10 +516,18 @@ class ProductionAdmission:
             or evidence.worker_instance_id
             != getattr(worker, "worker_instance_id", None)
             or evidence.containment.to_dict() != containment.to_dict()
+            or not self._matches_process_binding(worker, evidence)
         ):
             raise EnginePolicyBlocked(
                 "production action admission requires an attested process worker"
             )
+
+    @staticmethod
+    def _matches_process_binding(worker: object, evidence: ProductionControlEvidence) -> bool:
+        try:
+            return evidence.process_binding == getattr(worker, "production_binding", None)
+        except Exception:
+            return False
 
     def _evidence(self, caller_id: str) -> ProductionControlEvidence:
         validate_identifier(caller_id, "caller_id", max_length=64)
@@ -546,6 +597,7 @@ __all__ = [
     "PRODUCTION_ADMISSION_SCHEMA_VERSION",
     "ProductionAdmission",
     "ProductionControlEvidence",
+    "ProductionProcessBinding",
     "ProductionEvidenceProvider",
     "WorkerContainmentEvidence",
     "WorkerResourceLimits",

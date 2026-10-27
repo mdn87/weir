@@ -1,2 +1,3 @@
 recursive-include contracts *.json *.sha256
 recursive-include profiles *.yaml
+recursive-include src/weir/data/windows *.ps1 *.txt

@@ -4,6 +4,7 @@ from weir.browser.admission import (
     LocalSyntheticActionAdmission,
     ProductionAdmission,
     ProductionControlEvidence,
+    ProductionProcessBinding,
     WorkerContainmentEvidence,
     WorkerResourceLimits,
 )
@@ -67,6 +68,7 @@ __all__ = [
     "ProcessBrowserWorker",
     "ProductionAdmission",
     "ProductionControlEvidence",
+    "ProductionProcessBinding",
     "ProfileBindingProvider",
     "ProfileStateProvider",
     "ResolvedTarget",

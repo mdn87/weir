@@ -130,6 +130,11 @@ def scripted_factory() -> ScriptedBrowserWorker:
     return ScriptedBrowserWorker()
 
 
+def marked_factory(marker: str) -> ScriptedBrowserWorker:
+    Path(marker).write_text("factory ran", encoding="ascii")
+    return ScriptedBrowserWorker()
+
+
 def failing_factory() -> FailingWorker:
     return FailingWorker()
 
@@ -188,6 +193,20 @@ def _command(
 
 
 class ProcessBrowserWorkerTests(unittest.TestCase):
+    def test_rejected_pre_start_verification_never_runs_factory(self):
+        def reject(*_args):
+            raise WorkerProcessStartupError("host pre-start verification denied")
+
+        with tempfile.TemporaryDirectory() as directory:
+            marker = Path(directory) / "factory.txt"
+            with self.assertRaises(WorkerProcessStartupError):
+                ProcessBrowserWorker(
+                    functools.partial(marked_factory, str(marker)),
+                    resource_limits=WorkerResourceLimits(536870912, 8),
+                    containment_verifier=reject,
+                )
+            self.assertFalse(marker.exists())
+
     def test_timeouts_must_be_finite_and_platform_representable(self):
         values = (math.nan, math.inf, -math.inf, threading.TIMEOUT_MAX * 2, 10**1000)
         for value in values:

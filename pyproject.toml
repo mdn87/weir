@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "lugos-weir"
-version = "0.3.1"
+version = "0.4.0"
 description = "WEIR - Web Evidence, Interaction & Retrieval for Lugos"
 readme = "README.md"
 requires-python = ">=3.11"
@@ -21,6 +21,9 @@ weir = "weir.cli:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.setuptools.package-data]
+weir = ["data/windows/*.ps1", "data/windows/*.txt"]
 
 [tool.pytest.ini_options]
 addopts = "--import-mode=importlib"
