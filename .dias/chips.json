@@ -289,7 +289,7 @@
       "projectId": "weir",
       "title": "Provision and attest deployment controls",
       "summary": "Provision the service identity, credential ACLs, lifecycle supervisor, and egress policy on the deployed host so fail-closed production admission can pass for real.",
-      "stage": "ready",
+      "stage": "active",
       "sequence": 70,
       "prereqs": [
         "weir:activate-remote-approval-relay"
@@ -299,7 +299,7 @@
       "aheadOfPrereqs": null,
       "timestamps": {
         "createdAt": "2026-09-27T22:07:55.000Z",
-        "updatedAt": "2026-09-27T22:07:55.000Z"
+        "updatedAt": "2026-10-27T00:19:40.640Z"
       },
       "evidence": [
         {
@@ -319,6 +319,18 @@
           "at": "2026-09-27T22:07:55.000Z",
           "kind": "note",
           "message": "No commits since 2026-08-29, so nothing is in flight; marked ready rather than active."
+        },
+        {
+          "entryId": "ev:2610267p0001",
+          "at": "2026-10-27T00:19:40.640Z",
+          "kind": "stage-change",
+          "message": "ready -> active. Matt authorized Batch 7P with whats-left go; Windows source committed as 907a552."
+        },
+        {
+          "entryId": "ev:2610267p0002",
+          "at": "2026-10-27T00:19:40.640Z",
+          "kind": "note",
+          "message": "Native AppContainer, named Job limits, credential/supervisor denial, zero IPv4/IPv6 TCP/UDP delivery and descendant cleanup passed. Elevated SCM acceptance remains."
         }
       ]
     },
@@ -354,7 +366,7 @@
       "chipId": "weir:integrate-lugos-seats",
       "projectId": "weir",
       "title": "Integrate Lugos seats",
-      "summary": "Expose the MCP surface, task-router and run-profile policy, Autowork campaigns, Sulis records, AETA handoff, and HUD views so seats request web capabilities by intent.",
+      "summary": "Finish task-router/run-profile policy, Sulis/AETA handoff and broader HUD session/evidence views; MCP and Autowork source plus the HUD action projection already shipped.",
       "stage": "vague",
       "sequence": 90,
       "prereqs": [
@@ -365,7 +377,7 @@
       "aheadOfPrereqs": null,
       "timestamps": {
         "createdAt": "2026-09-27T22:07:55.000Z",
-        "updatedAt": "2026-09-27T22:07:55.000Z"
+        "updatedAt": "2026-10-27T00:19:40.640Z"
       },
       "evidence": [
         {
@@ -373,6 +385,12 @@
           "at": "2026-09-27T22:07:55.000Z",
           "kind": "created",
           "message": "Added 2026-09-27 from ROADMAP P4; only the hashed work context and the metadata-only session journal are checked so far."
+        },
+        {
+          "entryId": "ev:2610267p0003",
+          "at": "2026-10-27T00:19:40.640Z",
+          "kind": "note",
+          "message": "Reconciled MCP adapter/wiring tests, Autowork web_evidence.py and HUD action projection/event reader with accepted Batch 3/4/5 rollout records."
         }
       ]
     },

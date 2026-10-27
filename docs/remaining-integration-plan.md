@@ -9,6 +9,12 @@
 
 ## Implementation status — 2026-08-29
 
+Update 2026-10-26: Batch 7P Windows source and native sandbox proof are implemented.
+The explicit deny-only installer and elevated host acceptance procedure are recorded
+in [Windows deployment](windows-deployment.md). A production effect policy/adapter
+remains separate work. The roadmap now distinguishes the shipped MCP, Autowork and
+HUD action projection from broader unimplemented seat integration.
+
 The approved source work is present for WEIR Batch 2D and Batch 7, APU Batch 1B, Dias
 Batch 1C, disabled `lugos-mcp` Batch 3 plumbing, Autowork Batch 4, Mission Control and
 HUD Batch 5, and Fade Batch 6. The operator subsequently authorized the named local

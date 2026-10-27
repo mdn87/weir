@@ -8,13 +8,13 @@
   "milestonePhase": "operational-proof",
   "portfolioGroup": "acquisition",
   "displayPriority": 50,
-  "assessedAt": "2026-09-27T22:07:55.000Z",
+  "assessedAt": "2026-10-27T00:19:40.640Z",
   "confidence": "reported",
-  "currentMilestone": "P2 browser session broker built and locally proven; remote approval relay reviewed and activated with one production canary on 2026-08-29. Repo idle since then.",
-  "remainingSummary": "Provision and attest the deployed service identity, credential ACLs, supervisor, and egress policy; then write and review the production effect policy.",
+  "currentMilestone": "Batch 7P Windows admission source and native sandbox proof implemented; elevated SCM/ACL/firewall acceptance is next. Production DOM effects remain disabled.",
+  "remainingSummary": "Complete elevated host acceptance, then separately implement and review a production effect policy. Broader seat integration and visual fallback remain.",
   "nextChipId": "weir:provision-deployment-controls",
   "source": {
-    "label": "ROADMAP checkboxes, Batch 8 and 9 acceptance records, git log, and a full passing test run reviewed 2026-09-27",
-    "updatedAt": "2026-09-27"
+    "label": "907a552, native AppContainer proof, full unittest run, and accepted sibling rollout records",
+    "updatedAt": "2026-10-27"
   }
 }
