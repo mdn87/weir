@@ -216,7 +216,11 @@ remaining sibling work is in `docs/remaining-integration-plan.md`. The accepted 
 The implemented Batch 1A caller, cache, persistence, and telemetry invariants are in
 `docs/context-bound-acquisition.md`.
 The 7P evidence contract, fail-closed gates, and host rollout boundary are in
-`docs/production-admission.md`.
+`docs/production-admission.md`. Version 0.4.0 adds schema-v2 process lifetime binding,
+live Windows inspection and an explicit deny-only installer described in
+[`docs/windows-deployment.md`](docs/windows-deployment.md). Its no-capability
+AppContainer worker cannot read caller credentials or modify the supervisor; a
+separate production effect policy and adapter are still required.
 The frozen Batch 8 signed-capsule, queue, acknowledgement, revocation, and redacted
 audit contracts are in `docs/remote-decision-contract.md` and
 `contracts/fixtures/remote-relay-v1.json`. Source flags remain disabled by default;

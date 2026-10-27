@@ -74,9 +74,11 @@ immutable persistence, and no authenticated browser dependency.
   sources, lifecycle supervision, and enforced egress evidence. Windows Job Objects
   apply memory/process limits directly; Linux requires a prepared cgroup verifier and
   cannot downclass a process group into resource evidence.
-- [ ] Provision and attest the deployment-specific service identity, credential ACLs,
-  supervisor, and firewall/AppContainer or network-namespace/nftables policy. Source
-  admission does not authorize or perform those host mutations.
+- [x] Provision and attest the Windows deployment's service identity, credential ACLs,
+  supervisor, and firewall/AppContainer policy. Version 0.4.0 passed independent
+  host, tamper and restart acceptance on `4070pc` on 2026-10-26; see
+  `docs/acceptance/batch7p-windows-controls-20261026.json`.
+  Linux host admission and deployment remain unimplemented.
 - [x] Add structured observations and deterministic semantic locators.
 - [x] Add immutable browser-observation and screenshot evidence capture.
 - [x] Add the reversible local synthetic DOM-interaction surface behind a Fade-issued
@@ -112,24 +114,30 @@ are in `docs/remaining-integration-plan.md`.
 - [x] Freeze the parameter-free Ed25519 remote-decision capsule, queue, acknowledgement,
   revocation, redacted-audit, and cross-language fixture contracts without adding a
   remote listener.
-- [ ] Keep the signed outbound pull issuer and workstation consumer disabled until the
-  separate post-implementation security review and operational identity, mTLS, key
-  custody, and retention decisions are accepted.
+- [x] Complete the separate signed outbound pull relay review and accept operational
+  identity, mTLS, key custody and retention decisions. The named rollout passed on
+  2026-08-29 (`docs/acceptance/batch8-remote-relay-20260829.md`); source defaults stay
+  disabled and workstation pulls require explicit process-local arming.
 
 Gate: a staged external action cannot execute without policy evaluation and, when required, explicit approval; success is proven by post-state evidence.
 
 ## P4 - Lugos integration
 
 - [x] Define explicit, hashed `WorkContext` identity for objective/run/assignment/correlation provenance.
-- [ ] `lugos-mcp` surface.
+- [x] `lugos-mcp` acquisition/evidence adapter and guarded source wiring (Batch 3);
+  feature flags remain explicit. See `lugos-mcp`'s `weir_adapter.py` and wiring tests.
 - [ ] task-router integration.
 - [ ] run-profile policy.
-- [ ] Autowork campaign integration.
+- [x] Autowork campaign evidence acquisition and trusted dispatch context (Batch 4,
+  `autowork/src/autowork/campaign/web_evidence.py`).
 - [ ] Sulis provenance/summary records.
 - [ ] AETA source-capture handoff.
 - [x] Add a metadata-only browser session/event journal suitable for AITU/HUD projection.
 - [ ] Register that journal with the AITU/HUD integration surfaces.
 - [ ] HUD session/evidence/approval views.
+  The narrower metadata-only action projection and event reader already shipped in
+  Batch 5; the named HUD/Mission Control rollout passed on 2026-08-29. Full session
+  and evidence views remain outside that proof.
 - [ ] COGIN/APU behavior-registry feedback.
 
 Gate: multiple Lugos seats can request web capabilities without direct engine knowledge, and route decisions are observable.

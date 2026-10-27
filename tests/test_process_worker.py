@@ -43,6 +43,12 @@ from weir.work_context import WorkContext, WorkContextSource
 from weir.profiles import SiteProfile, SiteProfileRegistry
 
 
+def _write_pid_marker(path: Path, process_id: int) -> None:
+    temporary = path.with_suffix(".tmp")
+    temporary.write_text(str(process_id), encoding="ascii")
+    temporary.replace(path)
+
+
 class FailingWorker(ScriptedBrowserWorker):
     def open_session(self, spec: SessionSpec, command: WorkerCommand) -> str:
         raise RuntimeError("secret child failure detail")
@@ -65,7 +71,7 @@ class ProcessTreeWorker(ScriptedBrowserWorker):
             [sys.executable, "-c", "import time; time.sleep(30)"],
             creationflags=creation_flags,
         )
-        self.marker.write_text(str(child.pid), encoding="ascii")
+        _write_pid_marker(self.marker, child.pid)
         time.sleep(30)
         return super().observe(
             session_id,
@@ -130,6 +136,11 @@ def scripted_factory() -> ScriptedBrowserWorker:
     return ScriptedBrowserWorker()
 
 
+def marked_factory(marker: str) -> ScriptedBrowserWorker:
+    Path(marker).write_text("factory ran", encoding="ascii")
+    return ScriptedBrowserWorker()
+
+
 def failing_factory() -> FailingWorker:
     return FailingWorker()
 
@@ -144,7 +155,7 @@ def _parent_death_host(worker_marker: str, descendant_marker: str) -> None:
         call_timeout_seconds=30,
         shutdown_timeout_seconds=2,
     )
-    Path(worker_marker).write_text(str(worker.process_id), encoding="ascii")
+    _write_pid_marker(Path(worker_marker), worker.process_id)
     worker.observe(
         "session-process-1",
         _command("observe", {"session_id": "session-process-1"}, seconds=30),
@@ -188,6 +199,20 @@ def _command(
 
 
 class ProcessBrowserWorkerTests(unittest.TestCase):
+    def test_rejected_pre_start_verification_never_runs_factory(self):
+        def reject(*_args):
+            raise WorkerProcessStartupError("host pre-start verification denied")
+
+        with tempfile.TemporaryDirectory() as directory:
+            marker = Path(directory) / "factory.txt"
+            with self.assertRaises(WorkerProcessStartupError):
+                ProcessBrowserWorker(
+                    functools.partial(marked_factory, str(marker)),
+                    resource_limits=WorkerResourceLimits(536870912, 8),
+                    containment_verifier=reject,
+                )
+            self.assertFalse(marker.exists())
+
     def test_timeouts_must_be_finite_and_platform_representable(self):
         values = (math.nan, math.inf, -math.inf, threading.TIMEOUT_MAX * 2, 10**1000)
         for value in values:

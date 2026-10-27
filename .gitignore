@@ -12,6 +12,7 @@ build/
 .weir/
 .autowork/
 .lugos-wip/
+.lugos-audit/
 artifacts/
 benchmarks/results/
 .codex-tmp/

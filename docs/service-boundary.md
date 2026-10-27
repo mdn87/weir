@@ -107,8 +107,9 @@ schema-v2 terminal state; the immutable receipt is authoritative for `completed`
 
 ## Disabled-by-default deployment
 
-There is deliberately no `weir serve` command, generated credential, Windows service,
-systemd unit, or background process in this batch. A deployment must inject a
+There is no general `weir serve` command or implicit service installation. The explicit
+Batch 7P Windows installer provisions a deny-only admission service and two protected
+credential sources; it exposes no HTTP action endpoint. A web deployment must inject a
 `ClientRegistry` from a secret provider or a user-ACL-restricted file outside the
 repository. Creating that credential material and installing a service are separate
 operator-approved actions. The standalone CLI remains on its private legacy seam, and
@@ -147,8 +148,9 @@ production enablement remains disabled until deployment work provides and attest
   canary. The approved local synthetic canary does not authorize that rollout.
 
 See `docs/production-admission.md` for the exact evidence contract and rollout
-checklist. WEIR creates none of the required host identities, credentials, ACLs,
-firewall rules, cgroups, namespaces, or supervisors.
+checklist. The explicit [Windows installer](windows-deployment.md) handles the
+deny-only host controls. Library construction creates no host identity or supervisor;
+Linux host provisioning remains unimplemented.
 
 Those additions must preserve per-client scope separation. In particular,
 `lugos-mcp` may acquire and read evidence but cannot read command/action authority;

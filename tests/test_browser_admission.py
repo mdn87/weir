@@ -12,6 +12,7 @@ from weir.browser.admission import (
     LocalSyntheticActionAdmission,
     ProductionAdmission,
     ProductionControlEvidence,
+    ProductionProcessBinding,
     WorkerContainmentEvidence,
     WorkerResourceLimits,
 )
@@ -47,6 +48,7 @@ def _evidence(**overrides: object) -> ProductionControlEvidence:
         "worker_id": "production-worker",
         "worker_instance_id": "production-worker-instance",
         "containment": CONTAINMENT,
+        "process_binding": ProductionProcessBinding("test-host", 4000, 100, 200, "test-isolation"),
         "restricted_identity": True,
         "credential_protection": (CREDENTIAL,),
         "lifecycle_supervisor": "windows-service-control-manager",
@@ -123,6 +125,9 @@ class BrowserAdmissionContractTests(unittest.TestCase):
                 protected=True,
             ).validate()
 
+        with self.assertRaisesRegex(ValueError, "sources must be distinct"):
+            _evidence(credential_protection=(CREDENTIAL, replace(CREDENTIAL, caller_id="lugos-mcp")))
+
     def test_production_gate_binds_exact_process_worker_and_caller(self) -> None:
         evidence = _evidence()
         admission = ProductionAdmission(
@@ -133,6 +138,7 @@ class BrowserAdmissionContractTests(unittest.TestCase):
         worker = SimpleNamespace(
             production_process_transport=True,
             containment_evidence=CONTAINMENT,
+            production_binding=evidence.process_binding,
             descriptor=SimpleNamespace(
                 worker_id=evidence.worker_id,
                 instance_id=evidence.worker_instance_id,
@@ -146,6 +152,11 @@ class BrowserAdmissionContractTests(unittest.TestCase):
             caller_id="fade-weir-authority",
             action_driver=SimpleNamespace(worker=worker),
         )
+
+        worker.production_binding = replace(evidence.process_binding, worker_created=201)
+        with self.assertRaisesRegex(EnginePolicyBlocked, "process transport"):
+            admission.require_browser_worker(worker, caller_id="fade-weir-authority")
+        worker.production_binding = evidence.process_binding
 
         with self.assertRaisesRegex(EnginePolicyBlocked, "process transport"):
             admission.require_browser_worker(

@@ -4,17 +4,17 @@
   "projectLabel": "WEIR",
   "assessmentState": "scored",
   "assessmentScope": "current-milestone",
-  "percentComplete": 90,
+  "percentComplete": 100,
   "milestonePhase": "operational-proof",
   "portfolioGroup": "acquisition",
   "displayPriority": 50,
-  "assessedAt": "2026-09-27T22:07:55.000Z",
+  "assessedAt": "2026-10-27T02:29:30.820Z",
   "confidence": "reported",
-  "currentMilestone": "P2 browser session broker built and locally proven; remote approval relay reviewed and activated with one production canary on 2026-08-29. Repo idle since then.",
-  "remainingSummary": "Provision and attest the deployed service identity, credential ACLs, supervisor, and egress policy; then write and review the production effect policy.",
-  "nextChipId": "weir:provision-deployment-controls",
+  "currentMilestone": "Batch 7P Windows deployment controls passed independent live acceptance on 4070pc. Production website actions remain disabled.",
+  "remainingSummary": "Define and review the production effect policy and browser deployment. Broader seat integration, Linux host admission and visual fallback remain.",
+  "nextChipId": "weir:review-production-effect-policy",
   "source": {
-    "label": "ROADMAP checkboxes, Batch 8 and 9 acceptance records, git log, and a full passing test run reviewed 2026-09-27",
-    "updatedAt": "2026-09-27"
+    "label": "PR #3; native Windows acceptance; 368 unittest cases with four skips; green CI",
+    "updatedAt": "2026-10-27"
   }
 }
