@@ -87,8 +87,27 @@ immutable persistence, and no authenticated browser dependency.
 
 Gate status: observation and the reversible synthetic interaction slice passed against
 a local authenticated Playwright fixture with session isolation and durable evidence.
-General-purpose and production DOM interaction remain intentionally closed until the
-deployment controls and a separately reviewed production effect policy are in place.
+General-purpose and production DOM interaction remain closed. Windows deployment
+controls are accepted; production effect policy, browser compatibility and a bounded
+action rollout still need proof.
+
+### Next Windows production batches
+
+The Dias board projects this planned work. Taskmaster's `weir/workspace` trail records
+session and handoff history and is linked to the same WEIR board. The completed
+Batch 7P milestone's 100% assessment does not mean the whole product is complete.
+
+| Order | Batch | Completion criteria |
+| --- | --- | --- |
+| 1 | Review production effect policy | Define allowed operations and destinations, caller authority, credential custody, approval rules, failure handling and rollback. Resolve independent review findings before implementing effects. |
+| 2 | Prove browser compatibility | Start the selected browser under the service identity and containment. Verify observation, credential isolation, descendant cleanup and denial behavior. Review any required sandbox or egress changes; the headless probe alone is insufficient. |
+| 3 | Implement the production effect adapter | Bind commands to exact permits, current session state and durable reservations. Verify post-state receipts, stale or mismatched denial, response-loss reconciliation and no duplicate effects on retry. |
+| 4 | Run one approved production canary | Obtain explicit approval for the target and reversible action. Record one observed effect, single-use permission, restart replay denial and rollback evidence before expanding the rollout. |
+
+Policy review is ready to start. The following three batches are planned and have
+not started; this plan does not authorize website actions. Broader seat integration
+and visual fallback remain below. Linux host admission needs its own live inspector,
+process lifetime binding, resource/egress proof and a selected deployment target.
 
 ## P3 - Action authority integration
 

@@ -8,13 +8,13 @@
   "milestonePhase": "operational-proof",
   "portfolioGroup": "acquisition",
   "displayPriority": 50,
-  "assessedAt": "2026-10-27T02:29:30.820Z",
+  "assessedAt": "2026-10-27T02:53:26.430Z",
   "confidence": "reported",
-  "currentMilestone": "Batch 7P Windows deployment controls passed independent live acceptance on 4070pc. Production website actions remain disabled.",
-  "remainingSummary": "Define and review the production effect policy and browser deployment. Broader seat integration, Linux host admission and visual fallback remain.",
+  "currentMilestone": "Batch 7P Windows deployment controls passed independent live acceptance. Production website actions remain disabled.",
+  "remainingSummary": "Next: reviewed effect policy, browser compatibility, permit-bound adapter and approved canary. Broader seat integration, Linux controls and visual fallback remain.",
   "nextChipId": "weir:review-production-effect-policy",
   "source": {
-    "label": "PR #3; native Windows acceptance; 368 unittest cases with four skips; green CI",
+    "label": "Accepted Batch 7P report, production admission contract and refined roadmap; linked Taskmaster workspace trail",
     "updatedAt": "2026-10-27"
   }
 }

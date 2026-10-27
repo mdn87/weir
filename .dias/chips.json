@@ -351,7 +351,7 @@
       "chipId": "weir:review-production-effect-policy",
       "projectId": "weir",
       "title": "Review the production effect policy",
-      "summary": "Write and separately review the production effect policy that would let general-purpose DOM interaction open beyond the local synthetic canary slice.",
+      "summary": "Define approved operations, targets, caller authority, credential handling and failure rules; close independent review before implementation.",
       "stage": "ready",
       "sequence": 80,
       "prereqs": [
@@ -362,7 +362,7 @@
       "aheadOfPrereqs": null,
       "timestamps": {
         "createdAt": "2026-09-27T22:07:55.000Z",
-        "updatedAt": "2026-10-27T02:29:30.820Z"
+        "updatedAt": "2026-10-27T02:53:26.430Z"
       },
       "evidence": [
         {
@@ -376,6 +376,93 @@
           "at": "2026-10-27T02:29:30.820Z",
           "kind": "stage-change",
           "message": "planned -> ready. Windows deployment controls passed; production effect policy and browser compatibility remain separate work."
+        },
+        {
+          "entryId": "ev:261026trail01",
+          "at": "2026-10-27T02:53:26.430Z",
+          "kind": "note",
+          "message": "Next batch refined from the production admission contract; browser compatibility, adapter and canary are tracked separately."
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "chipId": "weir:prove-windows-browser-compatibility",
+      "projectId": "weir",
+      "title": "Prove browser isolation in the Windows service",
+      "summary": "Prove the selected browser starts inside the service sandbox and shuts down with its descendants; review any new capabilities before use.",
+      "stage": "planned",
+      "sequence": 90,
+      "prereqs": [
+        "weir:review-production-effect-policy"
+      ],
+      "linkedRunIds": [],
+      "confidence": "inferred",
+      "aheadOfPrereqs": null,
+      "timestamps": {
+        "createdAt": "2026-10-27T02:53:26.430Z",
+        "updatedAt": "2026-10-27T02:53:26.430Z"
+      },
+      "evidence": [
+        {
+          "entryId": "ev:261026trail02",
+          "at": "2026-10-27T02:53:26.430Z",
+          "kind": "created",
+          "message": "Refined from the accepted Windows deployment limits, production admission contract and remaining roadmap; implementation has not started."
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "chipId": "weir:implement-production-effect-adapter",
+      "projectId": "weir",
+      "title": "Bind production actions to reviewed permits",
+      "summary": "Connect reviewed browser actions to exact permits, current state and durable receipts; prove denial, ambiguity and retry behavior.",
+      "stage": "planned",
+      "sequence": 100,
+      "prereqs": [
+        "weir:prove-windows-browser-compatibility"
+      ],
+      "linkedRunIds": [],
+      "confidence": "inferred",
+      "aheadOfPrereqs": null,
+      "timestamps": {
+        "createdAt": "2026-10-27T02:53:26.430Z",
+        "updatedAt": "2026-10-27T02:53:26.430Z"
+      },
+      "evidence": [
+        {
+          "entryId": "ev:261026trail03",
+          "at": "2026-10-27T02:53:26.430Z",
+          "kind": "created",
+          "message": "Refined from the accepted Windows deployment limits, production admission contract and remaining roadmap; implementation has not started."
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "chipId": "weir:verify-production-action-canary",
+      "projectId": "weir",
+      "title": "Verify one approved production action",
+      "summary": "After explicit action approval, prove one reversible effect, one-use permission, no replay on restart and safe rollback with retained evidence.",
+      "stage": "planned",
+      "sequence": 110,
+      "prereqs": [
+        "weir:implement-production-effect-adapter"
+      ],
+      "linkedRunIds": [],
+      "confidence": "inferred",
+      "aheadOfPrereqs": null,
+      "timestamps": {
+        "createdAt": "2026-10-27T02:53:26.430Z",
+        "updatedAt": "2026-10-27T02:53:26.430Z"
+      },
+      "evidence": [
+        {
+          "entryId": "ev:261026trail04",
+          "at": "2026-10-27T02:53:26.430Z",
+          "kind": "created",
+          "message": "Refined from the accepted Windows deployment limits, production admission contract and remaining roadmap; implementation has not started."
         }
       ]
     },
@@ -386,7 +473,7 @@
       "title": "Integrate Lugos seats",
       "summary": "Finish task-router/run-profile policy, Sulis/AETA handoff and broader HUD session/evidence views; MCP and Autowork source plus the HUD action projection already shipped.",
       "stage": "vague",
-      "sequence": 90,
+      "sequence": 120,
       "prereqs": [
         "weir:review-production-effect-policy"
       ],
@@ -395,7 +482,7 @@
       "aheadOfPrereqs": null,
       "timestamps": {
         "createdAt": "2026-09-27T22:07:55.000Z",
-        "updatedAt": "2026-10-27T00:19:40.640Z"
+        "updatedAt": "2026-10-27T02:53:26.430Z"
       },
       "evidence": [
         {
@@ -419,7 +506,7 @@
       "title": "Add visual fallback",
       "summary": "Add the targeted crop adapter, Argus interpretation contract, visual verifier, and ambiguity classification so browser failures can escalate without bypassing policy.",
       "stage": "vague",
-      "sequence": 100,
+      "sequence": 130,
       "prereqs": [
         "weir:integrate-lugos-seats"
       ],
@@ -428,7 +515,7 @@
       "aheadOfPrereqs": null,
       "timestamps": {
         "createdAt": "2026-09-27T22:07:55.000Z",
-        "updatedAt": "2026-09-27T22:07:55.000Z"
+        "updatedAt": "2026-10-27T02:53:26.430Z"
       },
       "evidence": [
         {
@@ -436,6 +523,33 @@
           "at": "2026-09-27T22:07:55.000Z",
           "kind": "created",
           "message": "Added 2026-09-27 from ROADMAP P5; screenshot retention and the manual takeover path are already checked."
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "chipId": "weir:verify-linux-host-admission",
+      "projectId": "weir",
+      "title": "Prove Linux host admission controls",
+      "summary": "Add live Linux identity, process and host inspection; verify cgroup limits, network isolation and supervisor cleanup before production admission.",
+      "stage": "vague",
+      "sequence": 140,
+      "prereqs": [
+        "weir:gate-browser-session-work"
+      ],
+      "linkedRunIds": [],
+      "confidence": "inferred",
+      "aheadOfPrereqs": null,
+      "timestamps": {
+        "createdAt": "2026-10-27T02:53:26.430Z",
+        "updatedAt": "2026-10-27T02:53:26.430Z"
+      },
+      "evidence": [
+        {
+          "entryId": "ev:261026trail05",
+          "at": "2026-10-27T02:53:26.430Z",
+          "kind": "created",
+          "message": "Refined from the accepted Windows deployment limits, production admission contract and remaining roadmap; implementation has not started."
         }
       ]
     }
