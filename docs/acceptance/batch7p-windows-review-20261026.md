@@ -37,6 +37,12 @@ DLL initialization. The worker probe remains headless; this does not establish G
 browser compatibility. Bootstrap diagnostics return only bounded exception types,
 known module names and numeric codes, never exception text or credential values.
 
+The credential denial fixture initially retained an inherited service-read ACE.
+Native reproduction counted one remaining service ACE; the corrected explicit
+administrator/SYSTEM-only DACL counted zero, and restoration reproduced the original
+SDDL exactly. Acceptance now checks the installed denial fixture before observing the
+service, so a fixture that failed to remove access cannot pass unnoticed.
+
 ## Verification status
 
 The real AppContainer worker and descendant passed credential-read and supervisor-

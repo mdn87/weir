@@ -67,12 +67,21 @@ try {
         $originalAcl = Get-Acl -LiteralPath $credentialPath
         $changedAt = [datetime]::UtcNow
         try {
-            $restrictedAcl = Get-Acl -LiteralPath $credentialPath
-            $restrictedAcl.SetAccessRuleProtection($true, $true)
-            foreach ($ace in @($restrictedAcl.GetAccessRules($true, $true, [Security.Principal.SecurityIdentifier]))) {
-                if ($ace.IdentityReference.Value -eq $config.service_sid) { $restrictedAcl.RemoveAccessRuleSpecific($ace) }
+            # Preserving inherited ACEs can retain service read access even after
+            # RemoveAccessRuleSpecific. Build the intended admin-only DACL explicitly.
+            $restrictedAcl = [Security.AccessControl.FileSecurity]::new()
+            $restrictedAcl.SetOwner($originalAcl.GetOwner([Security.Principal.SecurityIdentifier]))
+            $restrictedAcl.SetAccessRuleProtection($true, $false)
+            foreach ($sid in @('S-1-5-18', 'S-1-5-32-544')) {
+                $restrictedAcl.AddAccessRule([Security.AccessControl.FileSystemAccessRule]::new(
+                    [Security.Principal.SecurityIdentifier]::new($sid), 'FullControl', 'Allow'))
             }
             Set-Acl -LiteralPath $credentialPath -AclObject $restrictedAcl
+            $readback = Get-Acl -LiteralPath $credentialPath
+            if (@($readback.GetAccessRules($true, $true, [Security.Principal.SecurityIdentifier]) |
+                    Where-Object { $_.IdentityReference.Value -eq $config.service_sid }).Count -ne 0) {
+                throw 'Credential denial fixture retained service access'
+            }
             $results.inaccessible_credential = Assert-Denied $changedAt
         } finally { Set-Acl -LiteralPath $credentialPath -AclObject $originalAcl }
         $null = Wait-Health 'admitted' ([datetime]::UtcNow)
