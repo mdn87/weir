@@ -144,7 +144,8 @@ try {
             profiles = $profiles; bypass_rules = $bypass;
             rule = [ordered]@{
                 name = $rule.Name; enabled = ([string]$rule.Enabled -eq 'True'); direction = [string]$rule.Direction;
-                action = [string]$rule.Action; profiles = [string]$rule.Profile; enforcement = [string]$rule.EnforcementStatus;
+                action = [string]$rule.Action; profiles = [string]$rule.Profile;
+                enforcement = @($rule.CimInstanceProperties['EnforcementStatus'].Value | ForEach-Object { [int]$_ });
                 local_user = [string]$security.LocalUsers; remote_user = (Any-Value $security.RemoteUsers);
                 remote_machine = (Any-Value $security.RemoteMachines); authentication = [string]$security.Authentication;
                 program = (Any-Value $application.AppPath); package = (Any-Value $application.Package);

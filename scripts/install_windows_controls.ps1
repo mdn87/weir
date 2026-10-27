@@ -239,7 +239,7 @@ try {
         & "$env:SystemRoot\System32\icacls.exe" $ownedFile /setowner '*S-1-5-32-544' /Q | Out-Null
         if ($LASTEXITCODE -ne 0) { throw 'Deployment file ownership could not be secured' }
     }
-    if (Test-Path -LiteralPath $configPath) { [IO.File]::Replace($temporaryConfig, $configPath, $null) }
+    if (Test-Path -LiteralPath $configPath) { [IO.File]::Replace($temporaryConfig, $configPath, [NullString]::Value) }
     else { [IO.File]::Move($temporaryConfig, $configPath) }
     $command = '"' + $python + '" -I -B -m weir.windows_service --config "' + $configPath + '"'
     if ($null -eq $existingService) {

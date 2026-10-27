@@ -59,7 +59,7 @@ def snapshot() -> dict:
         "sid": SID, "groups": ["S-1-1-0", "S-1-5-6"],
         "privileges": ["SeChangeNotifyPrivilege"], "executable": PYTHON,
         "created": 133000000000000000,
-        "appcontainer_sid": None, "capabilities": [], "integrity": "S-1-16-8192",
+        "appcontainer_sid": None, "capabilities": [], "integrity": "S-1-16-12288",
     }
     return {
         "host_name": "MATT",
@@ -86,7 +86,7 @@ def snapshot() -> dict:
                 "protocol": "Any", "local_address": ["Any"], "remote_address": ["Any"],
                 "local_port": ["Any"], "remote_port": ["Any"], "interface_type": "Any",
                 "interface_alias": ["Any"], "package": "Any", "remote_user": "Any",
-                "remote_machine": "Any", "authentication": "NotRequired", "enforcement": "Full",
+                "remote_machine": "Any", "authentication": "NotRequired", "enforcement": [5, 1, 1, 1],
             },
         },
     }
@@ -174,6 +174,13 @@ class WindowsHostTests(unittest.TestCase):
             else:
                 facts["firewall"]["bypass_rules"] = ["domain-bypass"]
             with self.assertRaises(EnginePolicyBlocked):
+                self.check(facts)
+
+    def test_active_store_enforcement_rejects_every_partial_failure(self):
+        for statuses in ([], [5], [1, 2], [1, 16], [1, 19], [True]):
+            facts = snapshot()
+            facts["firewall"]["rule"]["enforcement"] = statuses
+            with self.subTest(statuses=statuses), self.assertRaises(EnginePolicyBlocked):
                 self.check(facts)
 
     def test_runtime_closure_ancestor_or_loopback_exemption_denies(self):

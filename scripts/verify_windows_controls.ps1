@@ -20,6 +20,9 @@ function Wait-Health([string]$State, [datetime]$After, [int]$TimeoutSeconds = 18
     while ([datetime]::UtcNow -lt $deadline) {
         if (Test-Path -LiteralPath $healthPath) {
             $value = Get-Content -Raw -LiteralPath $healthPath | ConvertFrom-Json
+            if ($value.state -eq 'failed' -and ([datetime]$value.heartbeat_at).ToUniversalTime() -gt $After) {
+                throw ('Service startup failed: ' + $value.detail)
+            }
             if ($value.state -eq $State -and ([datetime]$value.heartbeat_at).ToUniversalTime() -gt $After) { return $value }
         }
         Start-Sleep -Milliseconds 500

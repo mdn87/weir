@@ -22,6 +22,11 @@ Administrators provision it; the service reads code/configuration/credentials an
 write only its status directory. Distinct caller sources are reserved for
 `lugos-mcp` and `fade-weir-authority`; credentials never enter reports or the repo.
 
+SCM assigns the supervisor high integrity (`S-1-16-12288`) even for this nonadministrator
+virtual account. Native readback confirmed the dedicated SID, no administrator group
+and only `SeChangeNotifyPrivilege`. The worker must independently have low integrity
+(`S-1-16-4096`) and no AppContainer capabilities.
+
 ## Live inspection
 
 The supervisor performs host preflight before creating a worker and verifies the child
@@ -35,6 +40,11 @@ policy, requires all profiles enabled, and checks an all-protocol/all-address ou
 block for the service account SID, with no executable restriction. An unrelated
 Python executable is never blocked. Enabled authenticated bypass rules and an
 AppContainer loopback exemption are rejected.
+
+The inspector reads the numeric WMI enforcement-state array: it requires full
+enforcement (`1`) and permits only inactive-profile entries (`5`) alongside it.
+Disabled firewall, unresolved filters and disallowed local policy states deny
+admission ([Microsoft WMI contract](https://learn.microsoft.com/en-us/windows/win32/fwp/wmi/wfascimprov/msft-netfirewallrule)).
 
 The provider creates 60-second schema-v2 `ProductionControlEvidence` from those observations;
 it never accepts a saved status report as admission evidence. A missing/failed probe,
@@ -65,7 +75,10 @@ validation; use `-Mode Apply` from an elevated PowerShell for host changes.
 Installation and verification require PowerShell 7.3 or later with `Windows` or
 `Standard` native argument passing, which preserves embedded quotes in the SCM
 command and Python verifier arguments ([Microsoft reference](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_parsing#passing-arguments-that-contain-quote-characters)).
-The read-only service inspector uses the built-in Windows PowerShell 5.1.
+The read-only service inspector uses the built-in Windows PowerShell 5.1 with
+process-scoped `RemoteSigned` for its locally installed, manifest-verified scripts.
+Machine and group policies retain their normal precedence. This avoids depending on
+the interactive operator's per-user execution policy when running as a service.
 
 The installer verifies the manifest before and after copying. It creates the service disabled,
 protects code and credentials, installs the account-scoped block, and only then starts

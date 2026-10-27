@@ -45,6 +45,14 @@ def _write_status(config: WindowsDeployment, payload: dict) -> None:
     os.replace(temporary, path)
 
 
+def _failure_detail(exc: BaseException) -> str:
+    if isinstance(exc, EnginePolicyBlocked):
+        return str(exc)
+    if isinstance(exc, OSError):
+        return f"{type(exc).__name__}: winerror={getattr(exc, 'winerror', None)}, errno={exc.errno}"
+    return type(exc).__name__
+
+
 def run_supervisor(config: WindowsDeployment, stop: threading.Event) -> None:
     # Preflight runs before the process transport, worker imports, or factory starts.
     _write_status(config, {"state": "preflight", "worker_operations": 0})
@@ -88,7 +96,7 @@ def run_supervisor(config: WindowsDeployment, stop: threading.Event) -> None:
                                           "delivered_packets": count, "positive_controls": 4})
                 except (EnginePolicyBlocked, OSError, ValueError) as exc:
                     _write_status(config, {"state": "denied", "reason_code": "host_controls_denied",
-                                          "detail": str(exc) if isinstance(exc, EnginePolicyBlocked) else type(exc).__name__,
+                                          "detail": _failure_detail(exc),
                                           "worker_pid": worker.process_id, "worker_operations": operations})
                 if not worker.is_alive:
                     raise RuntimeError("admission worker exited")
@@ -149,7 +157,7 @@ def serve(config: WindowsDeployment) -> int:
             exit_code = 1
             try:
                 _write_status(config, {"state": "failed", "reason_code": "supervisor_failed",
-                                      "detail": str(exc) if isinstance(exc, EnginePolicyBlocked) else type(exc).__name__})
+                                      "detail": _failure_detail(exc)})
             except OSError:
                 pass
         finally:

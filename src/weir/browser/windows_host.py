@@ -182,7 +182,9 @@ def validate_host_snapshot(
             if kind == "worker":
                 validate_worker_isolation(config, process)
             else:
-                _deny(process["appcontainer_sid"] is None and process["integrity"] == "S-1-16-8192", "wrong supervisor integrity")
+                # SCM gives this non-administrator virtual account high integrity.
+                # SID, groups and privileges above establish its authority boundary.
+                _deny(process["appcontainer_sid"] is None and process["integrity"] == "S-1-16-12288", "wrong supervisor integrity")
         if worker_pid is not None:
             _deny(facts["worker"]["parent_pid"] == supervisor_pid, "wrong worker parent")
             _deny(facts["worker"]["created"] >= facts["supervisor"]["created"], "wrong process generation")
@@ -234,13 +236,18 @@ def validate_host_snapshot(
               and all(type(x) is bool for x in firewall["profiles"].values()), "firewall profile disabled")
         _deny(firewall["bypass_rules"] == [], "authenticated firewall bypass")
         _deny(config.appcontainer_sid not in facts["loopback_exemptions"], "AppContainer loopback exemption")
+        # WMI returns an array: 1=Full, 5=InactiveProfile. Inactive profiles do not
+        # weaken the exact all-profile rule; every profile must still be enabled.
+        enforcement = firewall["rule"]["enforcement"]
+        _deny(isinstance(enforcement, list) and 1 <= len(enforcement) <= 16 and 1 in enforcement
+              and all(type(item) is int and item in (1, 5) for item in enforcement), "egress rule is not fully enforced")
         expected_rule = {
             "name": config.firewall_rule, "enabled": True, "direction": "Outbound", "action": "Block",
             "profiles": "Any", "local_user": f"D:(A;;CC;;;{config.service_sid})",
             "program": "Any", "service": "Any", "protocol": "Any",
             "local_address": ["Any"], "remote_address": ["Any"], "local_port": ["Any"], "remote_port": ["Any"],
             "interface_type": "Any", "interface_alias": ["Any"], "package": "Any",
-            "remote_user": "Any", "remote_machine": "Any", "authentication": "NotRequired", "enforcement": "Full",
+            "remote_user": "Any", "remote_machine": "Any", "authentication": "NotRequired", "enforcement": enforcement,
         }
         _deny(firewall["rule"] == expected_rule and firewall["rule"]["enabled"] is True, "egress rule narrowed or disabled")
         instance = f"scm-{supervisor_pid}-{facts['supervisor']['created']}"
@@ -274,12 +281,12 @@ def read_host_snapshot(config: WindowsDeployment, worker_pid: int | None = None,
     request = {"config": config.to_dict(), "supervisor_pid": supervisor_pid, "worker_pid": worker_pid}
     try:
         result = subprocess.run(
-            [str(powershell), "-NoLogo", "-NoProfile", "-NonInteractive", "-File", str(_inspector_script())],
+            [str(powershell), "-NoLogo", "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "RemoteSigned", "-File", str(_inspector_script())],
             input=json.dumps(request), capture_output=True, text=True, encoding="utf-8",
             timeout=45, creationflags=subprocess.CREATE_NO_WINDOW, check=False,
         )
         if result.returncode or len(result.stdout) > 16 * 1024 * 1024:
-            match = re.fullmatch(r"Windows control inspection denied: (runtime|credentials|service|firewall)\s*", result.stderr)
+            match = re.search(r"Windows control inspection denied: (runtime|credentials|service|firewall)\b", result.stderr)
             if match:
                 raise EnginePolicyBlocked("Windows control readback failed: " + match[1])
             raise EnginePolicyBlocked("Windows control readback failed")
