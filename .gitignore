@@ -29,3 +29,5 @@ benchmarks/results/
 
 # Autowork isolated worktrees
 .worktrees/
+config/glas.ebay.local.json
+config/glas.relay.local.json
