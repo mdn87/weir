@@ -1,4 +1,4 @@
-"""Launch the eBay connector or remote relay canary with scoped BWS secrets."""
+"""Launch Weir credentialed commands with scoped BWS secrets."""
 
 from __future__ import annotations
 
@@ -10,11 +10,12 @@ import sys
 
 
 ROOT = Path(__file__).resolve().parents[1]
+WINDOWS = os.name == "nt"
 
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("consumer", choices=("ebay", "relay"))
+    parser.add_argument("consumer", choices=("ebay", "relay", "windows-install"))
     parser.add_argument("args", nargs=argparse.REMAINDER)
     options = parser.parse_args(argv)
     manifest = ROOT / "config" / f"glas.{options.consumer}.local.json"
@@ -25,13 +26,18 @@ def main(argv: list[str] | None = None) -> int:
         if not args or args[0] not in ("engines", "search", "read", "enrich"):
             parser.error("The eBay consumer accepts engines, search, read, or enrich")
         command = [sys.executable, "-c", "from weir.cli import main; raise SystemExit(main())", *args]
-    else:
+    elif options.consumer == "relay":
         command = [sys.executable, str(ROOT / "scripts" / "run_remote_relay_canary.py"), *args]
+    else:
+        if not WINDOWS:
+            parser.error("Windows installer requires Windows")
+        command = ["pwsh", "-NoProfile", "-File", str(ROOT / "scripts" / "install_windows_controls.ps1"), *args]
 
     env = os.environ.copy()
     for name in (
         "BWS_ACCESS_TOKEN", "EBAY_CLIENT_ID", "EBAY_CLIENT_SECRET",
         "WEIR_EBAY_CLIENT_ID", "WEIR_EBAY_CLIENT_SECRET", "LUGOS_EVENT_INGEST_TOKEN",
+        "WEIR_LUGOS_MCP_CALLER_TOKEN", "WEIR_FADE_WEIR_AUTHORITY_CALLER_TOKEN",
     ):
         env.pop(name, None)
     sources = [str(ROOT / "src")]

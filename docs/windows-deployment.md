@@ -75,7 +75,21 @@ attempts. UDP send success alone is never interpreted as successful delivery.
 runtime and installs a locally built WEIR wheel plus downloaded dependency wheels.
 It seals every runtime file in `runtime-manifest.json`. Run the explicit installer with
 `-Mode Prepare -Bundle <absolute-bundle> -ManifestSha256 <manifest-sha256>` for read-only
-validation; use `-Mode Apply` from an elevated PowerShell for host changes.
+validation. For `-Mode Apply`, first import the two existing protected caller token
+values into separate BWS entries without rotating them. Create the ignored
+`config/glas.windows-install.local.json` manifest binding those entries to
+`WEIR_LUGOS_MCP_CALLER_TOKEN` and `WEIR_FADE_WEIR_AUTHORITY_CALLER_TOKEN`.
+From an elevated PowerShell under the account with the GLAS native profile, run:
+
+```powershell
+python scripts/with_glas.py windows-install -- -Mode Apply -Bundle <absolute-bundle> -ManifestSha256 <manifest-sha256>
+```
+
+The installer refuses missing, duplicate, or mismatched BWS tokens before changing
+the service. It materializes the BWS values only in the existing protected caller
+files, which the deny-only service needs to verify per-caller file access controls.
+It never generates replacement tokens. `Prepare`, `Verify`, and `Rollback` remain
+direct installer modes without BWS bindings.
 
 Installation and verification require PowerShell 7.3 or later with `Windows` or
 `Standard` native argument passing, which preserves embedded quotes in the SCM

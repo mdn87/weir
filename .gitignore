@@ -31,3 +31,4 @@ benchmarks/results/
 .worktrees/
 config/glas.ebay.local.json
 config/glas.relay.local.json
+config/glas.windows-install.local.json

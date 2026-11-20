@@ -317,6 +317,10 @@ token to `LUGOS_EVENT_INGEST_TOKEN`. Then run:
 python scripts/with_glas.py ebay -- search QUERY --source ebay
 python scripts/with_glas.py relay -- <canary args>
 ```
+The Windows admission-service installer uses a third, ignored
+`config/glas.windows-install.local.json` manifest for its two protected caller
+tokens. See [Windows deployment](docs/windows-deployment.md) before running
+`-Mode Apply`; it preserves existing values and refuses an unbacked token.
 Set `GLAS_PYTHON` to an installation with GLAS and Bitwarden support,
 `GLAS_ROOT` when using a source checkout, and `GLAS_HOME` to the intended
 native-store inventory. The public Lode hosted-runner integration still needs
