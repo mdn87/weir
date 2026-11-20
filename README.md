@@ -305,3 +305,19 @@ oversized structured-search set fails instead of violating its result-set contra
 **WEIR** = **Web Evidence, Interaction & Retrieval**.
 
 A weir controls and directs flow without pretending to be the water itself. That is the intended architectural role here: external web state flows through a governed, observable boundary before it becomes agent context or action authority.
+
+# BWS-backed credentialed commands
+
+Create ignored `config/glas.ebay.local.json` and `config/glas.relay.local.json`
+reference manifests for the commands you use. Map the eBay client ID and secret
+to `WEIR_EBAY_CLIENT_ID` and `WEIR_EBAY_CLIENT_SECRET`; map the event ingest
+token to `LUGOS_EVENT_INGEST_TOKEN`. Then run:
+
+```text
+python scripts/with_glas.py ebay -- search QUERY --source ebay
+python scripts/with_glas.py relay -- <canary args>
+```
+Set `GLAS_PYTHON` to an installation with GLAS and Bitwarden support,
+`GLAS_ROOT` when using a source checkout, and `GLAS_HOME` to the intended
+native-store inventory. The public Lode hosted-runner integration still needs
+its own migration before its caller can stop supplying eBay credentials.

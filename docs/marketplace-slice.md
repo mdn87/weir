@@ -203,9 +203,10 @@ what Lode's listing-state change detection needs.
 - Rung-2 enrichment: `weir enrich <item-url>` read the live eBay item page
   through oc (~23KB normalized content, no fallback needed), capture tagged
   `enrichment: page`.
-- Credentials: the Lode production keyset via `EBAY_CLIENT_ID`/
-  `EBAY_CLIENT_SECRET` user env vars; WEIR's `ebay-app` profile reads the
-  same names, so one keyset serves both projects.
+- Credentials: launch WEIR through `python scripts/with_glas.py ebay -- search`
+  with an ignored `config/glas.ebay.local.json` manifest mapping BWS entries to
+  `WEIR_EBAY_CLIENT_ID` and `WEIR_EBAY_CLIENT_SECRET`. The wrapper removes
+  inherited eBay credentials before GLAS supplies the connector's keyset.
 
 ## Lode consumption (proven 2026-08-24)
 

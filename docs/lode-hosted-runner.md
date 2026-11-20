@@ -1,5 +1,11 @@
 # WEIR on Lode's hosted scout runner
 
+This page records the existing private Lode runner contract. That runner still
+injects eBay credentials from GitHub Actions secrets, so it does not meet the
+GLAS/BWS launch policy. Migrate the private Lode workflow to a self-hosted
+runner with an authorized GLAS profile before retiring those caller secrets.
+The local WEIR eBay launch in this repository is described in the README.
+
 Lode's `WeirCollector` shells out to two commands:
 
 ```text
