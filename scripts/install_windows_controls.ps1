@@ -169,6 +169,26 @@ if ($Mode -eq 'Verify') {
     & (Join-Path $PSScriptRoot 'verify_windows_controls.ps1') -Root $rootPath -OutputPath (Join-Path $bundlePath 'host-acceptance.json')
     exit $LASTEXITCODE
 }
+$callerTokens = [ordered]@{
+    'lugos-mcp' = $env:WEIR_LUGOS_MCP_CALLER_TOKEN
+    'fade-weir-authority' = $env:WEIR_FADE_WEIR_AUTHORITY_CALLER_TOKEN
+}
+foreach ($caller in $callerTokens.Keys) {
+    $value = $callerTokens[$caller]
+    if ([string]::IsNullOrWhiteSpace($value) -or $value.Length -lt 32 -or $value -match '\s') {
+        throw "Missing or invalid GLAS BWS caller token for $caller; the service was not stopped"
+    }
+    $existingTokenPath = Join-Path (Join-Path $rootPath 'credentials') ($caller + '.token')
+    if (Test-Path -LiteralPath $existingTokenPath) {
+        Assert-ProtectedPath $existingTokenPath -Credentials
+        if ([IO.File]::ReadAllText($existingTokenPath) -cne $value) {
+            throw "Protected $caller token differs from BWS; the service was not stopped"
+        }
+    }
+}
+if ($callerTokens['lugos-mcp'] -ceq $callerTokens['fade-weir-authority']) {
+    throw 'GLAS BWS caller tokens must be distinct; the service was not stopped'
+}
 if ($null -ne $existingService) {
     Invoke-ServiceCommand @('config', $serviceName, 'start=', 'disabled')
     if ($existingService.State -ne 'Stopped') { Stop-Service -Name $serviceName }
@@ -208,12 +228,14 @@ try {
     $sources = @()
     foreach ($caller in @('lugos-mcp', 'fade-weir-authority')) {
         $path = Join-Path (Join-Path $rootPath 'credentials') ($caller + '.token')
-        if (Test-Path -LiteralPath $path) { Assert-ProtectedPath $path -Credentials }
+        if (Test-Path -LiteralPath $path) {
+            Assert-ProtectedPath $path -Credentials
+            if ([IO.File]::ReadAllText($path) -cne $callerTokens[$caller]) {
+                throw "Protected $caller token differs from BWS; no credential was rotated"
+            }
+        }
         else {
-            $random = [Security.Cryptography.RandomNumberGenerator]::Create()
-            $bytes = New-Object byte[] 32
-            try { $random.GetBytes($bytes); [IO.File]::WriteAllText($path, [Convert]::ToBase64String($bytes), [Text.UTF8Encoding]::new($false)) }
-            finally { [Array]::Clear($bytes, 0, $bytes.Length); $random.Dispose() }
+            [IO.File]::WriteAllText($path, $callerTokens[$caller], [Text.UTF8Encoding]::new($false))
         }
         $sources += [ordered]@{ caller_id = $caller; source_id = ('weir-' + $caller + '-v1'); path = $path }
     }
