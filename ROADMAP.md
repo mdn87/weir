@@ -2,11 +2,11 @@
 
 ## Current release
 
-An operator should be able to ask Lugos a web question, inspect the answer and its
-sources, and return to the same result later. When the job involves an account,
-the operator can inspect private information and approve a specific change whose
-result WEIR verifies. Public research and marketplace comparisons can ship while
-the team qualifies a host for signed-in browsing.
+Matt selected two jobs for release. From a normal Lugos seat, he can request a
+report on a signed-in dashboard or compare marketplace listings against his
+criteria. Each job must return a result with evidence he can reopen later. The
+marketplace workflow can ship while the dashboard team qualifies private access.
+Saved website changes follow under their own policy and approval.
 [Operator workflows, owners and release tests](docs/operator-release.md)
 
 ## P0 - Contracts and benchmark harness
@@ -111,8 +111,9 @@ The earlier 100% assessment covered the first effect policy review alone.
 | 3 | Implement the production effect adapter | Bind commands to exact permits, current session state and durable reservations. Verify post-state receipts, stale or mismatched denial, response-loss reconciliation and no duplicate effects on retry. |
 | 4 | Run one approved production canary | Obtain explicit approval for the target and reversible action. Record one observed effect, single-use permission, restart replay denial and rollback evidence before expanding the rollout. |
 
-The next delivery is public research and comparisons from a normal Lugos seat.
-Windows service qualification blocks the browser branch. The production allowlist
+The next delivery is marketplace comparison with evidence and run history in
+Lugos. Signed-in dashboard reporting can develop alongside it. Windows service
+qualification blocks live observation on that browser host. The production allowlist
 is empty. A Linux alternative needs its own live admission evidence and a reviewed
 deployment decision. [Windows service findings](docs/acceptance/windows-browser-driver-20261121.md)
 

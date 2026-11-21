@@ -462,7 +462,7 @@
       "aheadOfPrereqs": null,
       "timestamps": {
         "createdAt": "2026-11-21T09:29:54.544Z",
-        "updatedAt": "2026-11-21T09:40:34.856Z"
+        "updatedAt": "2026-11-21T09:44:10.438Z"
       },
       "evidence": [
         {
@@ -482,6 +482,18 @@
           "at": "2026-11-21T09:40:34.856Z",
           "kind": "stage-change",
           "message": "Product, engineering and testing agreed on two public jobs, private account reports and a verified saved change. The release plan defines owners and live acceptance."
+        },
+        {
+          "entryId": "ev:weir-operator-jobs-selected",
+          "at": "2026-11-21T09:42:31.861Z",
+          "kind": "stage-change",
+          "message": "Matt chose signed-in dashboard reports and marketplace comparisons. Revising acceptance and dependencies around those two jobs."
+        },
+        {
+          "entryId": "ev:weir-selected-release-agreed",
+          "at": "2026-11-21T09:44:10.438Z",
+          "kind": "stage-change",
+          "message": "The signed-in dashboard report and marketplace comparison both need live operator acceptance. Both results must reopen from run history."
         }
       ]
     },
@@ -489,8 +501,8 @@
       "schemaVersion": 1,
       "chipId": "weir:integrate-lugos-seats",
       "projectId": "weir",
-      "title": "Deliver public research and comparisons from Lugos",
-      "summary": "Ask for a sourced report or a listing comparison in a Lugos seat, repeat the job and reopen the original answer and its evidence from history.",
+      "title": "Compare marketplace listings and reopen results in Lugos",
+      "summary": "Find listings from operator criteria, explain matches and unknowns, repeat the comparison and reopen its original sources from a regular Lugos seat.",
       "stage": "ready",
       "sequence": 86,
       "prereqs": [
@@ -503,7 +515,7 @@
       "aheadOfPrereqs": null,
       "timestamps": {
         "createdAt": "2026-09-27T22:07:55.000Z",
-        "updatedAt": "2026-11-21T09:40:34.856Z"
+        "updatedAt": "2026-11-21T09:44:10.438Z"
       },
       "evidence": [
         {
@@ -529,34 +541,12 @@
           "at": "2026-11-21T09:40:34.856Z",
           "kind": "stage-change",
           "message": "The release plan is complete. Public comparisons and research can use the existing broker, trusted dispatcher and durable evidence without waiting for browser hosting."
-        }
-      ]
-    },
-    {
-      "schemaVersion": 1,
-      "chipId": "weir:review-saved-effect-policy",
-      "projectId": "weir",
-      "title": "Review the policy for a saved website change",
-      "summary": "For a selected account and change, review permitted data and delivery, exact approval, independent readback and reversal before enrollment.",
-      "stage": "planned",
-      "sequence": 87,
-      "prereqs": [
-        "weir:define-operator-release",
-        "weir:review-production-effect-policy"
-      ],
-      "linkedRunIds": [],
-      "confidence": "reported",
-      "aheadOfPrereqs": null,
-      "timestamps": {
-        "createdAt": "2026-11-21T09:40:34.856Z",
-        "updatedAt": "2026-11-21T09:40:34.856Z"
-      },
-      "evidence": [
+        },
         {
-          "entryId": "ev:weir-saved-policy-created",
-          "at": "2026-11-21T09:40:34.856Z",
-          "kind": "created",
-          "message": "The operator still needs to choose a real target and operation. Policy review can proceed independently of browser qualification once that choice is made."
+          "entryId": "ev:weir-listings-user-choice",
+          "at": "2026-11-21T09:44:10.438Z",
+          "kind": "note",
+          "message": "Matt selected marketplace comparisons. The existing public connector can deliver this workflow while the team qualifies the signed-in dashboard host."
         }
       ]
     },
@@ -633,12 +623,13 @@
       "schemaVersion": 1,
       "chipId": "weir:deliver-private-account-reports",
       "projectId": "weir",
-      "title": "Deliver private account reports in Lugos",
-      "summary": "Read a named account page with permission, show a private report and let the authorized operator reopen the original observation after a restart.",
+      "title": "Turn signed-in dashboards into reopenable reports",
+      "summary": "Answer a question across an authorized dashboard, cite the relevant views, and let the operator reopen the private report and its evidence after a restart.",
       "stage": "planned",
       "sequence": 95,
       "prereqs": [
-        "weir:integrate-lugos-seats",
+        "weir:define-operator-release",
+        "weir:gate-browser-session-work",
         "weir:prove-windows-browser-compatibility"
       ],
       "linkedRunIds": [],
@@ -646,7 +637,7 @@
       "aheadOfPrereqs": null,
       "timestamps": {
         "createdAt": "2026-11-21T09:38:06.173Z",
-        "updatedAt": "2026-11-21T09:38:06.173Z"
+        "updatedAt": "2026-11-21T09:44:10.438Z"
       },
       "evidence": [
         {
@@ -654,6 +645,12 @@
           "at": "2026-11-21T09:38:06.173Z",
           "kind": "created",
           "message": "The local signed-in fixture already works. Release evidence requires an authorized account, a qualified browser host and a private report reopened from the seat."
+        },
+        {
+          "entryId": "ev:weir-dashboard-user-choice",
+          "at": "2026-11-21T09:44:10.438Z",
+          "kind": "note",
+          "message": "Matt selected signed-in dashboard reports. Reporting and access checks can develop alongside marketplace work. Live acceptance needs an authorized account and a qualified host."
         }
       ]
     },
@@ -714,6 +711,40 @@
           "at": "2026-11-21T09:38:06.173Z",
           "kind": "note",
           "message": "The existing policy covers only the unsaved marker. A useful saved change has a separate delivery and approval."
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "chipId": "weir:review-saved-effect-policy",
+      "projectId": "weir",
+      "title": "Review the policy for a saved website change",
+      "summary": "For a selected account and change, review permitted data and delivery, exact approval, independent readback and reversal before enrollment.",
+      "stage": "planned",
+      "sequence": 112,
+      "prereqs": [
+        "weir:define-operator-release",
+        "weir:review-production-effect-policy"
+      ],
+      "linkedRunIds": [],
+      "confidence": "reported",
+      "aheadOfPrereqs": null,
+      "timestamps": {
+        "createdAt": "2026-11-21T09:40:34.856Z",
+        "updatedAt": "2026-11-21T09:44:10.438Z"
+      },
+      "evidence": [
+        {
+          "entryId": "ev:weir-saved-policy-created",
+          "at": "2026-11-21T09:40:34.856Z",
+          "kind": "created",
+          "message": "The operator still needs to choose a real target and operation. Policy review can proceed independently of browser qualification once that choice is made."
+        },
+        {
+          "entryId": "ev:weir-future-saved-action",
+          "at": "2026-11-21T09:44:10.438Z",
+          "kind": "note",
+          "message": "Both selected jobs use read access. Review a saved website change when the operator chooses a later write workflow."
         }
       ]
     },

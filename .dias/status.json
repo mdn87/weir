@@ -8,13 +8,13 @@
   "milestonePhase": "build-and-validate",
   "portfolioGroup": "acquisition",
   "displayPriority": 50,
-  "assessedAt": "2026-11-21T09:40:34.856Z",
+  "assessedAt": "2026-11-21T09:44:10.438Z",
   "confidence": "reported",
-  "currentMilestone": "Complete real web work from a Lugos seat and reopen the evidence and outcome afterward.",
-  "remainingSummary": "Ship public research and comparisons from Lugos. Qualify a browser host for private reports, then deliver a separately reviewed and approved saved change.",
+  "currentMilestone": "Deliver signed-in dashboard reports and marketplace comparisons from Lugos, with results and evidence the operator can reopen.",
+  "remainingSummary": "Ship marketplace comparisons and shared run history. Build private dashboard reports, qualify the browser host and verify both jobs on real sources.",
   "nextChipId": "weir:integrate-lugos-seats",
   "source": {
-    "label": "Operator release plan and product, engineering and testing roundtable",
+    "label": "Matt's selected release jobs and the product, engineering and testing roundtable",
     "updatedAt": "2026-11-21"
   }
 }
