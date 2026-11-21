@@ -166,13 +166,41 @@ exact ActiveStore filter checks, and explicit manual-start/recovery/service-DACL
 
 ## Chromium compatibility diagnostic
 
-Build the optional candidate on Windows with the browser extra installed in the build
-interpreter. The builder installs its Playwright version and matching Chromium headless
-shell inside the runtime, reads a fixed offline field on the desktop, and hashes the
-driver and browser along with the Python files.
+The optional Windows candidate pins Playwright 1.65.2 and its matching Chromium
+159 headless shell. The builder gives the copied Python runtime container-local
+asyncio pipes, reads a fixed offline field on the desktop, and hashes the Python
+files, driver and browser. The default service uses its existing admission probe.
 
 ```powershell
 python scripts/build_windows_runtime.py --browser-proof --output .codex-tmp/browser-proof
+```
+
+For the AppContainer trial, use a Node build with libuv's Windows child-stdio fix.
+The November 21 candidate used the Node v22.23.5 source archive with SHA-256
+`6cce7c58bf058700c643944903d60a325e8c9ceede1f5c2c088b435f2ada091a`.
+The upstream patch file for commit `2cadaa40167050baf7c6905ac897e6fb57afb2c6`
+had SHA-256 `69c9776d5d93346620e71019ad8931e949427d06d4dca1213f3f517af9027327`.
+Verify both downloads before building. [Node release files](https://nodejs.org/dist/v22.23.5/) · [libuv patch](https://github.com/libuv/libuv/commit/2cadaa40167050baf7c6905ac897e6fb57afb2c6.patch)
+
+From the extracted Node source directory, apply only the upstream pipe change and
+build with the Visual Studio 2022 x64 compiler. The following commands assume the
+verified patch is in the directory above the source tree.
+
+```powershell
+$env:GIT_CEILING_DIRECTORIES = (Get-Item ..).FullName
+git -c core.autocrlf=false apply --directory=deps/uv --include=deps/uv/src/win/pipe.c ../libuv-2cadaa4.patch
+if ($LASTEXITCODE) { throw 'libuv patch failed' }
+if ((Get-FileHash deps/uv/src/win/pipe.c).Hash -ne '0739cb731a3e21eb23a7ee69ba2f1251542f34a06838cd115aa69e4a4bcc7b54') { throw 'Unexpected patched source' }
+.\vcbuild.bat release x64 vs2022 openssl-no-asm
+if ($LASTEXITCODE) { throw 'Node build failed' }
+```
+
+Copy `out/Release/node.exe` and the source tree's `LICENSE` into
+`.codex-tmp/browser-node` in WEIR. From the WEIR checkout, package that build
+for the diagnostic. The manifest covers the replacement binary and its license.
+
+```powershell
+python scripts/build_windows_runtime.py --browser-proof --browser-node-dir .codex-tmp/browser-node --output .codex-tmp/browser-proof-fixed
 ```
 
 Use the preparation and deployment procedure above for the candidate. With the
@@ -189,4 +217,4 @@ deployment root for the observed stage. A field match keeps the processes alive
 for up to 90 seconds so an independent verifier can examine them. The diagnostic
 then stops. A browser-compatibility acceptance also requires live browser and
 renderer inspection and cleanup checks. Restore the previous deployment and
-service state after the trial. [November 21 host results](acceptance/windows-browser-compatibility-20261121.md)
+service state after the trial. [Stock driver trial](acceptance/windows-browser-compatibility-20261121.md) · [Patched driver and Session 0 results](acceptance/windows-browser-driver-20261121.md)

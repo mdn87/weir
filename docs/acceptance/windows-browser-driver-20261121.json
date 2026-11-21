@@ -1,0 +1,156 @@
+{
+  "host": "4070pc",
+  "installed_trial_started_at": "2026-11-21T06:32:57.8911736Z",
+  "installed_trial_restored_at": "2026-11-21T06:39:55.2888533Z",
+  "commissioned_runtime": {
+    "manifest_sha256": "484ccb345406b99aa02560755c08a13a318ad831709cda4f83f3b8b14f103562",
+    "files": 3845,
+    "playwright": "1.65.2",
+    "chromium": "159.0.8154.6",
+    "node": "v22.23.5",
+    "node_sha256": "b86f95313a5ec42edeccace7b03d884eafabd59de5b7958edfa386be514f18d2",
+    "node_source_sha256": "6cce7c58bf058700c643944903d60a325e8c9ceede1f5c2c088b435f2ada091a",
+    "libuv_upstream_commit": "2cadaa40167050baf7c6905ac897e6fb57afb2c6",
+    "patched_pipe_source_sha256": "0739cb731a3e21eb23a7ee69ba2f1251542f34a06838cd115aa69e4a4bcc7b54"
+  },
+  "desktop_appcontainer_pipe_control": {
+    "job": {
+      "member": true,
+      "flags": 8712,
+      "process_count": 8,
+      "memory_bytes": 536870912
+    },
+    "results": {
+      "desktop_namespace": {
+        "error": "PermissionError",
+        "winerror": 5
+      },
+      "container_namespace": {
+        "opened": true
+      },
+      "private_child_stdio": {
+        "roundtrip": true
+      }
+    }
+  },
+  "desktop_job_only": {
+    "chromium": "159.0.8154.6",
+    "field_match": true,
+    "peak_job_commit_bytes": 220680192,
+    "max_processes": 6,
+    "memory_limit_bytes": 536870912,
+    "process_limit": 8,
+    "chromium_sandbox": true
+  },
+  "desktop_appcontainer": {
+    "packaged_field_probe": {
+      "available": false,
+      "version": null,
+      "field": {
+        "stage": "launch_chromium",
+        "error_type": "TargetClosedError",
+        "winerror": null,
+        "driver_connected": true,
+        "child_stdio_verified": true
+      }
+    },
+    "headless_shell_version_probe": {
+      "version_printed": true,
+      "exit": "0x0",
+      "locations": [],
+      "messages": []
+    },
+    "headless_shell_exit": "0x80000003",
+    "chrome_for_testing_exit": "0x80000003",
+    "job_peak_commit_bytes": 150970368
+  },
+  "host_acceptance": {
+    "state": "passed",
+    "checked_at": "2026-11-21T01:38:58.057435-05:00",
+    "checks": [
+      "baseline",
+      "disabled_firewall",
+      "narrowed_firewall",
+      "inaccessible_credential",
+      "writable_runtime_fixture",
+      "parent_death",
+      "restart",
+      "final"
+    ],
+    "job": {
+      "flags": 8712,
+      "member": true,
+      "memory_bytes": 536870912,
+      "process_count": 8
+    },
+    "positive_controls": 4,
+    "delivered_packets": 0,
+    "worker_and_test_descendant_died": true,
+    "scm_failure_number": 2,
+    "scm_restart_delay_ms": 30000
+  },
+  "service": {
+    "identity": "NT SERVICE\\WeirAdmission",
+    "session_id": 0,
+    "field": {
+      "child_stdio_verified": false,
+      "driver_connected": false,
+      "error_type": "Exception",
+      "stage": "start_driver",
+      "winerror": null
+    },
+    "delivered_packets": 0,
+    "worker_credential_access_denied": true,
+    "test_child_credential_access_denied": true,
+    "node_exit_observations": [
+      {
+        "finished_at": "2026-11-21T06:49:10.8403634Z",
+        "observer_control_exit": 37,
+        "worker_pid": 57204,
+        "node": {
+          "code": "0xc0000142",
+          "session_id": 0,
+          "pid": 58716,
+          "parent_pid": 57204
+        },
+        "restored": true
+      },
+      {
+        "finished_at": "2026-11-21T06:52:57.4228851Z",
+        "observer_control_exit": 37,
+        "worker_pid": 61244,
+        "node": {
+          "code": "0xc0000142",
+          "parent_pid": 61244,
+          "pid": 63700,
+          "session_id": 0
+        },
+        "restored": true
+      }
+    ],
+    "loader_events": [
+      {
+        "fields": {
+          "FileName": "node.exe"
+        },
+        "pid": 63700,
+        "event_id": 7
+      }
+    ],
+    "failing_dependency_identified": false,
+    "browser_started": false,
+    "browser_tree_cleanup_verified": false,
+    "action_endpoint_enabled": false
+  },
+  "restoration": {
+    "previous_manifest_sha256": "c8325972b151dee7849150d5275be3ea0b2ad1548fdad95ae97c6e3fecc2df2e",
+    "service_state": "Stopped",
+    "start_mode": "Manual",
+    "configuration_and_manifest_matched": true
+  },
+  "followup_diagnostic_bundle": {
+    "manifest_sha256": "df4de1baf6fec905fd42bfd8756d1b4b099698fc3aeb492d75db28ed467ad164",
+    "desktop_field_match": true,
+    "commissioned": false
+  }
+}
