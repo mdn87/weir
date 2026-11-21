@@ -34,13 +34,23 @@ function Any-Value($Value) {
     return [string]$Value
 }
 
+function Get-Sha256([string]$Path) {
+    # The virtual service account cannot rely on PowerShell module autoloading.
+    $stream = [IO.File]::OpenRead($Path)
+    try {
+        $sha = [Security.Cryptography.SHA256]::Create()
+        try { return [BitConverter]::ToString($sha.ComputeHash($stream)).Replace('-', '').ToLowerInvariant() }
+        finally { $sha.Dispose() }
+    } finally { $stream.Dispose() }
+}
+
 $stage = 'runtime'
 try {
     $root = [IO.Path]::GetFullPath($config.root)
     $runtime = [IO.Path]::GetFullPath($config.base_python_root)
     if (-not $runtime.StartsWith($root + '\', [StringComparison]::OrdinalIgnoreCase)) { throw 'Runtime is outside deployment' }
     $manifestPath = Join-Path $root 'runtime-manifest.json'
-    $manifestHash = (Get-FileHash -LiteralPath $manifestPath -Algorithm SHA256).Hash.ToLowerInvariant()
+    $manifestHash = Get-Sha256 $manifestPath
     if ($manifestHash -cne $config.runtime_manifest_sha256) { throw 'Runtime manifest changed' }
     $manifest = Get-Content -Raw -LiteralPath $manifestPath | ConvertFrom-Json
     if ($manifest.schema_version -ne 1 -or $manifest.files.Count -lt 1 -or $manifest.files.Count -gt 20000) { throw 'Invalid runtime manifest' }
@@ -70,7 +80,7 @@ try {
         if (-not $path.StartsWith($runtime + '\', [StringComparison]::OrdinalIgnoreCase) -or
             -not $actualFiles.ContainsKey($path) -or $seenFiles.ContainsKey($path)) { throw 'Invalid runtime manifest path' }
         $seenFiles[$path] = $true
-        if ((Get-FileHash -LiteralPath $path -Algorithm SHA256).Hash.ToLowerInvariant() -cne $entry.sha256) { throw 'Runtime file changed' }
+        if ((Get-Sha256 $path) -cne $entry.sha256) { throw 'Runtime file changed' }
     }
     $stage = 'credentials'
     $credentials = @($config.credentials | ForEach-Object { Read-AclRecord $_.path })

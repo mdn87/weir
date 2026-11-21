@@ -3,13 +3,14 @@ from __future__ import annotations
 import copy
 import json
 import os
+from pathlib import Path
 import subprocess
 import sys
 import threading
 import unittest
 from unittest import mock
 
-from weir.browser.windows_host import WindowsDeployment, validate_host_snapshot
+from weir.browser.windows_host import WindowsDeployment, _inspector_environment, validate_host_snapshot
 from weir.engines.base import EnginePolicyBlocked
 
 
@@ -21,6 +22,16 @@ SYSTEM = "S-1-5-18"
 ADMINS = "S-1-5-32-544"
 READ = 0x1200A9
 FULL = 0x1F01FF
+
+
+def test_inspector_drops_all_inherited_powershell_module_paths() -> None:
+    powershell = Path("C:/Windows/System32/WindowsPowerShell/v1.0/powershell.exe")
+    with mock.patch.dict(os.environ, {"PSMODULEPATH": "C:/untrusted/modules", "WEIR_SAFE": "yes"}, clear=True):
+        env = _inspector_environment(powershell)
+    assert env["WEIR_SAFE"] == "yes"
+    assert [key for key in env if key.casefold() == "psmodulepath"] == ["PSModulePath"]
+    assert "untrusted" not in env["PSModulePath"]
+    assert env["PSModulePath"].endswith("Modules")
 
 
 def deployment() -> WindowsDeployment:
