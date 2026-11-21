@@ -120,7 +120,9 @@ a committed dispatch, stop further admissions and reconcile the original command
 The first reservation closes admission to further fills. On every exit, including
 withdrawal, failure and crash recovery, retain available evidence and contain the
 worker. For an ambiguous dispatch, persist the unknown receipt and quarantine first
-when possible. Keep the egress block in force while closing the context and
+when possible. An unknown receipt binds only the pre-effect capture. Retain any
+available post-state separately as unverified evidence in the protected store for
+the existing retention period. Keep the egress block in force while closing the context and
 terminating its descendants. Independently read back process-tree exit and restoration
 of deny-only admission. Preserve an unverified shutdown as an open incident with
 admission closed. A later independent, separately admitted read of the enrolled page

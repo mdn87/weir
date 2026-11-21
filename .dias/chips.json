@@ -392,7 +392,7 @@
       "projectId": "weir",
       "title": "Review the production effect policy",
       "summary": "Define approved operations, targets, caller authority, credential handling and failure rules; close independent review before implementation.",
-      "stage": "active",
+      "stage": "done",
       "sequence": 80,
       "prereqs": [
         "weir:provision-deployment-controls",
@@ -403,7 +403,7 @@
       "aheadOfPrereqs": null,
       "timestamps": {
         "createdAt": "2026-09-27T22:07:55.000Z",
-        "updatedAt": "2026-11-21T04:36:09.179Z"
+        "updatedAt": "2026-11-21T04:45:04.134Z"
       },
       "evidence": [
         {
@@ -435,6 +435,12 @@
           "at": "2026-11-21T04:36:09.179Z",
           "kind": "stage-change",
           "message": "The written policy is available for independent review against the existing permit and admission contracts."
+        },
+        {
+          "entryId": "ev:weir-effect-review-accepted",
+          "at": "2026-11-21T04:45:04.134Z",
+          "kind": "stage-change",
+          "message": "Independent review accepted the revised design. All 14 findings were closed and the policy clarifies retention of unverified evidence."
         }
       ]
     },
@@ -444,17 +450,17 @@
       "projectId": "weir",
       "title": "Prove browser isolation in the Windows service",
       "summary": "Prove the selected browser starts inside the service sandbox and shuts down with its descendants; review any new capabilities before use.",
-      "stage": "planned",
+      "stage": "ready",
       "sequence": 90,
       "prereqs": [
         "weir:review-production-effect-policy"
       ],
       "linkedRunIds": [],
-      "confidence": "inferred",
+      "confidence": "reported",
       "aheadOfPrereqs": null,
       "timestamps": {
         "createdAt": "2026-10-27T02:53:26.430Z",
-        "updatedAt": "2026-10-27T02:53:26.430Z"
+        "updatedAt": "2026-11-21T04:45:04.134Z"
       },
       "evidence": [
         {
@@ -462,6 +468,12 @@
           "at": "2026-10-27T02:53:26.430Z",
           "kind": "created",
           "message": "Refined from the accepted Windows deployment limits, production admission contract and remaining roadmap; implementation has not started."
+        },
+        {
+          "entryId": "ev:weir-browser-ready-after-policy",
+          "at": "2026-11-21T04:45:04.134Z",
+          "kind": "stage-change",
+          "message": "With policy review complete, browser isolation and cleanup can be tested in the Windows service."
         }
       ]
     },

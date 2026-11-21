@@ -5,16 +5,16 @@
   "assessmentState": "scored",
   "assessmentScope": "current-milestone",
   "percentComplete": 100,
-  "milestonePhase": "operational-proof",
+  "milestonePhase": "closeout",
   "portfolioGroup": "acquisition",
   "displayPriority": 50,
-  "assessedAt": "2026-10-27T02:53:26.430Z",
+  "assessedAt": "2026-11-21T04:45:04.134Z",
   "confidence": "reported",
-  "currentMilestone": "Batch 7P Windows deployment controls passed independent live acceptance. Production website actions remain disabled.",
-  "remainingSummary": "Define the first reversible action and review its policy. Browser isolation, a permit-bound adapter and an approved canary follow. Seat integration, Linux and visual work remain.",
-  "nextChipId": "weir:review-production-effect-policy",
+  "currentMilestone": "Independent review accepted the first production action policy for design. Production website actions remain disabled.",
+  "remainingSummary": "Prove Windows browser isolation, then build the permit-bound adapter and run one approved canary. Seat integration, Linux controls and visual fallback remain.",
+  "nextChipId": "weir:prove-windows-browser-compatibility",
   "source": {
-    "label": "Accepted Batch 7P report, production admission contract and refined roadmap; linked Taskmaster workspace trail",
-    "updatedAt": "2026-10-27"
+    "label": "Reviewed action policy, independent acceptance and Windows deployment evidence",
+    "updatedAt": "2026-11-21"
   }
 }
