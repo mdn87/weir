@@ -8,13 +8,13 @@
   "milestonePhase": "build-and-validate",
   "portfolioGroup": "acquisition",
   "displayPriority": 50,
-  "assessedAt": "2026-11-21T09:29:54.544Z",
+  "assessedAt": "2026-11-21T09:40:34.856Z",
   "confidence": "reported",
   "currentMilestone": "Complete real web work from a Lugos seat and reopen the evidence and outcome afterward.",
-  "remainingSummary": "Define release acceptance and sequence the operator workflow, browser qualification and approved actions against the work already delivered.",
-  "nextChipId": "weir:define-operator-release",
+  "remainingSummary": "Ship public research and comparisons from Lugos. Qualify a browser host for private reports, then deliver a separately reviewed and approved saved change.",
+  "nextChipId": "weir:integrate-lugos-seats",
   "source": {
-    "label": "Operator release planning and measured WEIR capabilities",
+    "label": "Operator release plan and product, engineering and testing roundtable",
     "updatedAt": "2026-11-21"
   }
 }

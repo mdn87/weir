@@ -1,6 +1,13 @@
 # WEIR Roadmap
 
-This roadmap is exploratory. Engine promotion and final authority ownership require evidence.
+## Current release
+
+An operator should be able to ask Lugos a web question, inspect the answer and its
+sources, and return to the same result later. When the job involves an account,
+the operator can inspect private information and approve a specific change whose
+result WEIR verifies. Public research and marketplace comparisons can ship while
+the team qualifies a host for signed-in browsing.
+[Operator workflows, owners and release tests](docs/operator-release.md)
 
 ## P0 - Contracts and benchmark harness
 
@@ -93,9 +100,9 @@ Browser compatibility, a production adapter and an approved canary still need pr
 
 ### Next Windows production batches
 
-The Dias board projects this planned work. Taskmaster's `weir/workspace` trail records
-session and handoff history and is linked to the same WEIR board. Its 100%
-assessment covers the completed policy review. The board tracks the remaining work.
+The Dias board tracks these engineering prerequisites alongside the operator
+workflows. Taskmaster records session handoffs on the `weir/workspace` trail.
+The earlier 100% assessment covered the first effect policy review alone.
 
 | Order | Batch | Completion criteria |
 | --- | --- | --- |
@@ -104,9 +111,10 @@ assessment covers the completed policy review. The board tracks the remaining wo
 | 3 | Implement the production effect adapter | Bind commands to exact permits, current session state and durable reservations. Verify post-state receipts, stale or mismatched denial, response-loss reconciliation and no duplicate effects on retry. |
 | 4 | Run one approved production canary | Obtain explicit approval for the target and reversible action. Record one observed effect, single-use permission, restart replay denial and rollback evidence before expanding the rollout. |
 
-Browser compatibility is the next batch. The production allowlist is empty.
-Broader seat integration and visual fallback remain below. Linux host admission needs its own live inspector,
-process lifetime binding, resource/egress proof and a selected deployment target.
+The next delivery is public research and comparisons from a normal Lugos seat.
+Windows service qualification blocks the browser branch. The production allowlist
+is empty. A Linux alternative needs its own live admission evidence and a reviewed
+deployment decision. [Windows service findings](docs/acceptance/windows-browser-driver-20261121.md)
 
 ## P3 - Action authority integration
 
