@@ -4,6 +4,11 @@
 
 WEIR is the proposed web capability plane for the Lugos ecosystem. It provides one typed boundary for public web acquisition, authenticated browser observation, browser interaction, evidence capture, engine routing, and escalation to visual fallbacks.
 
+The current release has two jobs. Ask Lugos to work through a signed-in dashboard
+and deliver a report, or to compare marketplace listings against your criteria.
+Both jobs return results and evidence you can reopen from your seat.
+[Operator release](docs/operator-release.md)
+
 WEIR is not a browser, search engine, autonomous agent, or second orchestrator. It is the subsystem that lets Lugos ask for web capabilities without coupling callers to a specific implementation such as `oc`, `agent-browser`, Playwright, Chromium/CDP, or a service-specific API.
 
 ## Thesis

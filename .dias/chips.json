@@ -446,6 +446,112 @@
     },
     {
       "schemaVersion": 1,
+      "chipId": "weir:define-operator-release",
+      "projectId": "weir",
+      "title": "Define the usable WEIR release",
+      "summary": "Specify the web jobs an operator can finish from Lugos, the evidence they can reopen, and the work required to ship and verify the release.",
+      "stage": "done",
+      "sequence": 85,
+      "prereqs": [
+        "weir:add-durable-capture-persistence",
+        "weir:add-supported-site-profiles",
+        "weir:review-production-effect-policy"
+      ],
+      "linkedRunIds": [],
+      "confidence": "reported",
+      "aheadOfPrereqs": null,
+      "timestamps": {
+        "createdAt": "2026-11-21T09:29:54.544Z",
+        "updatedAt": "2026-11-21T09:44:10.438Z"
+      },
+      "evidence": [
+        {
+          "entryId": "ev:weir-operator-release-created",
+          "at": "2026-11-21T09:29:54.544Z",
+          "kind": "created",
+          "message": "Matt asked for a usable product milestone. The release plan must connect existing web capabilities to real operator work and clear acceptance evidence."
+        },
+        {
+          "entryId": "ev:weir-operator-roundtable",
+          "at": "2026-11-21T09:30:25.371Z",
+          "kind": "stage-change",
+          "message": "The product, engineering and testing roundtable is defining the operator journey, release tests and delivery dependencies."
+        },
+        {
+          "entryId": "ev:weir-operator-roundtable-converged",
+          "at": "2026-11-21T09:40:34.856Z",
+          "kind": "stage-change",
+          "message": "Product, engineering and testing agreed on two public jobs, private account reports and a verified saved change. The release plan defines owners and live acceptance."
+        },
+        {
+          "entryId": "ev:weir-operator-jobs-selected",
+          "at": "2026-11-21T09:42:31.861Z",
+          "kind": "stage-change",
+          "message": "Matt chose signed-in dashboard reports and marketplace comparisons. Revising acceptance and dependencies around those two jobs."
+        },
+        {
+          "entryId": "ev:weir-selected-release-agreed",
+          "at": "2026-11-21T09:44:10.438Z",
+          "kind": "stage-change",
+          "message": "The signed-in dashboard report and marketplace comparison both need live operator acceptance. Both results must reopen from run history."
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "chipId": "weir:integrate-lugos-seats",
+      "projectId": "weir",
+      "title": "Compare marketplace listings and reopen results in Lugos",
+      "summary": "Find listings from operator criteria, explain matches and unknowns, repeat the comparison and reopen its original sources from a regular Lugos seat.",
+      "stage": "ready",
+      "sequence": 86,
+      "prereqs": [
+        "weir:define-operator-release",
+        "weir:add-supported-site-profiles",
+        "weir:add-durable-capture-persistence"
+      ],
+      "linkedRunIds": [],
+      "confidence": "reported",
+      "aheadOfPrereqs": null,
+      "timestamps": {
+        "createdAt": "2026-09-27T22:07:55.000Z",
+        "updatedAt": "2026-11-21T09:44:10.438Z"
+      },
+      "evidence": [
+        {
+          "entryId": "ev:2609270w0016",
+          "at": "2026-09-27T22:07:55.000Z",
+          "kind": "created",
+          "message": "Added 2026-09-27 from ROADMAP P4; only the hashed work context and the metadata-only session journal are checked so far."
+        },
+        {
+          "entryId": "ev:2610267p0003",
+          "at": "2026-10-27T00:19:40.640Z",
+          "kind": "note",
+          "message": "Reconciled MCP adapter/wiring tests, Autowork web_evidence.py and HUD action projection/event reader with accepted Batch 3/4/5 rollout records."
+        },
+        {
+          "entryId": "ev:weir-public-workflow-scope",
+          "at": "2026-11-21T09:38:06.173Z",
+          "kind": "note",
+          "message": "The delivery includes task routing, trusted assignment context, reports and evidence history. Its two public jobs can ship while the browser host is being qualified."
+        },
+        {
+          "entryId": "ev:weir-public-workflow-ready",
+          "at": "2026-11-21T09:40:34.856Z",
+          "kind": "stage-change",
+          "message": "The release plan is complete. Public comparisons and research can use the existing broker, trusted dispatcher and durable evidence without waiting for browser hosting."
+        },
+        {
+          "entryId": "ev:weir-listings-user-choice",
+          "at": "2026-11-21T09:44:10.438Z",
+          "kind": "note",
+          "message": "Matt selected marketplace comparisons. The existing public connector can deliver this workflow while the team qualifies the signed-in dashboard host."
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
       "chipId": "weir:prove-windows-browser-compatibility",
       "projectId": "weir",
       "title": "Prove browser isolation in the Windows service",
@@ -515,6 +621,41 @@
     },
     {
       "schemaVersion": 1,
+      "chipId": "weir:deliver-private-account-reports",
+      "projectId": "weir",
+      "title": "Turn signed-in dashboards into reopenable reports",
+      "summary": "Answer a question across an authorized dashboard, cite the relevant views, and let the operator reopen the private report and its evidence after a restart.",
+      "stage": "planned",
+      "sequence": 95,
+      "prereqs": [
+        "weir:define-operator-release",
+        "weir:gate-browser-session-work",
+        "weir:prove-windows-browser-compatibility"
+      ],
+      "linkedRunIds": [],
+      "confidence": "reported",
+      "aheadOfPrereqs": null,
+      "timestamps": {
+        "createdAt": "2026-11-21T09:38:06.173Z",
+        "updatedAt": "2026-11-21T09:44:10.438Z"
+      },
+      "evidence": [
+        {
+          "entryId": "ev:weir-private-reports-created",
+          "at": "2026-11-21T09:38:06.173Z",
+          "kind": "created",
+          "message": "The local signed-in fixture already works. Release evidence requires an authorized account, a qualified browser host and a private report reopened from the seat."
+        },
+        {
+          "entryId": "ev:weir-dashboard-user-choice",
+          "at": "2026-11-21T09:44:10.438Z",
+          "kind": "note",
+          "message": "Matt selected signed-in dashboard reports. Reporting and access checks can develop alongside marketplace work. Live acceptance needs an authorized account and a qualified host."
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
       "chipId": "weir:implement-production-effect-adapter",
       "projectId": "weir",
       "title": "Bind production actions to reviewed permits",
@@ -544,8 +685,8 @@
       "schemaVersion": 1,
       "chipId": "weir:verify-production-action-canary",
       "projectId": "weir",
-      "title": "Verify one approved production action",
-      "summary": "After explicit action approval, prove one reversible effect, one-use permission, no replay on restart and safe rollback with retained evidence.",
+      "title": "Verify the unsaved browser field canary",
+      "summary": "With explicit approval, fill the enrolled unsaved field once. Verify readback, replay denial and rollback. The action expires with the tab.",
       "stage": "planned",
       "sequence": 110,
       "prereqs": [
@@ -556,7 +697,7 @@
       "aheadOfPrereqs": null,
       "timestamps": {
         "createdAt": "2026-10-27T02:53:26.430Z",
-        "updatedAt": "2026-10-27T02:53:26.430Z"
+        "updatedAt": "2026-11-21T09:38:06.173Z"
       },
       "evidence": [
         {
@@ -564,39 +705,75 @@
           "at": "2026-10-27T02:53:26.430Z",
           "kind": "created",
           "message": "Refined from the accepted Windows deployment limits, production admission contract and remaining roadmap; implementation has not started."
+        },
+        {
+          "entryId": "ev:weir-unsaved-canary-scope",
+          "at": "2026-11-21T09:38:06.173Z",
+          "kind": "note",
+          "message": "The existing policy covers only the unsaved marker. A useful saved change has a separate delivery and approval."
         }
       ]
     },
     {
       "schemaVersion": 1,
-      "chipId": "weir:integrate-lugos-seats",
+      "chipId": "weir:review-saved-effect-policy",
       "projectId": "weir",
-      "title": "Integrate Lugos seats",
-      "summary": "Finish task-router/run-profile policy, Sulis/AETA handoff and broader HUD session/evidence views; MCP and Autowork source plus the HUD action projection already shipped.",
-      "stage": "vague",
-      "sequence": 120,
+      "title": "Review the policy for a saved website change",
+      "summary": "For a selected account and change, review permitted data and delivery, exact approval, independent readback and reversal before enrollment.",
+      "stage": "planned",
+      "sequence": 112,
       "prereqs": [
+        "weir:define-operator-release",
         "weir:review-production-effect-policy"
       ],
       "linkedRunIds": [],
-      "confidence": "unknown",
+      "confidence": "reported",
       "aheadOfPrereqs": null,
       "timestamps": {
-        "createdAt": "2026-09-27T22:07:55.000Z",
-        "updatedAt": "2026-10-27T02:53:26.430Z"
+        "createdAt": "2026-11-21T09:40:34.856Z",
+        "updatedAt": "2026-11-21T09:44:10.438Z"
       },
       "evidence": [
         {
-          "entryId": "ev:2609270w0016",
-          "at": "2026-09-27T22:07:55.000Z",
+          "entryId": "ev:weir-saved-policy-created",
+          "at": "2026-11-21T09:40:34.856Z",
           "kind": "created",
-          "message": "Added 2026-09-27 from ROADMAP P4; only the hashed work context and the metadata-only session journal are checked so far."
+          "message": "The operator still needs to choose a real target and operation. Policy review can proceed independently of browser qualification once that choice is made."
         },
         {
-          "entryId": "ev:2610267p0003",
-          "at": "2026-10-27T00:19:40.640Z",
+          "entryId": "ev:weir-future-saved-action",
+          "at": "2026-11-21T09:44:10.438Z",
           "kind": "note",
-          "message": "Reconciled MCP adapter/wiring tests, Autowork web_evidence.py and HUD action projection/event reader with accepted Batch 3/4/5 rollout records."
+          "message": "Both selected jobs use read access. Review a saved website change when the operator chooses a later write workflow."
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "chipId": "weir:deliver-verified-site-change",
+      "projectId": "weir",
+      "title": "Complete and verify a useful website change",
+      "summary": "Review the selected saved change, let the operator approve or decline it, verify the destination and reopen the decision and receipt from the original job.",
+      "stage": "planned",
+      "sequence": 120,
+      "prereqs": [
+        "weir:review-saved-effect-policy",
+        "weir:deliver-private-account-reports",
+        "weir:verify-production-action-canary"
+      ],
+      "linkedRunIds": [],
+      "confidence": "reported",
+      "aheadOfPrereqs": null,
+      "timestamps": {
+        "createdAt": "2026-11-21T09:38:06.173Z",
+        "updatedAt": "2026-11-21T09:40:34.856Z"
+      },
+      "evidence": [
+        {
+          "entryId": "ev:weir-saved-change-created",
+          "at": "2026-11-21T09:38:06.173Z",
+          "kind": "created",
+          "message": "The operator chooses the site and action. Delivery requires its own reviewed policy, enrollment, approval and independent readback of a real saved result."
         }
       ]
     },

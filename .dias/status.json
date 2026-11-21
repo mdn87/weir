@@ -2,19 +2,19 @@
   "schemaVersion": 1,
   "projectId": "weir",
   "projectLabel": "WEIR",
-  "assessmentState": "scored",
+  "assessmentState": "unassessed",
   "assessmentScope": "current-milestone",
-  "percentComplete": 100,
-  "milestonePhase": "closeout",
+  "percentComplete": null,
+  "milestonePhase": "build-and-validate",
   "portfolioGroup": "acquisition",
   "displayPriority": 50,
-  "assessedAt": "2026-11-21T06:54:40.541Z",
+  "assessedAt": "2026-11-21T09:44:10.438Z",
   "confidence": "reported",
-  "currentMilestone": "Independent review accepted the first production action policy for design. Production website actions remain disabled.",
-  "remainingSummary": "Identify the DLL that stops the Windows service driver. Browser isolation, the permit adapter, approved canary, seats, Linux controls and visual fallback remain.",
-  "nextChipId": "weir:prove-windows-browser-compatibility",
+  "currentMilestone": "Deliver signed-in dashboard reports and marketplace comparisons from Lugos, with results and evidence the operator can reopen.",
+  "remainingSummary": "Ship marketplace comparisons and shared run history. Build private dashboard reports, qualify the browser host and verify both jobs on real sources.",
+  "nextChipId": "weir:integrate-lugos-seats",
   "source": {
-    "label": "Reviewed action policy, live service loader traces and Windows host-control trials",
+    "label": "Matt's selected release jobs and the product, engineering and testing roundtable",
     "updatedAt": "2026-11-21"
   }
 }
