@@ -8,13 +8,13 @@
   "milestonePhase": "closeout",
   "portfolioGroup": "acquisition",
   "displayPriority": 50,
-  "assessedAt": "2026-11-21T04:45:04.134Z",
+  "assessedAt": "2026-11-21T05:47:39.116Z",
   "confidence": "reported",
   "currentMilestone": "Independent review accepted the first production action policy for design. Production website actions remain disabled.",
-  "remainingSummary": "Prove Windows browser isolation, then build the permit-bound adapter and run one approved canary. Seat integration, Linux controls and visual fallback remain.",
+  "remainingSummary": "Windows denied the browser driver in Session 0. Prove a compatible driver before the permit adapter and canary. Seat integration, Linux controls and visual fallback remain.",
   "nextChipId": "weir:prove-windows-browser-compatibility",
   "source": {
-    "label": "Reviewed action policy, independent acceptance and Windows deployment evidence",
+    "label": "Reviewed action policy and live Windows browser and host-control trials",
     "updatedAt": "2026-11-21"
   }
 }

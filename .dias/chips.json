@@ -450,7 +450,7 @@
       "projectId": "weir",
       "title": "Prove browser isolation in the Windows service",
       "summary": "Prove the selected browser starts inside the service sandbox and shuts down with its descendants; review any new capabilities before use.",
-      "stage": "ready",
+      "stage": "blocked",
       "sequence": 90,
       "prereqs": [
         "weir:review-production-effect-policy"
@@ -460,7 +460,7 @@
       "aheadOfPrereqs": null,
       "timestamps": {
         "createdAt": "2026-10-27T02:53:26.430Z",
-        "updatedAt": "2026-11-21T04:45:04.134Z"
+        "updatedAt": "2026-11-21T05:47:39.116Z"
       },
       "evidence": [
         {
@@ -474,6 +474,24 @@
           "at": "2026-11-21T04:45:04.134Z",
           "kind": "stage-change",
           "message": "With policy review complete, browser isolation and cleanup can be tested in the Windows service."
+        },
+        {
+          "entryId": "ev:weir-browser-proof-start",
+          "at": "2026-11-21T05:21:34.956Z",
+          "kind": "stage-change",
+          "message": "Started the Windows service browser proof using the reviewed action policy and accepted host controls."
+        },
+        {
+          "entryId": "ev:weir-chromium-host-observed",
+          "at": "2026-11-21T05:47:39.116Z",
+          "kind": "note",
+          "message": "The packaged browser read the desktop field. The service worker and test child were denied credential access. Four reachable receivers recorded zero packets."
+        },
+        {
+          "entryId": "ev:weir-service-chromium-denied",
+          "at": "2026-11-21T05:47:39.116Z",
+          "kind": "stage-change",
+          "message": "Session 0 denied the Playwright driver pipe before Chromium launched. The original service was restored. Browser isolation and cleanup still need a compatible driver."
         }
       ]
     },

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import copy
+from contextlib import ExitStack, nullcontext
 import json
 import os
 from pathlib import Path
@@ -107,6 +108,35 @@ def snapshot() -> dict:
 
 
 class WindowsHostTests(unittest.TestCase):
+    def test_chromium_diagnostic_only_accepts_the_fixed_scm_argument(self):
+        from weir.windows_service import browser_proof_requested
+
+        self.assertFalse(browser_proof_requested([]))
+        self.assertTrue(browser_proof_requested(["chromium-field-proof"]))
+        for arguments in (["unknown"], ["chromium-field-proof", "https://example.test"]):
+            with self.subTest(arguments=arguments), self.assertRaises(ValueError):
+                browser_proof_requested(arguments)
+
+    def test_service_diagnostic_aborts_before_chromium_on_packet_delivery(self):
+        from weir import windows_service as service
+        from weir.engines.base import EngineProbe
+
+        with ExitStack() as stubs:
+            for name in ("read_host_snapshot", "validate_host_snapshot", "ensure_appcontainer_profile",
+                         "WindowsHostInspector", "ProductionAdmission"):
+                stubs.enter_context(mock.patch.object(service, name))
+            transport = stubs.enter_context(mock.patch.object(service, "ProcessBrowserWorker"))
+            worker = transport.return_value.__enter__.return_value
+            worker.probe.return_value = EngineProbe("admission-probe", True, "1", "{}")
+            stubs.enter_context(mock.patch.object(service, "positive_control_listeners", return_value=nullcontext(({}, []))))
+            stubs.enter_context(mock.patch.object(service, "delivered_packets", return_value=1))
+            status = stubs.enter_context(mock.patch.object(service, "_write_status"))
+            service.run_supervisor(deployment(), threading.Event(), browser_proof=True)
+            worker.probe.assert_called_once_with()
+            diagnostic = [c.args[1] for c in status.call_args_list if c.kwargs.get("browser_proof")]
+            self.assertEqual(len(diagnostic), 1)
+            self.assertEqual(diagnostic[0]["state"], "denied")
+
     def test_supervisor_probe_rejects_any_individually_granted_right(self):
         from weir.windows_probe import _supervisor_access_denied
         denied = OSError("access denied")
@@ -122,7 +152,7 @@ class WindowsHostTests(unittest.TestCase):
                 api.CloseHandle.assert_called_once_with(123)
 
     def test_service_probe_import_does_not_load_ctypes(self):
-        result = subprocess.run([sys.executable, "-c", "import sys; import weir.windows_probe; sys.exit(int('_ctypes' in sys.modules))"], capture_output=True, timeout=15)
+        result = subprocess.run([sys.executable, "-c", "import sys; import weir.windows_browser_probe; sys.exit(int('_ctypes' in sys.modules or 'playwright' in sys.modules))"], capture_output=True, timeout=15)
         self.assertEqual(result.returncode, 0)
 
     def test_bootstrap_diagnostic_never_sends_exception_text(self):

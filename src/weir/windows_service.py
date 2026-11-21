@@ -35,11 +35,11 @@ def load_deployment(path: Path) -> WindowsDeployment:
     return config
 
 
-def _write_status(config: WindowsDeployment, payload: dict) -> None:
+def _write_status(config: WindowsDeployment, payload: dict, *, browser_proof: bool = False) -> None:
     payload = {"schema_version": 1, "service": config.service_name,
                "heartbeat_at": datetime.now(timezone.utc).isoformat(),
                "supervisor_pid": os.getpid(), "action_endpoint_enabled": False, **payload}
-    path = Path(config.root) / "status" / "health.json"
+    path = Path(config.root) / "status" / ("chromium-proof.json" if browser_proof else "health.json")
     temporary = path.with_suffix(".tmp")
     temporary.write_text(json.dumps(payload, sort_keys=True) + "\n", encoding="utf-8")
     os.replace(temporary, path)
@@ -53,7 +53,15 @@ def _failure_detail(exc: BaseException) -> str:
     return type(exc).__name__
 
 
-def run_supervisor(config: WindowsDeployment, stop: threading.Event) -> None:
+def browser_proof_requested(arguments: list[str]) -> bool:
+    if not arguments:
+        return False
+    if arguments == ["chromium-field-proof"]:
+        return True
+    raise ValueError("unsupported service start argument")
+
+
+def run_supervisor(config: WindowsDeployment, stop: threading.Event, *, browser_proof: bool = False) -> None:
     # Preflight runs before the process transport, worker imports, or factory starts.
     _write_status(config, {"state": "preflight", "worker_operations": 0})
     facts = read_host_snapshot(config)
@@ -69,7 +77,11 @@ def run_supervisor(config: WindowsDeployment, stop: threading.Event) -> None:
 
     operations = 0
     with positive_control_listeners() as (ports, listeners):
-        factory = functools.partial(AdmissionProbeWorker, os.getpid(), [item["path"] for item in config.credentials], ports)
+        factory_type = AdmissionProbeWorker
+        if browser_proof:
+            from weir.windows_browser_probe import ServiceChromiumProbe
+            factory_type = ServiceChromiumProbe
+        factory = functools.partial(factory_type, os.getpid(), [item["path"] for item in config.credentials], ports)
         with ProcessBrowserWorker(factory, resource_limits=WorkerResourceLimits(config.memory_bytes, config.process_count),
                                   containment_verifier=pre_start, windows_appcontainer_sid=config.appcontainer_sid,
                                   start_timeout_seconds=20) as worker:
@@ -90,6 +102,21 @@ def run_supervisor(config: WindowsDeployment, stop: threading.Event) -> None:
                     count = delivered_packets(listeners)
                     if not result.available or count != 0:
                         raise EnginePolicyBlocked("worker isolation probe failed")
+                    if browser_proof:
+                        isolation = json.loads(result.detail)
+                        gate.require_browser_worker(worker, caller_id="lugos-mcp")
+                        field = worker.probe()
+                        operations += 1
+                        count += delivered_packets(listeners)
+                        observed = field.available and count == 0
+                        _write_status(config, {"state": "field_observed" if observed else "denied",
+                                      "worker_operations": operations, "evidence": last.to_dict(),
+                                      "isolation_probe": isolation, "field": json.loads(field.detail),
+                                      "browser_version": field.version, "job_object_name": worker.production_job_name,
+                                      "positive_controls": 4, "delivered_packets": count}, browser_proof=True)
+                        if observed:
+                            stop.wait(90)  # Keep the actual browser alive for independent readback.
+                        break
                     _write_status(config, {"state": "admitted", "worker_operations": operations,
                                           "evidence": last.to_dict(), "isolation_probe": json.loads(result.detail),
                                           "job_object_name": worker.production_job_name,
@@ -98,6 +125,10 @@ def run_supervisor(config: WindowsDeployment, stop: threading.Event) -> None:
                     _write_status(config, {"state": "denied", "reason_code": "host_controls_denied",
                                           "detail": _failure_detail(exc),
                                           "worker_pid": worker.process_id, "worker_operations": operations})
+                    if browser_proof:
+                        _write_status(config, {"state": "denied", "detail": _failure_detail(exc),
+                                              "worker_operations": operations}, browser_proof=True)
+                        break
                 if not worker.is_alive:
                     raise RuntimeError("admission worker exited")
                 stop.wait(5)
@@ -143,7 +174,7 @@ def serve(config: WindowsDeployment) -> int:
         return 0
 
     @main_type
-    def service_main(_argc, _argv):
+    def service_main(argc, argv):
         nonlocal status_handle, exit_code
         status_handle = register(config.service_name, handler, None)
         if not status_handle:
@@ -151,13 +182,19 @@ def serve(config: WindowsDeployment) -> int:
             return
         report(2)
         report(4)
+        browser_proof = False
         try:
-            run_supervisor(config, stop)
+            browser_proof = browser_proof_requested([argv[i] for i in range(1, argc)])
+            if browser_proof:
+                _write_status(config, {"state": "starting", "worker_operations": 0}, browser_proof=True)
+            run_supervisor(config, stop, browser_proof=browser_proof)
         except BaseException as exc:
             exit_code = 1
             try:
                 _write_status(config, {"state": "failed", "reason_code": "supervisor_failed",
                                       "detail": _failure_detail(exc)})
+                if browser_proof:
+                    _write_status(config, {"state": "failed", "detail": _failure_detail(exc)}, browser_proof=True)
             except OSError:
                 pass
         finally:

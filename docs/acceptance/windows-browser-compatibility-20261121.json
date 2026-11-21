@@ -1,0 +1,70 @@
+{
+  "host": "4070pc",
+  "started_at": "2026-11-21T05:38:19.4572852Z",
+  "finished_at": "2026-11-21T05:46:07.6474660Z",
+  "candidate_manifest_sha256": "bb7ec598059f826b77c038da89a3cd5651ab87d189c3dc61ba45472a97cb594f",
+  "runtime_files": 3788,
+  "desktop_control": {
+    "chromium_version": "149.0.7827.55",
+    "field_match": true,
+    "browser_processes": 1,
+    "renderer_processes": 1
+  },
+  "desktop_job_control": {
+    "limits": {
+      "memory_bytes": 536870912,
+      "process_count": 8
+    },
+    "field": {
+      "stage": "read_field",
+      "error_type": "TargetClosedError",
+      "winerror": null
+    }
+  },
+  "independent_host_verifier": {
+    "state": "passed",
+    "checked_at": "2026-11-21T05:45:10.1428479Z",
+    "job": {
+      "flags": 8712,
+      "member": true,
+      "memory_bytes": 536870912,
+      "process_count": 8
+    },
+    "positive_controls": 4,
+    "delivered_packets": 0,
+    "worker_and_test_descendant_exited_on_supervisor_loss": true
+  },
+  "service_trial": {
+    "service_account": "NT SERVICE\\WeirAdmission",
+    "session_id": 0,
+    "observed_at": "2026-11-21T05:46:06.052087+00:00",
+    "state": "denied",
+    "field": {
+      "component": "asyncio.windows_utils.pipe",
+      "error_type": "PermissionError",
+      "stage": "start_driver",
+      "winerror": 5
+    },
+    "action_endpoint_enabled": false,
+    "positive_controls": 4,
+    "delivered_packets": 0,
+    "worker_and_test_descendant": {
+      "worker": {
+        "credential_access_denied": true,
+        "supervisor_access_denied": true,
+        "network_attempts_complete": true
+      },
+      "descendant": {
+        "credential_access_denied": true,
+        "supervisor_access_denied": true,
+        "network_attempts_complete": true
+      }
+    }
+  },
+  "prior_deployment": {
+    "manifest_sha256": "c8325972b151dee7849150d5275be3ea0b2ad1548fdad95ae97c6e3fecc2df2e",
+    "service_state": "Stopped",
+    "start_mode": "Manual",
+    "restored": true
+  }
+}
