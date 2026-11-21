@@ -16,6 +16,7 @@ from weir.browser.playwright_observer import PlaywrightObserverWorker
 from weir.engines.base import FailureClass, WeirEngineError
 from weir.engines.ebay_connector import is_ebay_item_url
 from weir.models import DataClass, RequestMode, WebRequest
+from weir.report_cli import add_report_parser, execute_cli
 from weir.persistence import CaptureStore, FileCaptureCache
 from weir.profiles import SiteProfileRegistry
 from weir.router import EngineRegistry, RouteDecision, classify
@@ -44,6 +45,7 @@ def _parser() -> argparse.ArgumentParser:
         prog="weir", description="WEIR - Web Evidence, Interaction & Retrieval"
     )
     sub = parser.add_subparsers(dest="command", required=True)
+    add_report_parser(sub)
 
     sub.add_parser("engines", help="show reader-engine availability")
     sub.add_parser(
@@ -145,6 +147,8 @@ def _print_error(exc: Exception) -> int:
 
 def main(argv: list[str] | None = None) -> int:
     args = _parser().parse_args(argv)
+    if args.command == "report":
+        return execute_cli(args)
     registry = EngineRegistry()
 
     if args.command == "engines":

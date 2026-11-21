@@ -1,0 +1,10 @@
+[Unit]
+Description=Refresh the enrolled Dias views for WEIR reports
+
+[Timer]
+OnBootSec=5s
+OnUnitInactiveSec=45s
+AccuracySec=5s
+
+[Install]
+WantedBy=timers.target

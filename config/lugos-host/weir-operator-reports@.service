@@ -1,0 +1,20 @@
+[Unit]
+Description=Process one private WEIR report request
+
+[Service]
+User=matt
+ExecStart=/srv/lugos/runtimes/weir-operator-reports/0.5.0/bin/weir-operator-rpc
+Environment=WEIR_REPORT_DIR=/srv/lugos/state/weir-operator-reports/history
+Environment=WEIR_DIAS_SNAPSHOT_DIR=/srv/lugos/state/weir-operator-reports/published
+Environment=WEIR_LODE_EBAY_ENV_FILE=/home/matt/lode/.env
+StandardInput=socket
+StandardOutput=socket
+StandardError=journal
+RuntimeMaxSec=120
+UMask=0077
+PrivateTmp=yes
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=tmpfs
+BindReadOnlyPaths=/home/matt/lode/.env
+ReadWritePaths=/srv/lugos/state/weir-operator-reports/history

@@ -23,8 +23,9 @@ def main(argv: list[str] | None = None) -> int:
         parser.error(f"Create the BWS reference manifest at {manifest}")
     args = options.args[1:] if options.args[:1] == ["--"] else options.args
     if options.consumer == "ebay":
-        if not args or args[0] not in ("engines", "search", "read", "enrich"):
-            parser.error("The eBay consumer accepts engines, search, read, or enrich")
+        if not args or (args[0] not in ("engines", "search", "read", "enrich")
+                        and args[:2] != ["report", "marketplace"]):
+            parser.error("The eBay consumer accepts engines, search, read, enrich, or report marketplace")
         command = [sys.executable, "-c", "from weir.cli import main; raise SystemExit(main())", *args]
     elif options.consumer == "relay":
         command = [sys.executable, str(ROOT / "scripts" / "run_remote_relay_canary.py"), *args]
