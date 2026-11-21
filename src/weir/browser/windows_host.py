@@ -269,6 +269,15 @@ def validate_worker_isolation(config: WindowsDeployment, process: dict) -> None:
     _deny(set(process["privileges"]) <= {"SeChangeNotifyPrivilege"}, "excess worker privilege")
 
 
+def _inspector_environment(powershell: Path) -> dict[str, str]:
+    # PowerShell 7 can provide uppercase PSMODULEPATH. Windows treats that and
+    # PSModulePath as one variable, so discard every casing before adding the
+    # OS-owned Windows PowerShell module directory.
+    env = {name: value for name, value in os.environ.items() if name.casefold() != "psmodulepath"}
+    env["PSModulePath"] = str(powershell.parent / "Modules")
+    return env
+
+
 def read_host_snapshot(config: WindowsDeployment, worker_pid: int | None = None, *, supervisor_pid: int | None = None) -> dict:
     if os.name != "nt":
         raise EnginePolicyBlocked("Windows host inspection requires Windows")
@@ -286,7 +295,7 @@ def read_host_snapshot(config: WindowsDeployment, worker_pid: int | None = None,
             timeout=45, creationflags=subprocess.CREATE_NO_WINDOW, check=False,
             # A verifier launched from PowerShell 7 inherits incompatible module
             # paths. Use only the OS-owned Windows PowerShell modules in either role.
-            env={**os.environ, "PSModulePath": str(powershell.parent / "Modules")},
+            env=_inspector_environment(powershell),
         )
         if result.returncode or len(result.stdout) > 16 * 1024 * 1024:
             match = re.search(r"Windows control inspection denied: (runtime|credentials|service|firewall)\b", result.stderr)
