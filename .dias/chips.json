@@ -348,21 +348,50 @@
     },
     {
       "schemaVersion": 1,
+      "chipId": "weir:specify-first-production-action",
+      "projectId": "weir",
+      "title": "Define the first reversible website action",
+      "summary": "Write the policy for changing one unsaved draft field. Define eligible targets, approval, credential custody, failure handling and rollback for independent review.",
+      "stage": "ready",
+      "sequence": 75,
+      "prereqs": [
+        "weir:activate-remote-approval-relay",
+        "weir:provision-deployment-controls"
+      ],
+      "linkedRunIds": [],
+      "confidence": "reported",
+      "aheadOfPrereqs": null,
+      "timestamps": {
+        "createdAt": "2026-11-21T04:32:44.808Z",
+        "updatedAt": "2026-11-21T04:32:44.808Z"
+      },
+      "evidence": [
+        {
+          "entryId": "ev:weir-effect-draft-created",
+          "at": "2026-11-21T04:32:44.808Z",
+          "kind": "created",
+          "message": "The accepted Windows controls and approval relay provide the basis for a written policy. The existing review step will decide whether it is acceptable."
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
       "chipId": "weir:review-production-effect-policy",
       "projectId": "weir",
       "title": "Review the production effect policy",
       "summary": "Define approved operations, targets, caller authority, credential handling and failure rules; close independent review before implementation.",
-      "stage": "ready",
+      "stage": "planned",
       "sequence": 80,
       "prereqs": [
-        "weir:provision-deployment-controls"
+        "weir:provision-deployment-controls",
+        "weir:specify-first-production-action"
       ],
       "linkedRunIds": [],
       "confidence": "inferred",
       "aheadOfPrereqs": null,
       "timestamps": {
         "createdAt": "2026-09-27T22:07:55.000Z",
-        "updatedAt": "2026-10-27T02:53:26.430Z"
+        "updatedAt": "2026-11-21T04:32:44.808Z"
       },
       "evidence": [
         {
@@ -382,6 +411,12 @@
           "at": "2026-10-27T02:53:26.430Z",
           "kind": "note",
           "message": "Next batch refined from the production admission contract; browser compatibility, adapter and canary are tracked separately."
+        },
+        {
+          "entryId": "ev:weir-effect-review-awaits-draft",
+          "at": "2026-11-21T04:32:44.808Z",
+          "kind": "stage-change",
+          "message": "Review follows the new drafting step so the reviewer can assess an exact policy."
         }
       ]
     },
