@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import hashlib
 import os
 import uuid
 from datetime import datetime, timezone
@@ -12,7 +11,6 @@ from weir.broker import AcquisitionBroker
 from weir.dias_reports import DiasDisplay, dias_report
 from weir.evidence import AcquisitionEnvelope
 from weir.models import DataClass, RequestMode, WebRequest
-from weir.persistence import CaptureStore
 from weir.reports import MarketplaceCriteria, ReportHistory
 from weir.work_context import WorkContext, WorkContextSource
 
@@ -64,13 +62,7 @@ def run_job(
         raise ValueError("Unknown operator job or argument.")
     if not owner or not isinstance(owner, str):
         raise ValueError("An authenticated operator is required.")
-    namespace = hashlib.sha256(owner.encode("utf-8")).hexdigest()
-    directory = root / namespace
-    directory.mkdir(mode=0o700, exist_ok=True, parents=True)
-    store = CaptureStore(directory / "sources")
-    history = ReportHistory(
-        directory / "history", store, owner=owner, permitted_jobs=permitted_jobs
-    )
+    history = ReportHistory(root, owner=owner, permitted_jobs=permitted_jobs)
     if action == "list":
         return {"reports": history.list_reports(args.get("limit", 50))}
     if action in {"open", "source"}:
@@ -128,7 +120,9 @@ def run_job(
         maximum_depth=pages - 1,
     )
     acquisition = AcquisitionEnvelope.create(work_context=context, request=req)
-    result = AcquisitionBroker(profiles=_profile_registry(), store=store).search(acquisition)
+    result = AcquisitionBroker(profiles=_profile_registry(), store=history.captures).search(
+        acquisition
+    )
     return history.marketplace(
         result.capture, criteria, previous=args.get("previous"), run_id=context.run_id
     )

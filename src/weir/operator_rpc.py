@@ -21,7 +21,11 @@ def _marketplace_profile(action, jobs):
     added = []
     try:
         if action == "marketplace" and action in jobs and file:
-            with Path(file).open(encoding="utf-8") as settings:
+            try:
+                profile = Path(file).open(encoding="utf-8")
+            except OSError as exc:
+                raise OSError("The configured marketplace profile is unavailable.") from exc
+            with profile as settings:
                 for line in settings:
                     key, sep, value = line.strip().partition("=")
                     if not sep or key not in ("EBAY_CLIENT_ID", "EBAY_CLIENT_SECRET"):
@@ -82,11 +86,15 @@ def main() -> int:
             "code": "not_found",
             "error": "The report or its retained evidence is missing.",
         }
-    except ContractViolation:
+    except ContractViolation as exc:
         response = {
             "ok": False,
-            "code": "integrity_error",
-            "error": "Retained evidence failed verification.",
+            "code": "not_found"
+            if exc.reason_code == "report_source_missing"
+            else "integrity_error",
+            "error": "The retained report source is missing."
+            if exc.reason_code == "report_source_missing"
+            else "Retained evidence failed verification.",
         }
     except (AcquisitionFailed, WeirEngineError, OSError):
         response = {

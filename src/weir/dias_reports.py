@@ -85,8 +85,10 @@ class DiasDisplay:
                         "A current Dias snapshot for this project is unavailable."
                     ) from exc
                 self.snapshot = snap
-                self.observed_at = snap["observed_at"]
                 self.source_host = snap["source_host"]
+            self.observed_at = self.snapshot.get("view_times", {}).get(
+                resource, self.snapshot["observed_at"]
+            )
             value = self.snapshot["views"][resource]
         elif self.ssh_host:
             # Every remote command word is constant except the validated project slug.
@@ -153,6 +155,16 @@ class DiasDisplay:
         finally:
             conn.close()
 
+    def observe_project(self, project: str) -> list[tuple[str, dict, str]]:
+        """Read one fresh pair and preserve when each original view was observed."""
+        self.snapshot = None
+        self.observed_at = None
+        views = []
+        for resource in ("chip-boards", "projects"):
+            url, data = self.fetch(resource, project)
+            views.append((url, data, self.observed_at or datetime.now(timezone.utc).isoformat()))
+        return views
+
 
 def _snapshot_name(project: str) -> str:
     return hashlib.sha256(project.encode("utf-8")).hexdigest() + ".json"
@@ -160,14 +172,16 @@ def _snapshot_name(project: str) -> str:
 
 def publish_snapshot(display: DiasDisplay, project: str, directory: Path) -> None:
     """Publish only the enrolled project's display views, without partial reads."""
-    views = {
-        resource: display.fetch(resource, project)[1] for resource in ("chip-boards", "projects")
-    }
+    observations = display.observe_project(project)
+    resources = ("chip-boards", "projects")
+    views = {key: observation[1] for key, observation in zip(resources, observations, strict=True)}
+    times = {key: observation[2] for key, observation in zip(resources, observations, strict=True)}
     payload = {
         "project": project,
         "source_host": display.source_host,
         "origin": display.origin,
-        "observed_at": datetime.now(timezone.utc).isoformat(),
+        "observed_at": min(times.values()),
+        "view_times": times,
         "views": views,
     }
     directory.mkdir(parents=True, exist_ok=True, mode=0o700)
@@ -229,21 +243,30 @@ def dias_report(
         if not isinstance(since, str) or not re.fullmatch(r"\d{4}-\d\d-\d\d", since):
             raise ValueError("Use YYYY-MM-DD for the start of the reporting period.")
         date.fromisoformat(since)
-    board_url, board = display.fetch("chip-boards", project)
-    status_url, status = display.fetch("projects", project)
+    observations = display.observe_project(project)
+    (_, board, _), (_, status, _) = observations
     chips = _read_chips(board)
     counts = dict(Counter(c["stage"] for c in chips.values()))
     problems = []
     if (
         board.get("sourceStatus") != "consistent"
-        or status.get("statusSourceEvidence", {}).get("state") != "valid"
+        or (status.get("statusSourceEvidence") or {}).get("state") != "valid"
     ):
         problems.append(
             "Dias reports stale, incomplete or inconsistent source data. "
             "Verify the project board before starting work."
         )
-    if status.get("chipCounts", {}).get("total") != len(chips) or any(
-        status.get("chipCounts", {}).get(stage, 0) != n for stage, n in counts.items()
+    published_counts = status.get("chipCounts") or {}
+    selected = status.get("nextChip") or {}
+    board_chip = chips.get(selected.get("chipId"), {})
+    if (
+        published_counts.get("total") != len(chips)
+        or any(published_counts.get(stage, 0) != n for stage, n in counts.items())
+        or selected
+        and (
+            selected.get("stage") != board_chip.get("stage")
+            or selected.get("title") != board_chip.get("title")
+        )
     ):
         problems.append(
             "The two Dias views were observed at different revisions. "
@@ -329,9 +352,8 @@ def dias_report(
         }
     run = run_id or "run-" + uuid.uuid4().hex
     captures = []
-    for url, source, label in (
-        (board_url, board, "Chip board"),
-        (status_url, status, "Project status"),
+    for (url, source, observed_at), label in zip(
+        observations, ("Chip board", "Project status"), strict=True
     ):
         request = WebRequest(
             request_id="req-" + uuid.uuid4().hex,
@@ -353,7 +375,7 @@ def dias_report(
         cap = WebCapture.from_reader_result(
             result,
             request,
-            captured_at=display.observed_at or datetime.now(timezone.utc).isoformat(),
+            captured_at=observed_at,
         )
         captures.append(history.captures.persist(cap, request)[0])
     return history.save("dias", {**report, "run_id": run}, captures)

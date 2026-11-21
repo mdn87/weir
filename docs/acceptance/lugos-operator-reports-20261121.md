@@ -19,6 +19,8 @@ On November 21, 2026, the WEIR project board and eBay Browse API supplied live d
 
 ## Installed service
 
+WEIR 0.5.1 records the archive owner and source observation times, checks citation fields against the verified capture, and preserves existing reports. The installed worker reopened the original November 21 eBay report and its capture without the eBay profile. Regression tests cover copied reports, missing prices, mismatched currency and shipping alone exceeding the budget.
+
 Mission Control revision `0ccd6983e3796ec829413d3d0e1c84741d16de94` serves the Lugos panel. The installed UI returned 200 for login and 401 for an unauthenticated report request. The production systemd worker fetched both sources and reopened both reports through its owner-only Unix socket. The operator API and remote relay retained their original processes. The application schema matched the installed database before activation. Website writes remain disabled.
 
 The UI release uses a dedicated working-directory override. For rollback, move the WEIR override aside, reload systemd and restart only Mission Control. The earlier UI release, OGMI paths and shared producer release remain available. The report worker and publisher use the scoped host definitions. [Host units](../../config/lugos-host)

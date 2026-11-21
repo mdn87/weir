@@ -64,6 +64,15 @@ def _compare_row(item: dict, criteria: MarketplaceCriteria) -> dict:
     failures: list[str] = []
     unknowns: list[str] = []
     matches: list[str] = []
+    currencies = [
+        part["currency"]
+        for part in (item["price"], item["shipping"])
+        if isinstance(part, dict) and isinstance(part.get("currency"), str)
+    ]
+    if any(currency != criteria.currency for currency in currencies):
+        failures.append("Different currency")
+    elif total is None:
+        unknowns.append("Price including shipping unavailable in " + criteria.currency)
     if criteria.condition:
         if not isinstance(condition, dict):
             unknowns.append("Condition unavailable")
@@ -82,11 +91,9 @@ def _compare_row(item: dict, criteria: MarketplaceCriteria) -> dict:
             failures.append("Different item country")
     if criteria.max_delivered is not None:
         maximum = Decimal(criteria.max_delivered)
-        if price is not None and price > maximum or total is not None and total > maximum:
+        if any(amount is not None and amount > maximum for amount in (price, shipping, total)):
             failures.append("Over budget")
-        elif total is None:
-            unknowns.append("Price including shipping unavailable in " + criteria.currency)
-        else:
+        elif total is not None:
             matches.append("Within budget including shipping")
     return {
         "item_id": item["source_item_id"],
@@ -94,7 +101,7 @@ def _compare_row(item: dict, criteria: MarketplaceCriteria) -> dict:
         "url": item["canonical_url"],
         "price": item["price"],
         "shipping": item["shipping"],
-        "currency": criteria.currency,
+        "currency": currencies[0] if currencies else None,
         "delivered_price": format(total, "f") if total is not None else None,
         "condition": condition,
         "country": country,
@@ -110,15 +117,18 @@ class ReportHistory:
     def __init__(
         self,
         root: Path,
-        captures: CaptureStore,
         *,
         owner: str,
         permitted_jobs: frozenset[str] = frozenset({"marketplace", "dias"}),
     ):
         if not owner or not isinstance(owner, str):
             raise ValueError("Reports require an authenticated operator.")
-        self.directory = root / hashlib.sha256(owner.encode("utf-8")).hexdigest()
-        self.captures = captures
+        self.owner_ref = hashlib.sha256(owner.encode("utf-8")).hexdigest()
+        private = root / self.owner_ref
+        private.mkdir(mode=0o700, parents=True, exist_ok=True)
+        self.directory = private / "history"
+        self.legacy_directory = self.directory / self.owner_ref
+        self.captures = CaptureStore(private / "sources")
         self.permitted_jobs = permitted_jobs
 
     def require_job(self, job: str) -> None:
@@ -141,11 +151,13 @@ class ReportHistory:
                     "observed_at": capture.captured_at,
                     "content_hash": capture.content_hash,
                     "manifest_hash": canonical_digest(replace(capture, content=None).to_dict()),
+                    **({"source_host": report["source_host"]} if job == "dias" else {}),
                 }
             )
         body = {
             **report,
-            "schema_version": 1,
+            "schema_version": 2,
+            "owner_ref": self.owner_ref,
             "job": job,
             "sources": citations,
             "created_at": datetime.now(timezone.utc).isoformat(),
@@ -159,22 +171,40 @@ class ReportHistory:
     def _manifest(self, report_id: str) -> dict:
         if not isinstance(report_id, str) or not _REPORT_ID.fullmatch(report_id):
             raise ValueError("Invalid report ID.")
-        payload = (self.directory / (report_id + ".json")).read_bytes()
+        name = report_id + ".json"
+        try:
+            payload = (self.directory / name).read_bytes()
+            legacy = False
+        except FileNotFoundError:
+            payload = (self.legacy_directory / name).read_bytes()
+            legacy = True
         if "report-" + hashlib.sha256(payload).hexdigest() != report_id:
             raise ContractViolation("report_hash_mismatch", "Report failed its content-hash check.")
         body = json.loads(payload)
+        if legacy:
+            if body.get("schema_version") != 1:
+                raise ContractViolation("report_version", "Invalid historical report format.")
+        elif body.get("schema_version") != 2 or body.get("owner_ref") != self.owner_ref:
+            raise PermissionError("Report owner mismatch.")
         self.require_job(body["job"])
         return {**body, "report_id": report_id}
 
     def _source(self, citation: dict) -> WebCapture:
         try:
             metadata = self.captures.load_capture(citation["capture_id"], hydrate=False)
-            if canonical_digest(metadata.to_dict()) != citation["manifest_hash"]:
+            if (
+                canonical_digest(metadata.to_dict()) != citation["manifest_hash"]
+                or metadata.capture_id != citation["capture_id"]
+                or metadata.final_url != citation["url"]
+                or metadata.captured_at != citation["observed_at"]
+                or metadata.content_hash != citation["content_hash"]
+                or not metadata.raw_artifact_ref
+            ):
                 raise ContractViolation(
                     "report_source_mismatch",
                     "Report source manifest failed its content-hash check.",
                 )
-            return self.captures.load_capture(citation["capture_id"])
+            return replace(metadata, content=self.captures.load_artifact(metadata.raw_artifact_ref))
         except FileNotFoundError as exc:
             raise ContractViolation(
                 "report_source_missing", "The retained report source is missing."
@@ -202,9 +232,14 @@ class ReportHistory:
         if type(limit) is not int or not 1 <= limit <= 100:
             raise ValueError("History limit must be between 1 and 100.")
         rows = []
-        for path in self.directory.glob("report-*.json"):
+        report_ids = {
+            path.stem
+            for directory in (self.directory, self.legacy_directory)
+            for path in directory.glob("report-*.json")
+        }
+        for report_id in report_ids:
             try:
-                body = self._manifest(path.stem)
+                body = self._manifest(report_id)
             except PermissionError:
                 continue
             rows.append({key: body[key] for key in ("report_id", "job", "title", "created_at")})
@@ -218,7 +253,7 @@ class ReportHistory:
         criteria: MarketplaceCriteria,
         *,
         previous: str | None = None,
-        run_id: str | None = None,
+        run_id: str,
     ) -> dict:
         self.require_job("marketplace")
         data = capture.content
@@ -246,7 +281,7 @@ class ReportHistory:
         )
         report = {
             "title": "Marketplace comparison for " + criteria.query,
-            "run_id": run_id or capture.request_id,
+            "run_id": run_id,
             "criteria": asdict(criteria),
             "rows": rows,
             "pagination": data["pagination"],

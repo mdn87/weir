@@ -1,5 +1,6 @@
 """Release checks for operator reports across independent invocations."""
 
+import hashlib
 import json
 import os
 import unittest
@@ -7,11 +8,11 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 from unittest.mock import patch
 
+from weir.contract import ContractViolation, canonical_json_bytes
 from weir.dias_reports import DiasDisplay, dias_report, publish_snapshot
 from weir.engines.ebay_connector import normalize_summary
 from weir.models import DataClass, ReaderResult, RequestMode, WebCapture, WebRequest
 from weir.operator_rpc import dispatch
-from weir.persistence import CaptureStore
 from weir.reports import MarketplaceCriteria, ReportHistory
 
 
@@ -20,7 +21,7 @@ class OperatorReportTests(unittest.TestCase):
         temp = TemporaryDirectory()
         self.addCleanup(temp.cleanup)
         self.root = Path(temp.name)
-        self.captures = CaptureStore(self.root / "evidence")
+        self.captures = self.history().captures
 
     def search_capture(self, prices):
         observed = "2026-11-21T10:00:00Z"
@@ -34,6 +35,8 @@ class OperatorReportTests(unittest.TestCase):
                 "condition": "Used",
                 "itemLocation": {"country": "US"},
             }
+            if price is None:
+                raw.pop("price")
             if shipping is not None:
                 raw["shippingOptions"] = [{"shippingCost": {"currency": "USD", "value": shipping}}]
             rows.append(normalize_summary(raw, observed))
@@ -66,7 +69,7 @@ class OperatorReportTests(unittest.TestCase):
         return self.captures.persist(cap, req)[0]
 
     def history(self, owner="operator-one"):
-        return ReportHistory(self.root / "reports", self.captures, owner=owner)
+        return ReportHistory(self.root / "reports", owner=owner)
 
     def test_dias_prerequisites_activity_history_and_revoked_access(self):
         display = DiasDisplay()
@@ -121,7 +124,6 @@ class OperatorReportTests(unittest.TestCase):
         self.assertEqual(self.history().open(first["report_id"]), first)
         denied = ReportHistory(
             self.root / "reports",
-            self.captures,
             owner="operator-one",
             permitted_jobs=frozenset({"marketplace"}),
         )
@@ -134,10 +136,13 @@ class OperatorReportTests(unittest.TestCase):
     def test_currency_mismatch_zero_matches_and_nonfinite_budget(self):
         cap = self.search_capture([("12345", "9.99", "5.00")])
         report = self.history().marketplace(
-            cap, MarketplaceCriteria("keyboard", currency="EUR", max_delivered="50")
+            cap, MarketplaceCriteria("keyboard", currency="EUR", max_delivered="50"), run_id="run-1"
         )
-        self.assertEqual(report["counts"]["unknown"], 1)
-        empty = self.history().marketplace(self.search_capture([]), MarketplaceCriteria("keyboard"))
+        self.assertEqual(report["counts"]["excluded"], 1)
+        self.assertEqual(report["rows"][0]["currency"], "USD")
+        empty = self.history().marketplace(
+            self.search_capture([]), MarketplaceCriteria("keyboard"), run_id="run-1"
+        )
         self.assertEqual(empty["counts"], {"match": 0, "unknown": 0, "excluded": 0})
         for invalid in ("NaN", "Infinity", "-1", "1e9"):
             with self.assertRaises(ValueError):
@@ -168,6 +173,44 @@ class OperatorReportTests(unittest.TestCase):
                 DiasDisplay(snapshot_dir=root).fetch("projects", project)
         with self.assertRaises(ValueError):
             DiasDisplay(ssh_host="other host")
+
+    def test_owner_binding_legacy_archive_and_citation_fields(self):
+        history = self.history()
+        cap = self.search_capture([("12345", "15", "0")])
+        report = history.marketplace(cap, MarketplaceCriteria("keyboard"), run_id="original-run")
+        path = history.directory / (report["report_id"] + ".json")
+        other = self.history("another-reader")
+        other.directory.mkdir()
+        (other.directory / path.name).write_bytes(path.read_bytes())
+        with self.assertRaises(PermissionError):
+            other.open(report["report_id"])
+        self.assertNotEqual(other.captures.root, history.captures.root)
+        with self.assertRaises(ContractViolation):
+            history._source({**report["sources"][0], "observed_at": "different observation"})
+
+        legacy = json.loads(path.read_bytes())
+        legacy.pop("owner_ref")
+        legacy["schema_version"] = 1
+        data = canonical_json_bytes(legacy)
+        old_id = "report-" + hashlib.sha256(data).hexdigest()
+        history.legacy_directory.mkdir()
+        (history.legacy_directory / (old_id + ".json")).write_bytes(data)
+        self.assertEqual(history.open(old_id), {**legacy, "report_id": old_id})
+        self.assertEqual(len(history.list_reports()), 2)
+
+    def test_missing_price_and_shipping_above_budget(self):
+        cap = self.search_capture([("10001", None, "80"), ("10002", "20", None)])
+        report = self.history().marketplace(
+            cap, MarketplaceCriteria("keyboard", max_delivered="50"), run_id="run-1"
+        )
+        self.assertEqual(
+            {r["item_id"]: r["verdict"] for r in report["rows"]},
+            {"10001": "excluded", "10002": "unknown"},
+        )
+        without_budget = self.history().marketplace(
+            cap, MarketplaceCriteria("keyboard"), run_id="run-1"
+        )
+        self.assertEqual(without_budget["counts"]["unknown"], 2)
 
     def test_unavailable_source_creates_no_report_and_only_marketplace_gets_its_profile(self):
         env_file = self.root / "profile.env"
@@ -202,7 +245,9 @@ class OperatorReportTests(unittest.TestCase):
             [("10001", "19.99", "5.00"), ("10002", "20.00", None), ("10003", "30.00", "0.00")]
         )
         first = self.history().marketplace(
-            cap, MarketplaceCriteria("keyboard", max_delivered="25", country="US", condition="Used")
+            cap,
+            MarketplaceCriteria("keyboard", max_delivered="25", country="US", condition="Used"),
+            run_id="run-1",
         )
         rows = {r["item_id"]: r for r in first["rows"]}
         self.assertEqual(rows["10001"]["delivered_price"], "24.99")
@@ -210,7 +255,10 @@ class OperatorReportTests(unittest.TestCase):
         self.assertEqual(rows["10002"]["verdict"], "unknown")
         self.assertEqual(rows["10003"]["verdict"], "excluded")
         second = self.history().marketplace(
-            cap, MarketplaceCriteria("keyboard", max_delivered="35"), previous=first["report_id"]
+            cap,
+            MarketplaceCriteria("keyboard", max_delivered="35"),
+            previous=first["report_id"],
+            run_id="run-1",
         )
         self.assertEqual(second["changes"]["entered"], ["10003"])
         self.assertEqual(self.history().open(first["report_id"]), first)
