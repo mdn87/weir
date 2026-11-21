@@ -219,8 +219,10 @@ The 7P evidence contract, fail-closed gates, and host rollout boundary are in
 `docs/production-admission.md`. Version 0.4.0 adds schema-v2 process lifetime binding,
 live Windows inspection and an explicit deny-only installer described in
 [`docs/windows-deployment.md`](docs/windows-deployment.md). Its no-capability
-AppContainer worker cannot read caller credentials or modify the supervisor; a
-separate production effect policy and adapter are still required.
+AppContainer worker cannot read caller credentials or modify the supervisor.
+Independent review accepted a policy for one unsaved field on an operator-owned page.
+Browser compatibility and the production adapter still need proof. No destination
+is enrolled. [First production browser action](docs/production-effect-policy.md)
 The frozen Batch 8 signed-capsule, queue, acknowledgement, revocation, and redacted
 audit contracts are in `docs/remote-decision-contract.md` and
 `contracts/fixtures/remote-relay-v1.json`. Source flags remain disabled by default;
