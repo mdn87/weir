@@ -2,19 +2,19 @@
   "schemaVersion": 1,
   "projectId": "weir",
   "projectLabel": "WEIR",
-  "assessmentState": "scored",
+  "assessmentState": "unassessed",
   "assessmentScope": "current-milestone",
-  "percentComplete": 100,
-  "milestonePhase": "closeout",
+  "percentComplete": null,
+  "milestonePhase": "build-and-validate",
   "portfolioGroup": "acquisition",
   "displayPriority": 50,
-  "assessedAt": "2026-11-21T06:54:40.541Z",
+  "assessedAt": "2026-11-21T09:29:54.544Z",
   "confidence": "reported",
-  "currentMilestone": "Independent review accepted the first production action policy for design. Production website actions remain disabled.",
-  "remainingSummary": "Identify the DLL that stops the Windows service driver. Browser isolation, the permit adapter, approved canary, seats, Linux controls and visual fallback remain.",
-  "nextChipId": "weir:prove-windows-browser-compatibility",
+  "currentMilestone": "Complete real web work from a Lugos seat and reopen the evidence and outcome afterward.",
+  "remainingSummary": "Define release acceptance and sequence the operator workflow, browser qualification and approved actions against the work already delivered.",
+  "nextChipId": "weir:define-operator-release",
   "source": {
-    "label": "Reviewed action policy, live service loader traces and Windows host-control trials",
+    "label": "Operator release planning and measured WEIR capabilities",
     "updatedAt": "2026-11-21"
   }
 }

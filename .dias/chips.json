@@ -446,6 +446,35 @@
     },
     {
       "schemaVersion": 1,
+      "chipId": "weir:define-operator-release",
+      "projectId": "weir",
+      "title": "Define the usable WEIR release",
+      "summary": "Specify the web jobs an operator can finish from Lugos, the evidence they can reopen, and the work required to ship and verify the release.",
+      "stage": "ready",
+      "sequence": 85,
+      "prereqs": [
+        "weir:add-durable-capture-persistence",
+        "weir:add-supported-site-profiles",
+        "weir:review-production-effect-policy"
+      ],
+      "linkedRunIds": [],
+      "confidence": "reported",
+      "aheadOfPrereqs": null,
+      "timestamps": {
+        "createdAt": "2026-11-21T09:29:54.544Z",
+        "updatedAt": "2026-11-21T09:29:54.544Z"
+      },
+      "evidence": [
+        {
+          "entryId": "ev:weir-operator-release-created",
+          "at": "2026-11-21T09:29:54.544Z",
+          "kind": "created",
+          "message": "Matt asked for a usable product milestone. The release plan must connect existing web capabilities to real operator work and clear acceptance evidence."
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
       "chipId": "weir:prove-windows-browser-compatibility",
       "projectId": "weir",
       "title": "Prove browser isolation in the Windows service",
