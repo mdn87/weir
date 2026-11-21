@@ -5,16 +5,16 @@
   "assessmentState": "unassessed",
   "assessmentScope": "current-milestone",
   "percentComplete": null,
-  "milestonePhase": "build-and-validate",
+  "milestonePhase": "operational-proof",
   "portfolioGroup": "acquisition",
   "displayPriority": 50,
-  "assessedAt": "2026-11-21T09:44:10.438Z",
-  "confidence": "reported",
-  "currentMilestone": "Deliver signed-in dashboard reports and marketplace comparisons from Lugos, with results and evidence the operator can reopen.",
-  "remainingSummary": "Ship marketplace comparisons and shared run history. Build private dashboard reports, qualify the browser host and verify both jobs on real sources.",
-  "nextChipId": "weir:integrate-lugos-seats",
+  "assessedAt": "2026-11-21T11:05:22.126Z",
+  "confidence": "authoritative",
+  "currentMilestone": "The WEIR board report and eBay comparison are deployed in Lugos with private history. The next milestone is browser-based account reporting.",
+  "remainingSummary": "Qualify a service browser for other signed-in dashboards. Windows browser startup, permit-bound site changes, a live approved change and visual fallback remain.",
+  "nextChipId": "weir:verify-linux-host-admission",
   "source": {
-    "label": "Matt's selected release jobs and the product, engineering and testing roundtable",
+    "label": "Installed Lugos release and verified operator report runs",
     "updatedAt": "2026-11-21"
   }
 }

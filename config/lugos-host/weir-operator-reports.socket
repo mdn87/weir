@@ -1,0 +1,13 @@
+[Unit]
+Description=Local requests from the signed-in Mission Control report view
+
+[Socket]
+ListenStream=/run/weir-operator-reports/requests.sock
+Accept=yes
+SocketUser=matt
+SocketMode=0600
+DirectoryMode=0755
+MaxConnections=8
+
+[Install]
+WantedBy=sockets.target

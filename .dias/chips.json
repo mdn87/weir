@@ -503,19 +503,22 @@
       "projectId": "weir",
       "title": "Compare marketplace listings and reopen results in Lugos",
       "summary": "Find listings from operator criteria, explain matches and unknowns, repeat the comparison and reopen its original sources from a regular Lugos seat.",
-      "stage": "ready",
+      "stage": "done",
       "sequence": 86,
       "prereqs": [
         "weir:define-operator-release",
         "weir:add-supported-site-profiles",
         "weir:add-durable-capture-persistence"
       ],
-      "linkedRunIds": [],
-      "confidence": "reported",
+      "linkedRunIds": [
+        "run-b5dfde9470dc4c50841be5f880f93da0",
+        "run-243626e57e994d7a8de28f74523ad592"
+      ],
+      "confidence": "authoritative",
       "aheadOfPrereqs": null,
       "timestamps": {
         "createdAt": "2026-09-27T22:07:55.000Z",
-        "updatedAt": "2026-11-21T09:44:10.438Z"
+        "updatedAt": "2026-11-21T11:05:22.126Z"
       },
       "evidence": [
         {
@@ -547,6 +550,18 @@
           "at": "2026-11-21T09:44:10.438Z",
           "kind": "note",
           "message": "Matt selected marketplace comparisons. The existing public connector can deliver this workflow while the team qualifies the signed-in dashboard host."
+        },
+        {
+          "entryId": "ev:weir-operator-comparison-start",
+          "at": "2026-11-21T10:00:58.979Z",
+          "kind": "stage-change",
+          "message": "Building criteria-based marketplace comparisons, repeat-run differences and evidence that reopens from history."
+        },
+        {
+          "entryId": "ev:weir-marketplace-installed",
+          "at": "2026-11-21T11:05:22.126Z",
+          "kind": "stage-change",
+          "message": "The installed Lugos panel compared 50 live eBay listings. Budget changes identified entries and departures. Saved reports and original sources reopened after restart."
         }
       ]
     },
@@ -623,21 +638,23 @@
       "schemaVersion": 1,
       "chipId": "weir:deliver-private-account-reports",
       "projectId": "weir",
-      "title": "Turn signed-in dashboards into reopenable reports",
-      "summary": "Answer a question across an authorized dashboard, cite the relevant views, and let the operator reopen the private report and its evidence after a restart.",
-      "stage": "planned",
+      "title": "Report on Dias project chips from signed-in Lugos",
+      "summary": "Show what to work on now, which chips are waiting, and what changed. Reopen the private report and its two captured Dias views from Lugos.",
+      "stage": "done",
       "sequence": 95,
       "prereqs": [
         "weir:define-operator-release",
-        "weir:gate-browser-session-work",
-        "weir:prove-windows-browser-compatibility"
+        "weir:add-durable-capture-persistence",
+        "weir:gate-browser-session-work"
       ],
-      "linkedRunIds": [],
-      "confidence": "reported",
-      "aheadOfPrereqs": null,
+      "linkedRunIds": [
+        "run-44bb103f04de4fee8b0900b11b435c85",
+        "run-d1f90137475643578ff9e64f7c0bab88"
+      ],
+      "confidence": "authoritative",
       "timestamps": {
         "createdAt": "2026-11-21T09:38:06.173Z",
-        "updatedAt": "2026-11-21T09:44:10.438Z"
+        "updatedAt": "2026-11-21T11:05:22.126Z"
       },
       "evidence": [
         {
@@ -651,6 +668,24 @@
           "at": "2026-11-21T09:44:10.438Z",
           "kind": "note",
           "message": "Matt selected signed-in dashboard reports. Reporting and access checks can develop alongside marketplace work. Live acceptance needs an authorized account and a qualified host."
+        },
+        {
+          "entryId": "ev:weir-dashboard-report-start",
+          "at": "2026-11-21T10:00:58.979Z",
+          "kind": "stage-change",
+          "message": "Building scoped dashboard reports and testing restart and access behavior while live host qualification is outstanding."
+        },
+        {
+          "entryId": "ev:weir-dias-selected",
+          "at": "2026-11-21T10:54:53.504Z",
+          "kind": "note",
+          "message": "Matt chose Dias. Its published board and status supply the report. Mission Control enforces private access. Other signed-in websites still need browser qualification."
+        },
+        {
+          "entryId": "ev:weir-dias-installed",
+          "at": "2026-11-21T11:05:22.126Z",
+          "kind": "stage-change",
+          "message": "The installed report form read the live WEIR board and status. Two periods matched source evidence. Separate signed-in accounts verified private access and offline history."
         }
       ]
     },
@@ -808,19 +843,19 @@
       "schemaVersion": 1,
       "chipId": "weir:verify-linux-host-admission",
       "projectId": "weir",
-      "title": "Prove Linux host admission controls",
-      "summary": "Add live Linux identity, process and host inspection; verify cgroup limits, network isolation and supervisor cleanup before production admission.",
-      "stage": "vague",
+      "title": "Qualify a Linux browser for authenticated dashboard reports",
+      "summary": "Run a sandboxed browser under its service identity, verify network and process limits, and read a dashboard field before enrolling an account.",
+      "stage": "ready",
       "sequence": 140,
       "prereqs": [
         "weir:gate-browser-session-work"
       ],
       "linkedRunIds": [],
-      "confidence": "inferred",
+      "confidence": "authoritative",
       "aheadOfPrereqs": null,
       "timestamps": {
         "createdAt": "2026-10-27T02:53:26.430Z",
-        "updatedAt": "2026-10-27T02:53:26.430Z"
+        "updatedAt": "2026-11-21T11:05:22.126Z"
       },
       "evidence": [
         {
@@ -828,6 +863,12 @@
           "at": "2026-10-27T02:53:26.430Z",
           "kind": "created",
           "message": "Refined from the accepted Windows deployment limits, production admission contract and remaining roadmap; implementation has not started."
+        },
+        {
+          "entryId": "ev:weir-linux-next",
+          "at": "2026-11-21T11:05:22.126Z",
+          "kind": "stage-change",
+          "message": "The selected reports are deployed. Qualify the browser host to support dashboards that require website login. The Windows service still exits before its first field read."
         }
       ]
     }

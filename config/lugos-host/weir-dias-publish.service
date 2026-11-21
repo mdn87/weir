@@ -1,0 +1,14 @@
+[Unit]
+Description=Publish the enrolled WEIR board and project status from Dias
+
+[Service]
+Type=oneshot
+User=matt
+ExecStart=/srv/lugos/runtimes/weir-operator-reports/0.5.1/bin/weir-dias-snapshot --directory /srv/lugos/state/weir-operator-reports/published --ssh-host 4070pc weir
+TimeoutStartSec=35
+UMask=0077
+PrivateTmp=yes
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=/srv/lugos/state/weir-operator-reports/published
