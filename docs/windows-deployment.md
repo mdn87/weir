@@ -163,3 +163,30 @@ ordering, PID reuse, incomplete runtime closure, narrowed firewall filters and S
 lifecycle ambiguity. The implementation addresses these with the AppContainer,
 preflight/pre-start checks, creation-time binding, full runtime manifest and ACL scan,
 exact ActiveStore filter checks, and explicit manual-start/recovery/service-DACL rules.
+
+## Chromium compatibility diagnostic
+
+Build the optional candidate on Windows with the browser extra installed in the build
+interpreter. The builder installs its Playwright version and matching Chromium headless
+shell inside the runtime, reads a fixed offline field on the desktop, and hashes the
+driver and browser along with the Python files.
+
+```powershell
+python scripts/build_windows_runtime.py --browser-proof --output .codex-tmp/browser-proof
+```
+
+Use the preparation and deployment procedure above for the candidate. With the
+candidate service stopped, an elevated operator can request one diagnostic through SCM.
+
+```powershell
+(Get-Service WeirAdmission).Start([string[]]@('chromium-field-proof'))
+```
+
+The supervisor checks the host, worker identity, Job limits, credential denials and
+four loopback receivers before requesting the fixed field. The page runs offline
+with JavaScript disabled. Read the fresh `status/chromium-proof.json` in the
+deployment root for the observed stage. A field match keeps the processes alive
+for up to 90 seconds so an independent verifier can examine them. The diagnostic
+then stops. A browser-compatibility acceptance also requires live browser and
+renderer inspection and cleanup checks. Restore the previous deployment and
+service state after the trial. [November 21 host results](acceptance/windows-browser-compatibility-20261121.md)
