@@ -8,13 +8,13 @@
   "milestonePhase": "closeout",
   "portfolioGroup": "acquisition",
   "displayPriority": 50,
-  "assessedAt": "2026-11-21T05:47:39.116Z",
+  "assessedAt": "2026-11-21T06:54:40.541Z",
   "confidence": "reported",
   "currentMilestone": "Independent review accepted the first production action policy for design. Production website actions remain disabled.",
-  "remainingSummary": "Windows denied the browser driver in Session 0. Prove a compatible driver before the permit adapter and canary. Seat integration, Linux controls and visual fallback remain.",
+  "remainingSummary": "Identify the DLL that stops the Windows service driver. Browser isolation, the permit adapter, approved canary, seats, Linux controls and visual fallback remain.",
   "nextChipId": "weir:prove-windows-browser-compatibility",
   "source": {
-    "label": "Reviewed action policy and live Windows browser and host-control trials",
+    "label": "Reviewed action policy, live service loader traces and Windows host-control trials",
     "updatedAt": "2026-11-21"
   }
 }

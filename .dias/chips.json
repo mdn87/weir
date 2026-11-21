@@ -460,7 +460,7 @@
       "aheadOfPrereqs": null,
       "timestamps": {
         "createdAt": "2026-10-27T02:53:26.430Z",
-        "updatedAt": "2026-11-21T05:47:39.116Z"
+        "updatedAt": "2026-11-21T06:54:40.541Z"
       },
       "evidence": [
         {
@@ -492,6 +492,24 @@
           "at": "2026-11-21T05:47:39.116Z",
           "kind": "stage-change",
           "message": "Session 0 denied the Playwright driver pipe before Chromium launched. The original service was restored. Browser isolation and cleanup still need a compatible driver."
+        },
+        {
+          "entryId": "ev:weir-driver-local-pipe-test",
+          "at": "2026-11-21T06:03:23.934Z",
+          "kind": "stage-change",
+          "message": "Testing the Windows driver communication failure inside the existing AppContainer and Job."
+        },
+        {
+          "entryId": "ev:weir-container-driver-verified",
+          "at": "2026-11-21T06:54:40.541Z",
+          "kind": "note",
+          "message": "The container-local pipes passed the driver and child checks. Chromium 159 read the offline field under the desktop Job and exited during startup in the AppContainer."
+        },
+        {
+          "entryId": "ev:weir-session-zero-loader",
+          "at": "2026-11-21T06:54:40.541Z",
+          "kind": "stage-change",
+          "message": "Windows twice recorded a native DLL initialization failure in the Node driver before Playwright connected in Session 0. Both observations restored the original service."
         }
       ]
     },
