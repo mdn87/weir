@@ -352,7 +352,7 @@
       "projectId": "weir",
       "title": "Define the first reversible website action",
       "summary": "Write the policy for changing one unsaved draft field. Define eligible targets, approval, credential custody, failure handling and rollback for independent review.",
-      "stage": "ready",
+      "stage": "done",
       "sequence": 75,
       "prereqs": [
         "weir:activate-remote-approval-relay",
@@ -363,7 +363,7 @@
       "aheadOfPrereqs": null,
       "timestamps": {
         "createdAt": "2026-11-21T04:32:44.808Z",
-        "updatedAt": "2026-11-21T04:32:44.808Z"
+        "updatedAt": "2026-11-21T04:36:09.179Z"
       },
       "evidence": [
         {
@@ -371,6 +371,18 @@
           "at": "2026-11-21T04:32:44.808Z",
           "kind": "created",
           "message": "The accepted Windows controls and approval relay provide the basis for a written policy. The existing review step will decide whether it is acceptable."
+        },
+        {
+          "entryId": "ev:weir-effect-draft-active",
+          "at": "2026-11-21T04:33:39.068Z",
+          "kind": "stage-change",
+          "message": "Drafting began after both board files passed the Dias parsers."
+        },
+        {
+          "entryId": "ev:weir-effect-draft-written",
+          "at": "2026-11-21T04:36:09.179Z",
+          "kind": "stage-change",
+          "message": "The written policy specifies one public draft field, who may approve it, and how to verify or quarantine the result."
         }
       ]
     },
@@ -380,18 +392,18 @@
       "projectId": "weir",
       "title": "Review the production effect policy",
       "summary": "Define approved operations, targets, caller authority, credential handling and failure rules; close independent review before implementation.",
-      "stage": "planned",
+      "stage": "active",
       "sequence": 80,
       "prereqs": [
         "weir:provision-deployment-controls",
         "weir:specify-first-production-action"
       ],
       "linkedRunIds": [],
-      "confidence": "inferred",
+      "confidence": "reported",
       "aheadOfPrereqs": null,
       "timestamps": {
         "createdAt": "2026-09-27T22:07:55.000Z",
-        "updatedAt": "2026-11-21T04:32:44.808Z"
+        "updatedAt": "2026-11-21T04:36:09.179Z"
       },
       "evidence": [
         {
@@ -417,6 +429,12 @@
           "at": "2026-11-21T04:32:44.808Z",
           "kind": "stage-change",
           "message": "Review follows the new drafting step so the reviewer can assess an exact policy."
+        },
+        {
+          "entryId": "ev:weir-effect-review-began",
+          "at": "2026-11-21T04:36:09.179Z",
+          "kind": "stage-change",
+          "message": "The written policy is available for independent review against the existing permit and admission contracts."
         }
       ]
     },
