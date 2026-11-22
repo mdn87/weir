@@ -947,7 +947,7 @@
       "projectId": "weir",
       "title": "Review the policy for a saved website change",
       "summary": "For a selected account and change, review permitted data and delivery, exact approval, independent readback and reversal before enrollment.",
-      "stage": "planned",
+      "stage": "ready",
       "sequence": 112,
       "prereqs": [
         "weir:define-operator-release",
@@ -958,7 +958,7 @@
       "aheadOfPrereqs": null,
       "timestamps": {
         "createdAt": "2026-11-21T09:40:34.856Z",
-        "updatedAt": "2026-11-21T09:44:10.438Z"
+        "updatedAt": "2026-11-22T12:37:22.597Z"
       },
       "evidence": [
         {
@@ -972,6 +972,12 @@
           "at": "2026-11-21T09:44:10.438Z",
           "kind": "note",
           "message": "Both selected jobs use read access. Review a saved website change when the operator chooses a later write workflow."
+        },
+        {
+          "entryId": "ev:saved-policy-review-ready",
+          "at": "2026-11-22T12:37:22.597Z",
+          "kind": "stage-change",
+          "message": "Both prerequisites passed. Review a real saved change against its destination while live execution stays disabled."
         }
       ]
     },

@@ -8,13 +8,13 @@
   "milestonePhase": "operational-proof",
   "portfolioGroup": "acquisition",
   "displayPriority": 50,
-  "assessedAt": "2026-11-22T12:27:21.637Z",
+  "assessedAt": "2026-11-22T12:37:22.597Z",
   "confidence": "authoritative",
-  "currentMilestone": "WEIR can read a dashboard value from retained browser pixels, verify the crop and reopen the evidence. Live website changes are disabled.",
-  "remainingSummary": "The live canary awaits an eligible page, a deployment decision and a grant. Saved-change policy and verification and Windows browser isolation remain.",
-  "nextChipId": "weir:verify-production-action-canary",
+  "currentMilestone": "WEIR reads dashboards on Windows and Linux. The next design covers one saved website change. Live website changes are disabled.",
+  "remainingSummary": "Review one saved change for a selected account. The unsaved live field and Windows service browser isolation remain on hold.",
+  "nextChipId": "weir:review-saved-effect-policy",
   "source": {
-    "label": "Browser evidence, Aire regional OCR, operator acceptance and the Dias work record",
+    "label": "Operator release, saved change review and Dias board evidence",
     "updatedAt": "2026-11-22"
   }
 }
