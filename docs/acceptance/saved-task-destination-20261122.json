@@ -1,0 +1,45 @@
+{
+  "site": "disposable Mission Control",
+  "platform": "Linux",
+  "network_interfaces": [
+    "lo"
+  ],
+  "path_under_test": "ordinary task route",
+  "verification": "fresh read-only SQLite connection",
+  "weir_permits_exercised": 0,
+  "live_site_used": false,
+  "cases": [
+    {
+      "field": "title",
+      "before": "Initial title",
+      "after": "Edited title",
+      "viewer_status": 403,
+      "saved_after_restart": true,
+      "original_value_restored": true,
+      "task_update_activity_records": 2,
+      "new_task_notifications": 0
+    },
+    {
+      "field": "status",
+      "before": "in_progress",
+      "after": "review",
+      "viewer_status": 403,
+      "saved_after_restart": true,
+      "original_value_restored": true,
+      "task_update_activity_records": 2,
+      "new_task_notifications": 0
+    }
+  ],
+  "mission_control_release": "078ddd2fce268d477589cf28c0721e6c32ac0d31",
+  "recorded_at": "2026-11-22T12:48:02.623772+00:00",
+  "reviewed_source": "f2ec9dac2024ae42cf6610baa17fd819361895f8",
+  "matching_source_files": [
+    "src/app/api/tasks/[id]/route.ts",
+    "src/lib/github-sync-engine.ts",
+    "src/lib/db.ts",
+    "src/lib/webhooks.ts",
+    "src/lib/task-dispatch.ts",
+    "src/lib/validation.ts"
+  ],
+  "fixture_sha256": "6abd94b74b887c91fa262d33301210a416da7dc9b7df92c12a30e8efef1ff0da"
+}

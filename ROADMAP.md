@@ -123,6 +123,11 @@ for a future Windows rollout. The packaged driver and a minimal USER32 program b
 failed before entry in the Windows sandbox. The production website action allowlist
 is empty. [Windows loader measurements](docs/acceptance/windows-browser-loader-20261122.md)
 
+The first proposed saved change is a title correction on an operator-owned
+Mission Control task. A private deployment test confirmed that a title edit and
+its reversal each leave an activity record. Moving a task into Review can also
+start an automatic review. [Saved-change policy and destination evidence](docs/saved-task-change-policy.md)
+
 ## P3 - Action authority integration
 
 Cross-repository sequence and accepted ownership decisions:
