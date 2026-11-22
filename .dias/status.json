@@ -8,11 +8,11 @@
   "milestonePhase": "operational-proof",
   "portfolioGroup": "acquisition",
   "displayPriority": 50,
-  "assessedAt": "2026-11-22T13:13:05.072Z",
+  "assessedAt": "2026-11-22T13:55:11.285Z",
   "confidence": "authoritative",
-  "currentMilestone": "The private saved-title workflow is in development. The reviewed design and destination test are complete. Live website changes are disabled.",
+  "currentMilestone": "The owner can approve, verify and undo a saved title in a private rehearsal. Live website changes are disabled.",
   "remainingSummary": "A real saved job needs a selected account and edit. The unsaved live field, verified live save and Windows service browser qualification remain.",
-  "nextChipId": "weir:rehearse-approved-saved-task",
+  "nextChipId": "weir:review-saved-effect-policy",
   "source": {
     "label": "Operator release, saved change review and Dias board evidence",
     "updatedAt": "2026-11-22"

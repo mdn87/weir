@@ -6,6 +6,8 @@ WEIR's next capability is to show a proposed website change, obtain the owner's 
 
 **Platforms.** The proposed destination and trusted site connector run on Linux on `lugos-host`. The owner can review the proposal from a normal signed-in Mission Control client. The proof below used the installed Linux application in a private network namespace. It required no Windows service browser.
 
+The implemented rehearsal uses a dedicated Mission Control task and a fresh database. It exercises the owner screen, two signatures, a single commit, independent verification, withdrawal and undo. A normal workspace task still requires enrollment and delivery qualification. [Run the private workflow](private-saved-task.md)
+
 ## What the destination actually does
 
 The current task update checks the signed-in role and workspace. A title update also sets the task's modification time, records activity, broadcasts a task update and calls outbound sync. Depending on the installation, subscribers can receive the full task and matching events can reach webhooks, GitHub or GNAP. The write predicate uses the task ID and workspace. It has no expected task revision or destination command receipt. [Task route](https://github.com/mdn87/mission-control/blob/f2ec9dac2024ae42cf6610baa17fd819361895f8/src/app/api/tasks/%5Bid%5D/route.ts) · [Outbound sync](https://github.com/mdn87/mission-control/blob/f2ec9dac2024ae42cf6610baa17fd819361895f8/src/lib/github-sync-engine.ts) · [Webhook delivery](https://github.com/mdn87/mission-control/blob/f2ec9dac2024ae42cf6610baa17fd819361895f8/src/lib/webhooks.ts)
