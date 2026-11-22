@@ -5,19 +5,9 @@ from __future__ import annotations
 import os
 import socket
 import sys
-from urllib.parse import urlsplit
 
 from weir.browser.linux_report import receive_message, send_message
-from weir.review_board import BOARD_PATH, MAX_HTML, ROW_LIMIT
-
-
-def _validate_url(url):
-    if not isinstance(url, str):
-        raise ValueError("The review board URL is required.")
-    parts = urlsplit(url)
-    if (parts.scheme != "http" or parts.hostname != "127.0.0.1" or not parts.port
-            or url != f"http://127.0.0.1:{parts.port}{BOARD_PATH}"):
-        raise ValueError("Only the enrolled Mission Control review board is supported.")
+from weir.review_board import MAX_HTML, ROW_LIMIT, validate_board_url
 
 
 def run(sock):
@@ -36,7 +26,7 @@ def run(sock):
     with sock.makefile("rb") as reader:
         command = receive_message(reader)
         url = command.get("url")
-        _validate_url(url)
+        validate_board_url(url)
         with sync_playwright() as runtime:
             browser = runtime.chromium.launch(headless=True, chromium_sandbox=True)
             try:

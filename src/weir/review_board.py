@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import http.client
+import ipaddress
 import os
 import re
 import uuid
@@ -30,10 +31,45 @@ class ReviewObservation:
 
 
 def source_url() -> str:
+    host = os.environ.get("WEIR_REVIEW_SOURCE_HOST", "127.0.0.1")
     port = int(os.environ.get("WEIR_REVIEW_SOURCE_PORT", "3230"))
-    if not 1 <= port <= 65535:
-        raise ValueError("Invalid Mission Control source port.")
-    return f"http://127.0.0.1:{port}{BOARD_PATH}"
+    return validate_board_url(f"http://{host}:{port}{BOARD_PATH}")
+
+
+def validate_board_url(url: str) -> str:
+    parts = urlsplit(url)
+    host = ipaddress.IPv4Address(parts.hostname or "")
+    if (not parts.port or not host.is_private or host.is_unspecified or host.is_link_local
+            or host.is_multicast or url != f"http://{host}:{parts.port}{BOARD_PATH}"):
+        raise ValueError("Only the enrolled Mission Control board address is supported.")
+    return url
+
+
+def fetch_board(url: str, owner: str, grant: str):
+    parts = urlsplit(validate_board_url(url))
+    connection = http.client.HTTPConnection(parts.hostname, parts.port, timeout=12)
+    try:
+        connection.connect()
+        peer = connection.sock
+        # The deployed server listens on its LAN interface. Verify both ends of
+        # the connected TCP socket are on the same local IP before releasing a grant.
+        if not peer or peer.getsockname()[0] != parts.hostname or peer.getpeername()[0] != parts.hostname:
+            raise OSError("The review board must be served by this host.")
+        connection.request("GET", BOARD_PATH, headers={
+            "X-Weir-Review-Grant": grant, "X-Weir-Report-Owner": owner,
+            "Accept": "text/html", "Accept-Encoding": "identity",
+        })
+        response = connection.getresponse()
+        if response.status != 200 or response.headers.get_content_type() != "text/html":
+            raise OSError("The signed-in task board could not be read.")
+        body = response.read(MAX_HTML + 1)
+        if not body or len(body) > MAX_HTML:
+            raise OSError("Invalid task board source size.")
+        return body.decode("utf-8", errors="strict")
+    except http.client.HTTPException as exc:
+        raise OSError("The task board response was incomplete.") from exc
+    finally:
+        connection.close()
 
 
 def observe_board(owner: str, grant: str) -> ReviewObservation:
@@ -41,25 +77,7 @@ def observe_board(owner: str, grant: str) -> ReviewObservation:
 
     url = source_url()
 
-    def fetch():
-        # Only the trusted bridge holds the grant. The renderer asks for one document.
-        connection = http.client.HTTPConnection("127.0.0.1", urlsplit(url).port, timeout=12)
-        try:
-            connection.request("GET", BOARD_PATH, headers={
-                "X-Weir-Review-Grant": grant, "X-Weir-Report-Owner": owner,
-                "Accept": "text/html", "Accept-Encoding": "identity",
-            })
-            response = connection.getresponse()
-            if response.status != 200 or response.headers.get_content_type() != "text/html":
-                raise OSError("The signed-in task board could not be read.")
-            body = response.read(MAX_HTML + 1)
-            if not body or len(body) > MAX_HTML:
-                raise OSError("Invalid task board source size.")
-            return body.decode("utf-8", errors="strict")
-        finally:
-            connection.close()
-
-    result, html, observed_at, _ = read_in_browser(url, fetch)
+    result, html, observed_at, _ = read_in_browser(url, lambda: fetch_board(url, owner, grant))
     return ReviewObservation(url, observed_at, html, result["workspace"], result["total"], result["tasks"])
 
 

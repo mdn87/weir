@@ -19,6 +19,19 @@ class ReviewBoardTests(unittest.TestCase):
         self.request = {"owner": self.owner, "action": "task_review", "args": {},
                         "permitted_jobs": ["dias", "marketplace", "task_review"]}
 
+    def test_enrolled_address_can_be_the_private_interface_and_must_be_local_before_sending_grant(self):
+        from weir.review_board import fetch_board, source_url
+
+        with patch.dict(os.environ, {"WEIR_REVIEW_SOURCE_HOST": "10.0.1.33"}):
+            self.assertEqual(source_url(), "http://10.0.1.33:3230/api/lugos/review-board")
+            with patch("weir.review_board.http.client.HTTPConnection") as factory:
+                connection = factory.return_value
+                connection.sock.getsockname.return_value = ("10.0.1.9", 13001)
+                connection.sock.getpeername.return_value = ("10.0.1.33", 3230)
+                with self.assertRaises(OSError):
+                    fetch_board(source_url(), self.owner, "a" * 64)
+                connection.request.assert_not_called()
+
     def test_grant_is_private_to_acquisition_and_missing_authority_fails(self):
         with self.assertRaises(PermissionError):
             dispatch(self.request)
