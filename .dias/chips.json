@@ -912,7 +912,7 @@
       "aheadOfPrereqs": null,
       "timestamps": {
         "createdAt": "2026-10-27T02:53:26.430Z",
-        "updatedAt": "2026-11-22T10:24:01.404Z"
+        "updatedAt": "2026-11-22T14:11:47.695Z"
       },
       "evidence": [
         {
@@ -938,6 +938,18 @@
           "at": "2026-11-22T10:24:01.404Z",
           "kind": "note",
           "message": "Matt requested rehearsal only. Live use is disabled and requires a separate deployment decision, a commissioned grant and approval for an eligible field."
+        },
+        {
+          "entryId": "ev:public-portfolio-field-inspected",
+          "at": "2026-11-22T14:11:47.695Z",
+          "kind": "note",
+          "message": "Matt requested live activation. WEIR read his portfolio. UX Work is a heading and the only input is a checkbox. The page cannot host the reviewed temporary fill as it stands."
+        },
+        {
+          "entryId": "ev:live-linux-host-inspected",
+          "at": "2026-11-22T14:11:47.695Z",
+          "kind": "note",
+          "message": "The Linux host has live read services. The write service, deployment settings, decision records and separate one-use grant storage are absent. No write was attempted."
         }
       ]
     },
