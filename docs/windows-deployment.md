@@ -244,4 +244,4 @@ System32. Exit 0 means it loaded. The intentionally absent library must return
 imports USER32 before its program entry point and returns 37 when it reaches that
 point. A native exit of `0xc0000142` means initialization failed. A timeout or a
 process-start error leaves that observation incomplete. The service records the
-results with the existing field diagnostic. [Windows library loading](https://learn.microsoft.com/en-us/windows/win32/api/libloaderapi/nf-libloaderapi-loadlibraryexw)
+results with the existing field diagnostic. [4070pc loader measurements](acceptance/windows-browser-loader-20261122.md) · [Windows library loading](https://learn.microsoft.com/en-us/windows/win32/api/libloaderapi/nf-libloaderapi-loadlibraryexw)

@@ -613,18 +613,20 @@
       "projectId": "weir",
       "title": "Prove browser isolation in the Windows service",
       "summary": "Prove the selected browser starts inside the service sandbox and shuts down with its descendants; review any new capabilities before use.",
-      "stage": "active",
+      "stage": "blocked",
       "sequence": 90,
       "prereqs": [
         "weir:review-production-effect-policy",
         "weir:identify-windows-loader-failure"
       ],
-      "linkedRunIds": [],
-      "confidence": "reported",
+      "linkedRunIds": [
+        "windows-d7835eb9f5fd4102a0ab8ed43c989519"
+      ],
+      "confidence": "authoritative",
       "aheadOfPrereqs": null,
       "timestamps": {
         "createdAt": "2026-10-27T02:53:26.430Z",
-        "updatedAt": "2026-11-22T07:43:02.163Z"
+        "updatedAt": "2026-11-22T07:50:08.020Z"
       },
       "evidence": [
         {
@@ -686,6 +688,12 @@
           "at": "2026-11-22T07:43:02.163Z",
           "kind": "stage-change",
           "message": "Started the final packaged browser under the commissioned service after identifying the failing Windows libraries."
+        },
+        {
+          "entryId": "ev:final-service-loader",
+          "at": "2026-11-22T07:50:08.020Z",
+          "kind": "stage-change",
+          "message": "The final package reproduced the native USER32 failure. The service still needs a Chromium field read and verified browser shutdown."
         }
       ]
     },
@@ -750,7 +758,7 @@
       "projectId": "weir",
       "title": "Qualify Linux for the first approved website change",
       "summary": "Review the Linux policy and test a permit-bound fill of one unsaved field. Verify readback, discard, network isolation and denial on replay.",
-      "stage": "ready",
+      "stage": "active",
       "sequence": 97,
       "prereqs": [
         "weir:review-production-effect-policy",
@@ -761,7 +769,7 @@
       "aheadOfPrereqs": null,
       "timestamps": {
         "createdAt": "2026-11-22T07:45:45.206Z",
-        "updatedAt": "2026-11-22T07:45:45.206Z"
+        "updatedAt": "2026-11-22T07:50:08.020Z"
       },
       "evidence": [
         {
@@ -769,6 +777,12 @@
           "at": "2026-11-22T07:45:45.206Z",
           "kind": "created",
           "message": "Matt chose Linux for the first approved website change after the Windows service failed the native browser comparison."
+        },
+        {
+          "entryId": "ev:linux-first-action-start",
+          "at": "2026-11-22T07:50:08.020Z",
+          "kind": "stage-change",
+          "message": "Started the Linux policy review and isolated rehearsal for one unsaved field. The signed-in report service keeps its read-only scope."
         }
       ]
     },

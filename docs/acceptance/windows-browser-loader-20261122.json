@@ -1,0 +1,149 @@
+{
+  "host": "4070pc",
+  "windows_gui_dll_version": "10.0.26100.8117 (WinBuild.160101.0800)",
+  "node": "v22.23.5",
+  "playwright": "1.65.2",
+  "chromium": "159.0.8154.6",
+  "node_sha256": "b86f95313a5ec42edeccace7b03d884eafabd59de5b7958edfa386be514f18d2",
+  "dynamic_probe_sha256": "9f54d850abbb828bf8bf2c5b85fc51690107766c7220779b53220c08b6dbaaeb",
+  "static_probe_sha256": "23ee6aeaed0df31ead8ec4e17d37f8c3912a46c89d7cbcc162906a1832e83d75",
+  "dynamic_probe_imports": [
+    "KERNEL32.dll"
+  ],
+  "static_probe_imports": [
+    "KERNEL32.dll",
+    "USER32.dll"
+  ],
+  "desktop": {
+    "field_observed": true,
+    "system_library_exit_codes": {
+      "kernel32.dll": 0,
+      "weir-intentionally-absent.dll": 126,
+      "win32u.dll": 0,
+      "gdi32.dll": 0,
+      "user32.dll": 0,
+      "dbghelp.dll": 0,
+      "ws2_32.dll": 0,
+      "crypt32.dll": 0,
+      "advapi32.dll": 0,
+      "ole32.dll": 0,
+      "iphlpapi.dll": 0,
+      "shell32.dll": 0,
+      "userenv.dll": 0,
+      "winmm.dll": 0
+    },
+    "static_user32_exit": 37
+  },
+  "baseline_runtime_fingerprint": "484ccb345406b99aa02560755c08a13a318ad831709cda4f83f3b8b14f103562",
+  "restored_manifest_sha256": "c8325972b151dee7849150d5275be3ea0b2ad1548fdad95ae97c6e3fecc2df2e",
+  "baseline_comparison": {
+    "observed_at": "2026-11-22T02:36:31.05108-05:00",
+    "restored_at": "2026-11-22T07:36:34.6678135Z",
+    "attestation_id": "windows-efe19ba7db664c198f84c9b8ac01ce57",
+    "manifest_sha256": "41179fcc58dab0b1d022e46c2b9ff2d34ca3937328143f759f2ee0c9a1e76fd8",
+    "service_identity": "NT SERVICE\\WeirAdmission",
+    "session_id": 0,
+    "admission_checks": [
+      "baseline",
+      "disabled_firewall",
+      "narrowed_firewall",
+      "inaccessible_credential",
+      "writable_runtime_fixture",
+      "parent_death",
+      "restart",
+      "final"
+    ],
+    "admission_child_cleanup": true,
+    "reachable_network_controls": 4,
+    "delivered_packets": 0,
+    "credential_and_supervisor_access_denied": true,
+    "node_exit": "0xc0000142",
+    "static_user32_exit": "0xc0000142",
+    "system_library_exit_codes": {
+      "advapi32.dll": 0,
+      "crypt32.dll": 0,
+      "dbghelp.dll": 0,
+      "gdi32.dll": 1114,
+      "iphlpapi.dll": 0,
+      "kernel32.dll": 0,
+      "ole32.dll": 1114,
+      "shell32.dll": 1114,
+      "user32.dll": 1114,
+      "userenv.dll": 0,
+      "weir-intentionally-absent.dll": 126,
+      "win32u.dll": 0,
+      "winmm.dll": 0,
+      "ws2_32.dll": 0
+    },
+    "playwright_connected": false,
+    "browser_field_observed": false,
+    "browser_tree_cleanup_verified": false,
+    "active_website_action_endpoint": false,
+    "original_configuration_and_manifest_restored": true,
+    "restored_service_state": "Stopped",
+    "restored_start_mode": "Manual"
+  },
+  "current_release": {
+    "observed_at": "2026-11-22T02:46:46.65297-05:00",
+    "restored_at": "2026-11-22T07:46:50.5153165Z",
+    "attestation_id": "windows-d7835eb9f5fd4102a0ab8ed43c989519",
+    "manifest_sha256": "8ba387b5626016328cf1315ff84f2f72230503cd6805b2d6464085c1a03b29f0",
+    "service_identity": "NT SERVICE\\WeirAdmission",
+    "session_id": 0,
+    "admission_checks": [
+      "baseline",
+      "disabled_firewall",
+      "narrowed_firewall",
+      "inaccessible_credential",
+      "writable_runtime_fixture",
+      "parent_death",
+      "restart",
+      "final"
+    ],
+    "admission_child_cleanup": true,
+    "reachable_network_controls": 4,
+    "delivered_packets": 0,
+    "credential_and_supervisor_access_denied": true,
+    "node_exit": "0xc0000142",
+    "static_user32_exit": "0xc0000142",
+    "system_library_exit_codes": {
+      "advapi32.dll": 0,
+      "crypt32.dll": 0,
+      "dbghelp.dll": 0,
+      "gdi32.dll": 1114,
+      "iphlpapi.dll": 0,
+      "kernel32.dll": 0,
+      "ole32.dll": 1114,
+      "shell32.dll": 1114,
+      "user32.dll": 1114,
+      "userenv.dll": 0,
+      "weir-intentionally-absent.dll": 126,
+      "win32u.dll": 0,
+      "winmm.dll": 0,
+      "ws2_32.dll": 0
+    },
+    "playwright_connected": false,
+    "browser_field_observed": false,
+    "browser_tree_cleanup_verified": false,
+    "active_website_action_endpoint": false,
+    "original_configuration_and_manifest_restored": true,
+    "restored_service_state": "Stopped",
+    "restored_start_mode": "Manual",
+    "accepted_process_observations": {
+      "supervisor": {
+        "observed_modules": [
+          "gdi32.dll",
+          "win32u.dll",
+          "user32.dll"
+        ],
+        "session": 0,
+        "win32k_system_calls_disabled": "OFF"
+      },
+      "worker": {
+        "observed_modules": [],
+        "session": 0,
+        "win32k_system_calls_disabled": "OFF"
+      }
+    }
+  }
+}

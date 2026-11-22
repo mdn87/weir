@@ -100,7 +100,7 @@ General-purpose and production DOM interaction remain closed. Windows deployment
 controls passed live acceptance, and the first action policy passed design review.
 Browser compatibility, a production adapter and an approved canary still need proof.
 
-### Next Windows production batches
+### First approved website action
 
 The Dias board tracks these engineering prerequisites alongside the operator
 workflows. Taskmaster records session handoffs on the `weir/workspace` trail.
@@ -109,7 +109,7 @@ The earlier 100% assessment covered the first effect policy review alone.
 | Order | Batch | Completion criteria |
 | --- | --- | --- |
 | 1 | Review production effect policy | Complete. Independent review accepted the rules for one unsaved field, including authority, credential custody, verification and rollback. [Policy](docs/production-effect-policy.md) · [Review record](docs/acceptance/first-production-effect-policy-20261121.md) |
-| 2 | Prove browser compatibility | Start the selected browser under the service identity and containment. Verify observation, credential isolation, descendant cleanup and denial behavior. Review any required sandbox or egress changes; the headless probe alone is insufficient. |
+| 2 | Qualify Linux for the first action | Review the Linux enforcement boundary and rehearse one permit-bound fill of an unsaved field. Verify exact readback, discard, network isolation, cleanup and replay handling. |
 | 3 | Implement the production effect adapter | Bind commands to exact permits, current session state and durable reservations. Verify post-state receipts, stale or mismatched denial, response-loss reconciliation and no duplicate effects on retry. |
 | 4 | Run one approved production canary | Obtain explicit approval for the target and reversible action. Record one observed effect, single-use permission, restart replay denial and rollback evidence before expanding the rollout. |
 
@@ -117,9 +117,10 @@ Mission Control provides marketplace comparisons, Dias reports and private histo
 The qualified Linux reader reports the Review column of the signed-in workspace
 and preserves its original source. [Installed report test](docs/acceptance/linux-task-review-20261122.md)
 
-The Windows service still needs a successful browser read under its service identity before the
-approved unsaved-field test. The production website action allowlist is empty.
-[Windows service findings](docs/acceptance/windows-browser-driver-20261121.md)
+Matt selected Linux for the first approved fill. Windows qualification remains open
+for a future Windows rollout. The packaged driver and a minimal USER32 program both
+failed before entry in the Windows sandbox. The production website action allowlist
+is empty. [Windows loader measurements](docs/acceptance/windows-browser-loader-20261122.md)
 
 ## P3 - Action authority integration
 

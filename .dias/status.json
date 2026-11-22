@@ -8,13 +8,13 @@
   "milestonePhase": "operational-proof",
   "portfolioGroup": "acquisition",
   "displayPriority": 50,
-  "assessedAt": "2026-11-22T07:45:45.206Z",
+  "assessedAt": "2026-11-22T07:50:08.020Z",
   "confidence": "authoritative",
-  "currentMilestone": "A minimal native program reproduced the Windows driver exit. The final browser package is under test in the installed service.",
+  "currentMilestone": "Two Windows service trials identified the native startup failure and restored the service. Linux qualification for the first approved action is underway.",
   "remainingSummary": "Qualify Linux for an approved unsaved fill, bind permits and run the canary. A saved change needs its own policy. Windows compatibility and visual fallback remain.",
   "nextChipId": "weir:qualify-linux-first-action",
   "source": {
-    "label": "Windows service and desktop comparison on the inventoried workstation",
+    "label": "Installed Windows service trials and Linux action planning",
     "updatedAt": "2026-11-22"
   }
 }
