@@ -7,11 +7,40 @@ import json
 import os
 from pathlib import Path
 import subprocess
+import time
 from uuid import uuid4
 
 from weir.browser.protocol import WorkerDescriptor
 from weir.engines.base import EngineProbe
 from weir.windows_probe import AdmissionProbeWorker
+
+
+def _loader_result(argv: list[str], deadline: float) -> dict:
+    remaining = deadline - time.monotonic()
+    if remaining <= 0:
+        return {"error": "deadline"}
+    try:
+        child = subprocess.run(argv, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                               creationflags=subprocess.CREATE_NO_WINDOW, timeout=min(2, remaining))
+    except subprocess.TimeoutExpired:
+        return {"error": "timeout"}
+    except OSError as exc:
+        return {"error": "start_failed", "winerror": getattr(exc, "winerror", None)}
+    return {"exit_code": child.returncode & 0xffffffff}
+
+
+def _system_library_checks(probe: Path) -> dict:
+    # Each fixed library starts in a fresh child of the same admitted worker.
+    modules = ("kernel32.dll", "weir-intentionally-absent.dll", "win32u.dll", "gdi32.dll", "user32.dll",
+               "dbghelp.dll", "ws2_32.dll", "crypt32.dll", "advapi32.dll", "ole32.dll", "iphlpapi.dll",
+               "shell32.dll", "userenv.dll", "winmm.dll")
+    deadline = time.monotonic() + 6
+    static = _loader_result([str(probe.with_name("weir-user32-startup.exe"))], deadline)
+    results = {name: _loader_result([str(probe), name], deadline) for name in modules}
+    expected = {"kernel32.dll": 0, "ws2_32.dll": 0, "weir-intentionally-absent.dll": 126}
+    return {"controls_passed": all(results[name].get("exit_code") == code for name, code in expected.items()),
+            "complete": "exit_code" in static and all("exit_code" in result for result in results.values()),
+            "libraries": results, "static_user32": static}
 
 
 def _driver_startup_check(node: Path) -> dict:
@@ -29,6 +58,9 @@ def _driver_startup_check(node: Path) -> dict:
             break
         version_printed = result.stdout.startswith(prefix)
         checks[name] = {"exit_code": f"0x{result.returncode & 0xffffffff:08x}", "version_printed": version_printed}
+        if name == "node" and (result.returncode & 0xffffffff) == 0xc0000142:
+            probe = node.with_name("weir-loader-probe.exe")
+            checks["system_libraries"] = _system_library_checks(probe) if probe.is_file() else {"error": "not_bundled"}
         if result.returncode or not version_printed:
             break
     return checks
@@ -146,8 +178,18 @@ class ServiceChromiumProbe(ChromiumFieldProbe):
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--desktop-control", action="store_true", required=True)
-    parser.parse_args()
+    modes = parser.add_mutually_exclusive_group(required=True)
+    modes.add_argument("--desktop-control", action="store_true")
+    modes.add_argument("--desktop-loader-control", action="store_true")
+    if parser.parse_args().desktop_loader_control:
+        import playwright
+
+        probe = Path(playwright.__file__).parent / "driver" / "weir-loader-probe.exe"
+        checks = _system_library_checks(probe)
+        print(json.dumps(checks))
+        expected = all(value.get("exit_code") == (126 if name == "weir-intentionally-absent.dll" else 0)
+                       for name, value in checks["libraries"].items())
+        return 0 if checks["complete"] and expected and checks["static_user32"].get("exit_code") == 37 else 1
     worker = ChromiumFieldProbe()
     try:
         result = worker.probe()

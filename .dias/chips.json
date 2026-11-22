@@ -571,7 +571,7 @@
       "projectId": "weir",
       "title": "Identify the Windows service browser startup failure",
       "summary": "Use the service identity and native loader evidence to identify which browser dependency fails and verify a control that loads successfully.",
-      "stage": "ready",
+      "stage": "active",
       "sequence": 89,
       "prereqs": [
         "weir:provision-deployment-controls",
@@ -582,7 +582,7 @@
       "aheadOfPrereqs": null,
       "timestamps": {
         "createdAt": "2026-11-22T07:19:05.062Z",
-        "updatedAt": "2026-11-22T07:19:05.062Z"
+        "updatedAt": "2026-11-22T07:19:48.060Z"
       },
       "evidence": [
         {
@@ -590,6 +590,12 @@
           "at": "2026-11-22T07:19:05.062Z",
           "kind": "created",
           "message": "Two service starts failed before Playwright connected. The next diagnostic will identify the Windows component that fails under the service identity."
+        },
+        {
+          "entryId": "ev:windows-loader-investigation",
+          "at": "2026-11-22T07:19:48.060Z",
+          "kind": "stage-change",
+          "message": "Started native loader inspection using the recorded service failure and the packaged Node driver as the baseline."
         }
       ]
     },
