@@ -8,13 +8,13 @@
   "milestonePhase": "operational-proof",
   "portfolioGroup": "acquisition",
   "displayPriority": 50,
-  "assessedAt": "2026-11-22T08:22:17.648Z",
+  "assessedAt": "2026-11-22T09:00:56.284Z",
   "confidence": "authoritative",
-  "currentMilestone": "The Linux action rehearsal passed. Implementation of signed enrollment, exact action approval and one durable grant is underway.",
-  "remainingSummary": "Build the Linux production adapter, enroll an eligible field and run one approved canary. Saved changes, Windows browser compatibility and visual fallback remain.",
-  "nextChipId": "weir:implement-production-effect-adapter",
+  "currentMilestone": "The Linux permit-bound action adapter passed independent review and host qualification using a disposable HTTPS field.",
+  "remainingSummary": "Commission the Linux grant, enroll one eligible field and approve its live canary. Saved changes, Windows browser compatibility and visual fallback remain.",
+  "nextChipId": "weir:verify-production-action-canary",
   "source": {
-    "label": "Independent policy review and installed Linux service rehearsal",
+    "label": "Linux host qualification, crash recovery tests and independent implementation review",
     "updatedAt": "2026-11-22"
   }
 }

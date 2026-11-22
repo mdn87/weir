@@ -2548,6 +2548,22 @@ class SQLiteSessionStore:
             for row in rows
         ]
 
+    def advance_field_observation(self, session, observation):
+        """Publish the retained snapshot only against its original session generation."""
+        observation.validate()
+        if (observation.session_id, observation.session_epoch, observation.session_revision) != (
+                session.session_id, session.epoch, session.revision + 1):
+            raise ControllerConflict("Observation belongs to another session revision")
+        with self._lock, self.database:
+            result = self.database.execute(
+                """UPDATE browser_sessions SET revision = ?, updated_at = ?
+                   WHERE session_id = ? AND epoch = ? AND revision = ? AND current_url = ?
+                   AND state = ? AND worker_id = ?""",
+                (observation.session_revision, observation.captured_at, session.session_id, session.epoch,
+                 session.revision, observation.url, session.state.value, session.worker_id))
+            if result.rowcount != 1:
+                raise ControllerConflict("Session changed during the independent field observation")
+
     def reserve_action_execution(
         self,
         permit: ExecutionPermit,
@@ -2558,6 +2574,7 @@ class SQLiteSessionStore:
         worker_id: str,
         worker_instance_id: str,
         required_lease: ControllerLease,
+        before_commit: Callable[[ActionExecutionReservation], None] | None = None,
     ) -> ActionReservationStart:
         """Reserve one exact permit and pause the session before any browser effect."""
 
@@ -2760,13 +2777,15 @@ class SQLiteSessionStore:
                        WHERE reservation_ref = ?""",
                     (reservation_ref,),
                 ).fetchone()
+                if before_commit is not None:
+                    before_commit(_action_reservation_from_row(row))
                 self.database.commit()
             except sqlite3.IntegrityError as exc:
                 self.database.rollback()
                 raise IdempotencyConflict(
                     "permit, action, proposal, or command is already reserved"
                 ) from exc
-            except Exception:
+            except BaseException:
                 self.database.rollback()
                 raise
         assert row is not None
@@ -2775,6 +2794,15 @@ class SQLiteSessionStore:
             replay=False,
             lease=reserved_lease,
         )
+
+    def enrolled_grant_requests(self):
+        """Find any earlier spend for the one enrolled-field engine in this ledger."""
+        with self._lock:
+            rows = self.database.execute(
+                """SELECT r.request_digest FROM action_execution_reservations AS r
+                   JOIN browser_sessions AS s ON s.session_id = r.session_id
+                   WHERE s.engine = 'linux-enrolled-field' LIMIT 2""").fetchall()
+        return [row[0] for row in rows]
 
     def action_reservation(self, permit_id: str) -> ActionExecutionReservation | None:
         validate_identifier(permit_id, "permit_id")

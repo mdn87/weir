@@ -40,6 +40,7 @@ from weir.browser.store import (
     ActionExecutionReservation,
     SQLiteSessionStore,
 )
+from weir.browser.enrolled_fill import EnrolledField
 from weir.contract import (
     ContractViolation,
     canonical_digest,
@@ -348,7 +349,7 @@ class BrowserActionDriver:
         store: SQLiteSessionStore,
         proposal_store: ActionProposalStore,
         worker: EffectWorker,
-        policy: SyntheticFixtureEffectPolicy,
+        policy: SyntheticFixtureEffectPolicy | EnrolledField,
         *,
         clock: Callable[[], datetime] | None = None,
         verifier: PostconditionVerifier | None = None,
@@ -362,7 +363,10 @@ class BrowserActionDriver:
         validate_identifier(worker_id, "worker_id")
         validate_identifier(worker_instance_id, "worker_instance_id")
         if not isinstance(policy, SyntheticFixtureEffectPolicy):
-            raise TypeError("action driver requires an explicit synthetic fixture policy")
+            from weir.browser.linux_fill_driver import LinuxEnrolledFillDriver
+
+            if type(self) is not LinuxEnrolledFillDriver or not isinstance(policy, EnrolledField):
+                raise TypeError("action driver requires an explicit synthetic fixture policy")
         self.store = store
         self.proposal_store = proposal_store
         self.worker = worker
@@ -421,10 +425,13 @@ class BrowserActionDriver:
                     approval_ref=permit.approval_ref,
                 )
             permit.validate_for(proposal, self._now())
-            self.policy.validate(proposal, self.store)
+            if isinstance(self.policy, EnrolledField):
+                self.policy.check_proposal(proposal, self.store)
+            else:
+                self.policy.validate(proposal, self.store)
             self._require_bound_worker()
             lease = self._owning_lease(proposal)
-            start = self.store.reserve_action_execution(
+            start = self._reserve_execution(
                 permit,
                 proposal,
                 request_digest=request_digest,
@@ -506,7 +513,7 @@ class BrowserActionDriver:
                 parameter_data_class=proposal.parameter_data_class,
                 parameters=proposal.parameters,
             )
-            self.store.mark_action_dispatching(
+            self._mark_dispatch(
                 reservation.reservation_ref,
                 before_capture_id=before.capture_id,
                 approval_ref=permit.approval_ref,
@@ -592,6 +599,12 @@ class BrowserActionDriver:
                 before.capture_id,
                 self.worker_id,
             )
+
+    def _reserve_execution(self, permit, proposal, **binding):
+        return self.store.reserve_action_execution(permit, proposal, **binding)
+
+    def _mark_dispatch(self, reservation_ref, **binding):
+        self.store.mark_action_dispatching(reservation_ref, **binding)
 
     def _validate_before(
         self, proposal: ActionProposal, observation: Observation

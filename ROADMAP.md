@@ -98,7 +98,8 @@ Gate status: observation and the reversible synthetic interaction slice passed a
 a local authenticated Playwright fixture with session isolation and durable evidence.
 General-purpose and production DOM interaction remain closed. Windows deployment
 controls passed live acceptance, and the first action policy passed design review.
-Browser compatibility, a production adapter and an approved canary still need proof.
+The Linux adapter passed host qualification. Windows browser compatibility and
+the first owner-approved live canary still need proof.
 
 ### First approved website action
 
@@ -110,7 +111,7 @@ The earlier 100% assessment covered the first effect policy review alone.
 | --- | --- | --- |
 | 1 | Review production effect policy | Complete. Independent review accepted the rules for one unsaved field, including authority, credential custody, verification and rollback. [Policy](docs/production-effect-policy.md) · [Review record](docs/acceptance/first-production-effect-policy-20261121.md) |
 | 2 | Qualify Linux for the first action | Complete for the offline rehearsal. Fade and WEIR dispatched one fill, recovered its receipt after restart, and verified exact readback, discard, receiver isolation and shutdown on the host. [Linux rehearsal](docs/acceptance/linux-first-action-20261122.md) |
-| 3 | Implement the production effect adapter | Bind commands to exact permits, current session state and durable reservations. Verify post-state receipts, stale or mismatched denial, response-loss reconciliation and no duplicate effects on retry. |
+| 3 | Implement the production effect adapter | Complete on Linux for the first unsaved field. Fade and WEIR recovered one receipt across response loss and service restart. The host retained both browser exits. [Adapter qualification](docs/acceptance/linux-enrolled-fill-20261122.md) |
 | 4 | Run one approved production canary | Obtain explicit approval for the target and reversible action. Record one observed effect, single-use permission, restart replay denial and rollback evidence before expanding the rollout. |
 
 Mission Control provides marketplace comparisons, Dias reports and private history.

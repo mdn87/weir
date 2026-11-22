@@ -102,7 +102,8 @@ class ServiceWitness:
                     "ProtectControlGroups", "NoNewPrivileges", "CapabilityBoundingSet", "Restart",
                     "KillMode", "Delegate", "ProtectKernelTunables", "ProtectKernelModules")
         for key in required:
-            if props.get(key) != PROPERTIES[key]:
+            expected = "weir-enrolled" if key == "User" and self.unit.startswith("weir-enrolled-field-") else PROPERTIES[key]
+            if props.get(key) != expected:
                 raise RuntimeError("Unexpected service property " + key)
         masks = {p.split(":")[0] for p in props["TemporaryFileSystem"].split()}
         binds = [p.split(":")[0] for p in props["BindReadOnlyPaths"].split()]
@@ -160,6 +161,10 @@ class ServiceWitness:
                 continue
             count += 1
             is_chromium = executable.is_relative_to(RUNTIME / "browsers")
+            if self.unit.startswith("weir-enrolled-field-") and not (
+                    (int(member) == pid and executable == driver_exe)
+                    or (is_chromium and executable.name == "chrome-headless-shell")):
+                raise RuntimeError("An unqualified executable entered the enrolled browser service")
             roles.add((executable.name, tuple(os.fsdecode(a) for a in cmd if a.startswith(b"--type="))))
             self.members.add((member, ticks))
             if any(arg in cmd for arg in (b"--no-sandbox", b"--disable-setuid-sandbox",
