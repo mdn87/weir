@@ -114,8 +114,10 @@ The earlier 100% assessment covered the first effect policy review alone.
 | 4 | Run one approved production canary | Obtain explicit approval for the target and reversible action. Record one observed effect, single-use permission, restart replay denial and rollback evidence before expanding the rollout. |
 
 Mission Control provides marketplace comparisons, Dias reports and private history.
-The qualified Linux reader supports a signed-in task board. The Windows service
-still needs a successful browser read under its service identity before the
+The qualified Linux reader reports the Review column of the signed-in workspace
+and preserves its original source. [Installed report test](docs/acceptance/linux-task-review-20261122.md)
+
+The Windows service still needs a successful browser read under its service identity before the
 approved unsaved-field test. The production website action allowlist is empty.
 [Windows service findings](docs/acceptance/windows-browser-driver-20261121.md)
 

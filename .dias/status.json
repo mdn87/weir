@@ -8,13 +8,13 @@
   "milestonePhase": "operational-proof",
   "portfolioGroup": "acquisition",
   "displayPriority": 50,
-  "assessedAt": "2026-11-22T06:43:18.212Z",
+  "assessedAt": "2026-11-22T07:04:42.402Z",
   "confidence": "authoritative",
-  "currentMilestone": "The Linux report browser passed host qualification. The signed-in Mission Control task board report is in integration testing.",
-  "remainingSummary": "Qualify a service browser for other signed-in dashboards. Windows browser startup, permit-bound site changes, a live approved change and visual fallback remain.",
-  "nextChipId": "weir:report-signed-in-review-tasks",
+  "currentMilestone": "Mission Control now reports the Review column of the signed-in workspace. Its original source and timestamp reopen from private history.",
+  "remainingSummary": "Identify the Windows driver startup failure, bind reviewed permits and verify an unsaved action. A saved change needs a chosen destination. Visual fallback remains.",
+  "nextChipId": "weir:prove-windows-browser-compatibility",
   "source": {
-    "label": "Installed Lugos release and verified operator report runs",
-    "updatedAt": "2026-11-21"
+    "label": "Installed Lugos service and signed-in report acceptance",
+    "updatedAt": "2026-11-22"
   }
 }

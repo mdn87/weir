@@ -851,13 +851,14 @@
         "weir:gate-browser-session-work"
       ],
       "linkedRunIds": [
-        "linux-339e9d190260447ebca2ea8c9899b3e7"
+        "linux-339e9d190260447ebca2ea8c9899b3e7",
+        "linux-65a3a042a96a4cf79b7a150368123a65"
       ],
       "confidence": "authoritative",
       "aheadOfPrereqs": null,
       "timestamps": {
         "createdAt": "2026-10-27T02:53:26.430Z",
-        "updatedAt": "2026-11-22T06:43:18.212Z"
+        "updatedAt": "2026-11-22T07:04:42.402Z"
       },
       "evidence": [
         {
@@ -883,6 +884,12 @@
           "at": "2026-11-22T06:43:18.212Z",
           "kind": "stage-change",
           "message": "A real service browser read the challenge field, enforced memory and process limits, and reaped all nine processes after disconnect and after a forced stop."
+        },
+        {
+          "entryId": "ev:linux-installed-host",
+          "at": "2026-11-22T07:04:42.402Z",
+          "kind": "note",
+          "message": "The installed Linux browser read a random field under its own service identity. All nine worker processes exited after disconnect and again after forced stop."
         }
       ]
     },
@@ -892,18 +899,20 @@
       "projectId": "weir",
       "title": "Report which Mission Control tasks are in review",
       "summary": "Read the signed-in task board from Lugos and reopen the review list with its original timestamped source.",
-      "stage": "active",
+      "stage": "done",
       "sequence": 150,
       "prereqs": [
         "weir:verify-linux-host-admission",
         "weir:deliver-private-account-reports"
       ],
-      "linkedRunIds": [],
+      "linkedRunIds": [
+        "run-cd77b5c30a3144878bcbd72d2a949533"
+      ],
       "confidence": "authoritative",
       "aheadOfPrereqs": null,
       "timestamps": {
         "createdAt": "2026-11-22T06:26:23.042Z",
-        "updatedAt": "2026-11-22T06:43:18.212Z"
+        "updatedAt": "2026-11-22T07:04:42.402Z"
       },
       "evidence": [
         {
@@ -917,6 +926,12 @@
           "at": "2026-11-22T06:43:18.212Z",
           "kind": "stage-change",
           "message": "The Linux service browser passed qualification. The signed-in task board view and its private report are under integration test."
+        },
+        {
+          "entryId": "ev:review-board-installed",
+          "at": "2026-11-22T07:04:42.402Z",
+          "kind": "stage-change",
+          "message": "The installed form read the two matching test tasks and saved the exact source. Only its owner could reopen the report and source after restart."
         }
       ]
     }

@@ -1,0 +1,57 @@
+{
+  "host": "lugos-host",
+  "weir_wheel_sha256": "0c8b0a7e0753b4f70fc7ae7510a0635eaaf46a9a671d018d14dd3dcc26b2964b",
+  "activation": {
+    "installed_at": "2026-11-22T07:03:33Z",
+    "mission_control": "078ddd2fce268d477589cf28c0721e6c32ac0d31",
+    "build_source": "8e1f35976f856e967a6dc3883c332b6ffdbd4203",
+    "weir": "0.6.0",
+    "previous_ui": "0ccd6983e3796ec829413d3d0e1c84741d16de94",
+    "private_source_signed_out": 401,
+    "login": 200,
+    "invalid_read_no_archive": true,
+    "original_dias_client": true,
+    "migration_inventory_unchanged": true,
+    "operator_api_and_relay_processes_unchanged": true,
+    "ui_and_worker_rollback_available": true
+  },
+  "service_browser": {
+    "observed_at": "2026-11-22T06:51:24.228671+00:00",
+    "field_read": true,
+    "platform": "linux",
+    "run_id": "linux-65a3a042a96a4cf79b7a150368123a65",
+    "limits": {
+      "memory_bytes": 536870912,
+      "process_count": 128
+    },
+    "peak_bytes": 166907904,
+    "observed_threads": 68,
+    "processes_reaped_on_disconnect": 9,
+    "processes_reaped_on_stop": 9,
+    "separate_network_namespace": true,
+    "host_state_hidden": true,
+    "ordinary_process_denied": true,
+    "disconnected_cgroup_removed": true,
+    "egress_policy": "private-network-unix-only"
+  },
+  "installed_seat": {
+    "at": "2026-11-22T07:04:06.483507+00:00",
+    "scope": "separate signed-in accounts and a disposable task board on the installed host",
+    "run_id": "run-cd77b5c30a3144878bcbd72d2a949533",
+    "report_id": "report-c0c349660c86938336a72ede59596c248168e20e6b63a11eff6c3e12946a8925",
+    "source_hash": "sha256:cd21f0d6f5706c505ca1229ed029c01fbda7495b7a480bedec2fc2dc4e76a409",
+    "source_matches_authenticated_page": true,
+    "browser_form": true,
+    "matched_ids": [
+      41,
+      43
+    ],
+    "empty_count": 0,
+    "other_workspace_excluded": true,
+    "signed_out_denied": true,
+    "other_owner_denied": true,
+    "viewer_acquisition_denied": true,
+    "reopened_after_restart_without_source": true,
+    "new_acquisition_with_source_offline_denied": true
+  }
+}

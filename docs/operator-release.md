@@ -22,7 +22,7 @@ Mission Control uses the operator's current browser session to issue one short-l
 read for this column. It checks the session, owner and workspace again when WEIR
 redeems the read. The isolated Linux browser requests the server-rendered page with
 JavaScript disabled. Only the host bridge contacts Mission Control. The saved report
-contains task IDs, titles, observation time and source evidence.
+contains task IDs, titles, observation time and source evidence. [Signed-in release test](acceptance/linux-task-review-20261122.md)
 
 ## Compare marketplace listings
 
