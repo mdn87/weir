@@ -567,6 +567,34 @@
     },
     {
       "schemaVersion": 1,
+      "chipId": "weir:identify-windows-loader-failure",
+      "projectId": "weir",
+      "title": "Identify the Windows service browser startup failure",
+      "summary": "Use the service identity and native loader evidence to identify which browser dependency fails and verify a control that loads successfully.",
+      "stage": "ready",
+      "sequence": 89,
+      "prereqs": [
+        "weir:provision-deployment-controls",
+        "weir:review-production-effect-policy"
+      ],
+      "linkedRunIds": [],
+      "confidence": "authoritative",
+      "aheadOfPrereqs": null,
+      "timestamps": {
+        "createdAt": "2026-11-22T07:19:05.062Z",
+        "updatedAt": "2026-11-22T07:19:05.062Z"
+      },
+      "evidence": [
+        {
+          "entryId": "ev:windows-loader-diagnosis-created",
+          "at": "2026-11-22T07:19:05.062Z",
+          "kind": "created",
+          "message": "Two service starts failed before Playwright connected. The next diagnostic will identify the Windows component that fails under the service identity."
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
       "chipId": "weir:prove-windows-browser-compatibility",
       "projectId": "weir",
       "title": "Prove browser isolation in the Windows service",
@@ -574,14 +602,15 @@
       "stage": "blocked",
       "sequence": 90,
       "prereqs": [
-        "weir:review-production-effect-policy"
+        "weir:review-production-effect-policy",
+        "weir:identify-windows-loader-failure"
       ],
       "linkedRunIds": [],
       "confidence": "reported",
       "aheadOfPrereqs": null,
       "timestamps": {
         "createdAt": "2026-10-27T02:53:26.430Z",
-        "updatedAt": "2026-11-21T06:54:40.541Z"
+        "updatedAt": "2026-11-22T07:19:05.062Z"
       },
       "evidence": [
         {
@@ -631,6 +660,12 @@
           "at": "2026-11-21T06:54:40.541Z",
           "kind": "stage-change",
           "message": "Windows twice recorded a native DLL initialization failure in the Node driver before Playwright connected in Session 0. Both observations restored the original service."
+        },
+        {
+          "entryId": "ev:windows-loader-dependency",
+          "at": "2026-11-22T07:19:05.062Z",
+          "kind": "note",
+          "message": "The loader diagnostic is the next prerequisite for the Windows field read and browser cleanup check."
         }
       ]
     },
