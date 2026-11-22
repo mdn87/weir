@@ -219,3 +219,29 @@ for up to 90 seconds so an independent verifier can examine them. The diagnostic
 then stops. A browser-compatibility acceptance also requires live browser and
 renderer inspection and cleanup checks. Restore the previous deployment and
 service state after the trial. [Stock driver trial](acceptance/windows-browser-compatibility-20261121.md) · [Patched driver and Session 0 results](acceptance/windows-browser-driver-20261121.md)
+
+### Identify a native driver initialization failure
+
+The optional loader controls run when the packaged Node version check exits with
+`0xc0000142`. Build both from the repository root in an x64 Visual Studio developer
+PowerShell. Use a fresh output directory inside the project.
+
+```powershell
+$out = (New-Item -ItemType Directory .codex-tmp/loader-controls).FullName
+cl /nologo /std:c17 /W4 /WX /O2 /MT /guard:cf "/Fo$out/dynamic.obj" "/Fe$out/weir-loader-probe.exe" scripts/windows_loader_probe.c /link /DYNAMICBASE /NXCOMPAT /Brepro
+if ($LASTEXITCODE) { throw 'Dynamic control build failed' }
+cl /nologo /std:c17 /W4 /WX /O2 /MT /guard:cf /DWEIR_STATIC_USER32 "/Fo$out/static.obj" "/Fe$out/weir-user32-startup.exe" scripts/windows_loader_probe.c user32.lib /link /DYNAMICBASE /NXCOMPAT /Brepro
+if ($LASTEXITCODE) { throw 'Static control build failed' }
+```
+
+Pass `--browser-loader-probes $out` to the browser-proof build above. Before
+sealing the runtime, the builder inspects both control executables with `dumpbin`,
+checks coverage of the actual Node imports and runs every control on the desktop.
+
+Each dynamic check uses a fresh child to initialize one fixed library from
+System32. Exit 0 means it loaded. The intentionally absent library must return
+126. Error 1114 means a DLL initialization routine failed. The static companion
+imports USER32 before its program entry point and returns 37 when it reaches that
+point. A native exit of `0xc0000142` means initialization failed. A timeout or a
+process-start error leaves that observation incomplete. The service records the
+results with the existing field diagnostic. [4070pc loader measurements](acceptance/windows-browser-loader-20261122.md) · [Windows library loading](https://learn.microsoft.com/en-us/windows/win32/api/libloaderapi/nf-libloaderapi-loadlibraryexw)

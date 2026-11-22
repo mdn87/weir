@@ -7,6 +7,7 @@ import importlib.metadata
 import json
 import os
 from pathlib import Path
+import re
 import shutil
 import subprocess
 import sys
@@ -25,6 +26,28 @@ def configure_appcontainer_pipes(runtime: Path) -> None:
     module.write_bytes(source.replace(prefix, local, 1))
 
 
+def verify_loader_controls(python: str, driver: Path) -> None:
+    dumpbin = shutil.which("dumpbin.exe")
+    if not dumpbin:
+        raise RuntimeError("Run the optional loader build in an x64 Visual Studio developer shell")
+
+    def dependencies(image: str) -> set[str]:
+        listing = subprocess.check_output([dumpbin, "/nologo", "/dependents", str(driver / image)], text=True)
+        return {name.lower() for name in re.findall(r"(?im)^[ \t]+([\w.\-]+\.dll)[ \t]*\r?$", listing)}
+
+    expected = {"weir-loader-probe.exe": {"kernel32.dll"}, "weir-user32-startup.exe": {"kernel32.dll", "user32.dll"}}
+    for image, imports in expected.items():
+        if dependencies(image) != imports:
+            raise ValueError(f"Unexpected imports in {image}")
+    reply = subprocess.check_output(
+        [python, "-I", "-B", "-m", "weir.windows_browser_probe", "--desktop-loader-control"], text=True,
+    )
+    checked = json.loads(reply)["libraries"]
+    imported = dependencies("node.exe")
+    if not imported or not imported.issubset(checked):
+        raise ValueError("The loader diagnostic does not cover the packaged Node imports")
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output", type=Path, required=True)
@@ -32,9 +55,16 @@ def main() -> int:
                         help="bundle Playwright and its matching Chromium headless shell for the fixed-field diagnostic")
     parser.add_argument("--browser-node-dir", type=Path,
                         help="use node.exe and LICENSE from this Node distribution in the browser proof runtime")
+    parser.add_argument("--browser-loader-probes", type=Path,
+                        help="include both compiled Windows system-library controls from this directory")
     args = parser.parse_args()
     if os.name != "nt":
         parser.error("build on the target Windows interpreter")
+    loader_probes = ("weir-loader-probe.exe", "weir-user32-startup.exe")
+    if args.browser_loader_probes and (not args.browser_proof or not all(
+        (args.browser_loader_probes / name).is_file() for name in loader_probes
+    )):
+        parser.error("--browser-loader-probes requires --browser-proof and both compiled controls")
     if args.browser_node_dir and (not args.browser_proof or not all(
         (args.browser_node_dir / name).is_file() for name in ("node.exe", "LICENSE")
     )):
@@ -70,9 +100,14 @@ def main() -> int:
     subprocess.run([python, "-I", "-B", "-c", "import weir, yaml, cryptography, multiprocessing; print('isolated runtime imports passed')"], cwd=destination, check=True)
     if args.browser_proof:
         driver = runtime / "Lib" / "site-packages" / "playwright" / "driver"
+        if args.browser_loader_probes:
+            for name in loader_probes:
+                shutil.copy2(args.browser_loader_probes / name, driver / name)
         if args.browser_node_dir:
             shutil.copy2(args.browser_node_dir / "node.exe", driver / "node.exe")
             shutil.copy2(args.browser_node_dir / "LICENSE", driver / "NODE-LICENSE.txt")
+        if args.browser_loader_probes:
+            verify_loader_controls(python, driver)
         env = {**os.environ, "PLAYWRIGHT_BROWSERS_PATH": "0"}
         env["PLAYWRIGHT_NODEJS_PATH"] = str(driver / "node.exe")
         subprocess.run([python, "-I", "-B", "-m", "playwright", "install", "--only-shell", "chromium"],
