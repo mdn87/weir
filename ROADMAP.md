@@ -109,7 +109,7 @@ The earlier 100% assessment covered the first effect policy review alone.
 | Order | Batch | Completion criteria |
 | --- | --- | --- |
 | 1 | Review production effect policy | Complete. Independent review accepted the rules for one unsaved field, including authority, credential custody, verification and rollback. [Policy](docs/production-effect-policy.md) · [Review record](docs/acceptance/first-production-effect-policy-20261121.md) |
-| 2 | Qualify Linux for the first action | Review the Linux enforcement boundary and rehearse one permit-bound fill of an unsaved field. Verify exact readback, discard, network isolation, cleanup and replay handling. |
+| 2 | Qualify Linux for the first action | Complete for the offline rehearsal. Fade and WEIR dispatched one fill, recovered its receipt after restart, and verified exact readback, discard, receiver isolation and shutdown on the host. [Linux rehearsal](docs/acceptance/linux-first-action-20261122.md) |
 | 3 | Implement the production effect adapter | Bind commands to exact permits, current session state and durable reservations. Verify post-state receipts, stale or mismatched denial, response-loss reconciliation and no duplicate effects on retry. |
 | 4 | Run one approved production canary | Obtain explicit approval for the target and reversible action. Record one observed effect, single-use permission, restart replay denial and rollback evidence before expanding the rollout. |
 

@@ -758,18 +758,21 @@
       "projectId": "weir",
       "title": "Qualify Linux for the first approved website change",
       "summary": "Review the Linux policy and test a permit-bound fill of one unsaved field. Verify readback, discard, network isolation and denial on replay.",
-      "stage": "active",
+      "stage": "done",
       "sequence": 97,
       "prereqs": [
         "weir:review-production-effect-policy",
         "weir:verify-linux-host-admission"
       ],
-      "linkedRunIds": [],
+      "linkedRunIds": [
+        "batch9-canary-a6e498376e666eba",
+        "batch9-canary-c6dc556cb464b875"
+      ],
       "confidence": "authoritative",
       "aheadOfPrereqs": null,
       "timestamps": {
         "createdAt": "2026-11-22T07:45:45.206Z",
-        "updatedAt": "2026-11-22T07:50:08.020Z"
+        "updatedAt": "2026-11-22T08:08:27.656Z"
       },
       "evidence": [
         {
@@ -783,6 +786,18 @@
           "at": "2026-11-22T07:50:08.020Z",
           "kind": "stage-change",
           "message": "Started the Linux policy review and isolated rehearsal for one unsaved field. The signed-in report service keeps its read-only scope."
+        },
+        {
+          "entryId": "ev:linux-fill-rehearsed",
+          "at": "2026-11-22T08:07:14.827Z",
+          "kind": "stage-change",
+          "message": "Linux filled one offline field and verified its exact value, discard and both service exits. Replay returned the original receipt. Six network receivers saw zero deliveries."
+        },
+        {
+          "entryId": "ev:linux-fill-final-package",
+          "at": "2026-11-22T08:08:27.656Z",
+          "kind": "note",
+          "message": "The final package repeated the check with the host policy and process lifetimes pinned. The ordinary service denied the rehearsal permit."
         }
       ]
     },
@@ -792,17 +807,17 @@
       "projectId": "weir",
       "title": "Bind production actions to reviewed permits",
       "summary": "Connect reviewed browser actions to exact permits, current state and durable receipts; prove denial, ambiguity and retry behavior.",
-      "stage": "planned",
+      "stage": "ready",
       "sequence": 100,
       "prereqs": [
         "weir:qualify-linux-first-action"
       ],
       "linkedRunIds": [],
-      "confidence": "inferred",
+      "confidence": "authoritative",
       "aheadOfPrereqs": null,
       "timestamps": {
         "createdAt": "2026-10-27T02:53:26.430Z",
-        "updatedAt": "2026-11-22T07:45:45.206Z"
+        "updatedAt": "2026-11-22T08:07:14.827Z"
       },
       "evidence": [
         {
@@ -816,6 +831,12 @@
           "at": "2026-11-22T07:45:45.206Z",
           "kind": "note",
           "message": "Matt selected Linux. Adapter qualification now builds on the reviewed Linux action policy and service proof."
+        },
+        {
+          "entryId": "ev:linux-effect-adapter-ready",
+          "at": "2026-11-22T08:07:14.827Z",
+          "kind": "stage-change",
+          "message": "The Linux rehearsal passed. The next step binds a live adapter to the enrolled owner, a signed approval, the exact field and one durable grant."
         }
       ]
     },

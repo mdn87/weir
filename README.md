@@ -213,9 +213,11 @@ origin. The first approved local canary now passes through real Playwright plus 
 Fade and WEIR HTTP boundaries, including response-loss reconciliation, conflicting
 replay rejection, and restart replay with exactly one DOM effect. Its runner and
 redacted evidence are in `scripts/run_fade_weir_action_canary.py` and
-`docs/acceptance/batch9-local-acceptance-20260828.md`. This does not add a production
-effect adapter, service deployment, or production credential. See
-`docs/focus-and-interaction.md` for the cross-system identity and controller model.
+`docs/acceptance/batch9-local-acceptance-20260828.md`. The Linux service rehearsal
+also verified exact marker readback, an empty field in a fresh browser, network
+isolation and shutdown. The production action allowlist remains empty.
+[Linux rehearsal and evidence](docs/acceptance/linux-first-action-20261122.md) ·
+[Cross-system identity and controller model](docs/focus-and-interaction.md)
 The implementation-ready cross-repository sequence and Fable review decisions are in
 `docs/sibling-integration-plan.md`; the focused post-freeze delivery plan for the
 remaining sibling work is in `docs/remaining-integration-plan.md`. The accepted Batch

@@ -17,12 +17,14 @@ from datetime import datetime, timedelta, timezone
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from threading import Thread
-from typing import Any, Callable
+from typing import TYPE_CHECKING, Any, Callable
 from urllib.error import HTTPError
 from urllib.parse import urlsplit
 from urllib.request import Request, urlopen
 
-from playwright.sync_api import Route, sync_playwright
+if TYPE_CHECKING:
+    from playwright.sync_api import Route
+
 from weir.actions import (
     ActionCompiler,
     ActionCondition,
@@ -187,6 +189,7 @@ def _persist_observation(
 
 class PlaywrightFixtureEffectWorker:
     worker_id = "playwright-synthetic-canary"
+    marker = MARKER
 
     def __init__(
         self,
@@ -210,6 +213,8 @@ class PlaywrightFixtureEffectWorker:
         self._executor.submit(self._start).result(timeout=30)
 
     def _start(self) -> None:
+        from playwright.sync_api import sync_playwright
+
         self._playwright = sync_playwright().start()
         self._browser = self._playwright.chromium.launch(headless=True)
         self._context = self._browser.new_context(
@@ -252,7 +257,7 @@ class PlaywrightFixtureEffectWorker:
         session = self.store.get_session(session_id)
         revision = session.revision + 1
         self._observations += 1
-        value = self._page.get_by_test_id("fixture-value").input_value()
+        value = self._read_value()
         state = "empty" if value == "" else "filled"
         captured_at = _iso(_utc_now())
         observation = Observation.create(
@@ -297,6 +302,12 @@ class PlaywrightFixtureEffectWorker:
     def apply(self, command: PrivateEffectCommand) -> EffectResult:
         return self._executor.submit(self._apply, command).result(timeout=15)
 
+    def _read_value(self) -> str:
+        return self._page.get_by_test_id("fixture-value").input_value()
+
+    def _fill_marker(self) -> None:
+        self._page.get_by_test_id("fixture-value").fill(self.marker)
+
     def _apply(self, command: PrivateEffectCommand) -> EffectResult:
         command.validate()
         if (
@@ -308,11 +319,11 @@ class PlaywrightFixtureEffectWorker:
         ):
             raise ValueError("canary effect command is outside the fixed fixture")
         parameters = command.parameters()
-        if set(parameters) != {"value"} or parameters["value"] != MARKER:
+        if set(parameters) != {"value"} or parameters["value"] != self.marker:
             raise ValueError("canary fill value is not the fixed marker")
         self.apply_calls += 1
-        self._page.get_by_test_id("fixture-value").fill(MARKER)
-        if self._page.get_by_test_id("fixture-value").input_value() != MARKER:
+        self._fill_marker()
+        if self._read_value() != self.marker:
             raise RuntimeError("Playwright did not apply the fixture fill")
         return EffectResult(self.worker_id, self.worker_instance_id, True)
 
@@ -399,7 +410,14 @@ def _write_report(path: Path, report: dict[str, object]) -> None:
     path.write_text(serialized, encoding="utf-8")
 
 
-def run_canary(run_dir: Path, report_path: Path, fade_source: Path) -> dict[str, object]:
+def run_canary(
+    run_dir: Path,
+    report_path: Path,
+    fade_source: Path,
+    *,
+    fixture_factory=FixturePage,
+    worker_factory=PlaywrightFixtureEffectWorker,
+) -> dict[str, object]:
     if run_dir.exists():
         raise FileExistsError(f"canary run directory already exists: {run_dir}")
     run_dir.mkdir(parents=True)
@@ -435,7 +453,7 @@ def run_canary(run_dir: Path, report_path: Path, fade_source: Path) -> dict[str,
             events.append(json.loads(json.dumps(event)))
 
     try:
-        with FixturePage() as fixture:
+        with fixture_factory() as fixture:
             context = WorkContext.create(
                 context_id=f"context-{run_token}",
                 run_id=run_id,
@@ -445,7 +463,7 @@ def run_canary(run_dir: Path, report_path: Path, fade_source: Path) -> dict[str,
                 evidence_refs=("weir-evidence:batch9-synthetic-input",),
                 created_at=_iso(started_at),
             )
-            worker = PlaywrightFixtureEffectWorker(
+            worker = worker_factory(
                 store,
                 captures,
                 context,
@@ -498,7 +516,7 @@ def run_canary(run_dir: Path, report_path: Path, fade_source: Path) -> dict[str,
                 observation=approved,
                 locator=locator,
                 action_type=ActionType.FILL,
-                parameters={"value": MARKER},
+                parameters={"value": worker.marker},
                 parameter_data_class=DataClass.PUBLIC,
                 risk=Risk.UNKNOWN,
                 expected_postconditions=[
@@ -696,7 +714,7 @@ def run_canary(run_dir: Path, report_path: Path, fade_source: Path) -> dict[str,
                 {"fade": first, "events": events},
                 sort_keys=True,
             )
-            if MARKER in serialized_public or '"parameters"' in serialized_public:
+            if worker.marker in serialized_public or '"parameters"' in serialized_public:
                 raise RuntimeError("private action parameters leaked into public output")
 
             finished_at = _utc_now()
