@@ -1,9 +1,13 @@
+import json
+import io
 import tempfile
 import threading
 import unittest
+from contextlib import redirect_stderr, redirect_stdout
 from dataclasses import replace
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import patch
 
 from tests.browser_fakes import ScriptedBrowserWorker
@@ -32,6 +36,9 @@ from weir.persistence import CaptureStore
 from weir.work_context import WorkContext, WorkContextSource
 
 from weir.profiles import SiteProfile, SiteProfileRegistry
+from weir.visual import Region, ValueQuery, png_bytes
+from weir.visual_cli import execute_visual
+from weir.visual_evidence import VisualReadings, observe_value
 
 
 class Ids:
@@ -134,6 +141,79 @@ class BrowserBrokerTests(unittest.TestCase):
             )
         self.assertEqual(self.store.sessions(), [])
         self.assertEqual(self.worker.calls, [])
+
+    def test_saved_visual_read_requires_registered_source_and_same_profile(self):
+        session = self._open()
+        result = self.broker.observe(session.session_id, self.context, expected_revision=session.revision,
+                                     expected_epoch=session.epoch, operation_id="saved-observation")
+        readings = VisualReadings(self.store, self.broker.capture_store, self.broker.profiles)
+        rect = Region(0, 0, 20, 10)
+        with patch("weir.visual_evidence.read_region") as ocr:
+            reading = readings.read(result.capture.capture_id, ValueQuery("Reviews"), rect)
+            self.assertEqual(reading["status"], "screenshot_missing")
+            self.assertEqual(reading, readings.show(reading["reading_id"]))
+            ocr.assert_not_called()
+        changed = replace(self.broker.profiles.get("test-portal"), retention={})
+        readings.profiles = SiteProfileRegistry([changed])
+        with self.assertRaises(EnginePolicyBlocked):
+            readings.show(reading["reading_id"])
+        readings.profiles = self.broker.profiles
+        path = readings.store.root / "captures" / (result.capture.capture_id + ".json")
+        manifest = json.loads(path.read_text())
+        manifest["request_id"] = "another-command"
+        path.write_text(json.dumps(manifest))
+        with self.assertRaisesRegex(ValueError, "registered browser observation"):
+            readings.read(result.capture.capture_id, ValueQuery("Reviews"), rect)
+
+    def test_crop_provenance_replay_and_reader_failure(self):
+        from PIL import Image
+
+        session = self._open()
+        worker_observe = self.worker.observe
+        captured = []
+
+        def observe(session_id, command, *, include_screenshot):
+            captured.append(include_screenshot)
+            result = worker_observe(session_id, command, include_screenshot=include_screenshot)
+            return replace(result, screenshot=png_bytes(Image.new("RGB", (64, 32), "white")) if include_screenshot else None)
+
+        args = (self.broker, session.session_id, self.context, ValueQuery("Reviews"))
+        kwargs = dict(region=Region(2, 3, 20, 10), expected_revision=session.revision,
+                      expected_epoch=session.epoch, operation_id="pixel-job")
+        with patch.object(self.worker, "observe", side_effect=observe), patch("weir.visual_evidence.read_region", return_value=[]):
+            result = observe_value(*args, **kwargs)
+            self.assertEqual((result["status"], result["value"]), ("reader_unavailable", None))
+            self.assertEqual(observe_value(*args, **kwargs), result)
+        self.assertEqual(captured, [False, True])
+        readings = VisualReadings(self.store, self.broker.capture_store, self.broker.profiles)
+        self.assertEqual(readings.show(result["reading_id"]), result)
+        source_id = result["source"]["capture_id"]
+        args = SimpleNamespace(visual_command="read", sessions=Path(self.temporary.name) / "browser.sqlite3",
+                               store=readings.store.root, capture=source_id, label="Reviews", choice=[],
+                               region=[2, 3, 20, 10], export_crop=None)
+        for second, expected, value in (("Reviews 7", 0, 7), ("Reviews: 9", 3, None)):
+            first = {"reader": "aire.windows", "text": "Reviews: 7"}
+            with patch("weir.visual_evidence.read_region", return_value=[first, {"reader":"aire.rapidocr", "text":second}]):
+                output = io.StringIO()
+                with redirect_stdout(output):
+                    self.assertEqual(execute_visual(args, lambda: self.broker.profiles), expected)
+                saved = json.loads(output.getvalue())
+                self.assertEqual(saved["value"], value)
+                self.assertEqual(readings.show(saved["reading_id"]), saved)
+                self.assertEqual(saved["readings"][0]["text"], "Reviews: 7")
+        args.sessions = Path(self.temporary.name) / "missing.sqlite3"
+        with redirect_stderr(io.StringIO()):
+            self.assertEqual(execute_visual(args, lambda: self.broker.profiles), 2)
+        self.assertFalse(args.sessions.exists())
+        status = self.store.command_status
+        with patch.object(self.store, "command_status", side_effect=lambda key: None if key.startswith("visual-receipt:") else status(key)):
+            with self.assertRaisesRegex(ValueError, "registered receipt"):
+                readings.show(saved["reading_id"])
+        digest = result["crop_ref"].split(":")[-1]
+        path = readings.store.root / "blobs" / "sha256" / digest[:2] / (digest + ".bin")
+        path.write_bytes(b"damaged evidence")
+        with self.assertRaisesRegex(OSError, "hash"):
+            readings.show(result["reading_id"])
 
     def test_open_binds_context_profile_and_controller_durably(self):
         session = self._open()

@@ -107,7 +107,7 @@ Initial evaluation targets:
 - `agent-browser` as a managed Chromium interaction substrate
 - direct Playwright/CDP as a lower-level browser engine
 - direct service APIs/connectors when available
-- Argus or screenshot/vision tooling only when structured browser state is insufficient
+- Aire reads a selected dashboard region when structured browser state cannot answer the question. [Visual reading guide](docs/visual-reading.md)
 
 No engine is canonical yet. The first benchmark exists specifically to decide which engines earn which routes.
 

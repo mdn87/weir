@@ -21,6 +21,7 @@ from weir.persistence import CaptureStore, FileCaptureCache
 from weir.profiles import SiteProfileRegistry
 from weir.router import EngineRegistry, RouteDecision, classify
 from weir.telemetry import JsonlTraceSink
+from weir.visual_cli import add_visual_parser, execute_visual
 
 
 def _positive_int(value: str) -> int:
@@ -46,6 +47,7 @@ def _parser() -> argparse.ArgumentParser:
     )
     sub = parser.add_subparsers(dest="command", required=True)
     add_report_parser(sub)
+    add_visual_parser(sub)
 
     sub.add_parser("engines", help="show reader-engine availability")
     sub.add_parser(
@@ -149,6 +151,8 @@ def main(argv: list[str] | None = None) -> int:
     args = _parser().parse_args(argv)
     if args.command == "report":
         return execute_cli(args)
+    if args.command == "visual":
+        return execute_visual(args, _profile_registry)
     registry = EngineRegistry()
 
     if args.command == "engines":

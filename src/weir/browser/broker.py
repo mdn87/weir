@@ -211,7 +211,7 @@ class BrowserSessionBroker:
                 work_context=context,
                 site_profile_id=profile.id,
                 credential_scope=profile.browser_observation["credential_scope"],
-                profile_policy_digest=_profile_policy_digest(profile),
+                profile_policy_digest=profile_policy_digest(profile),
                 credential_binding_id=credential_binding.credential_binding_id,
                 worker_instance_id=worker.descriptor.instance_id or "",
                 opening_operation_id=operation_id,
@@ -489,7 +489,7 @@ class BrowserSessionBroker:
             check_browser_target_policy(
                 raw.url, session.allowed_domains, session.data_class
             )
-            evidence_request = self._evidence_request(
+            evidence_request = self.evidence_request(
                 operation_id, session, raw.url
             )
             artifact_refs: list[str] = []
@@ -1586,7 +1586,7 @@ class BrowserSessionBroker:
                 "browser session's bound site profile is no longer configured"
             )
         if profile.id != binding.site_profile_id or (
-            _profile_policy_digest(profile) != binding.policy_digest
+            profile_policy_digest(profile) != binding.policy_digest
         ):
             raise EnginePolicyBlocked(
                 "browser session's bound site-profile policy changed after open"
@@ -1651,7 +1651,7 @@ class BrowserSessionBroker:
         )
 
     @staticmethod
-    def _evidence_request(
+    def evidence_request(
         operation_id: str, session: BrowserSession, url: str
     ) -> WebRequest:
         return WebRequest(
@@ -1789,7 +1789,7 @@ def _json_size(value: object) -> int:
     )
 
 
-def _profile_policy_digest(profile: SiteProfile) -> str:
+def profile_policy_digest(profile: SiteProfile) -> str:
     return canonical_digest(
         {
             "site_profile_id": profile.id,

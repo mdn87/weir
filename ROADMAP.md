@@ -178,10 +178,10 @@ Gate: multiple Lugos seats can request web capabilities without direct engine kn
 ## P5 - Visual fallback
 
 - [x] Screenshot evidence adapter with content-addressed binary retention.
-- [ ] Targeted crop evidence adapter.
-- [ ] Argus interpretation contract.
-- [ ] Visual verifier.
-- [ ] Ambiguity classification.
+- [x] Targeted crop evidence adapter for retained observation screenshots.
+- [x] Local interpretation of labelled dashboard counts and states through Aire, which owns the original Argus role.
+- [x] Visual verifier checks OCR agreement, source registration and exact crop pixels on replay.
+- [x] Ambiguous or unreadable results carry a null value and a source for review.
 - [x] Manual takeover path with atomic pause/fence rotation/return.
 
 Gate: structured-browser failures can escalate to visual interpretation without bypassing action policy.

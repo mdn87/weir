@@ -213,15 +213,25 @@ class SQLiteSessionStore:
         database: str | Path = ":memory:",
         *,
         clock: Callable[[], datetime] | None = None,
+        read_only: bool = False,
+        existing: bool = False,
     ) -> None:
         self.clock = clock or (lambda: datetime.now(timezone.utc))
-        self.database = sqlite3.connect(str(database), check_same_thread=False)
+        location = str(database)
+        if existing or read_only:
+            location = Path(database).resolve().as_uri() + ("?mode=ro" if read_only else "?mode=rw")
+        self.database = sqlite3.connect(location, uri=existing or read_only, check_same_thread=False)
         self.database.row_factory = sqlite3.Row
         self._lock = threading.RLock()
         self.database.execute("PRAGMA foreign_keys = ON")
         self.database.execute("PRAGMA busy_timeout = 5000")
         try:
-            self._initialize()
+            if existing or read_only:
+                version = self.database.execute("PRAGMA user_version").fetchone()[0]
+                if version != STORE_SCHEMA_VERSION:
+                    raise ValueError("visual reading requires an existing, current browser ledger")
+            else:
+                self._initialize()
         except Exception:
             self.database.close()
             raise
@@ -2375,6 +2385,27 @@ class SQLiteSessionStore:
             except Exception:
                 self.database.rollback()
                 raise
+
+    def bind_visual_reading(self, digest: str, source_id: str, artifact_ref: str, *, register: bool) -> None:
+        """Atomically register or verify a derived receipt without advancing the browser session."""
+        if not is_sha256(digest):
+            raise ValueError("invalid dashboard reading digest")
+        key = "visual-receipt:" + digest
+        binding = {"source_capture_id": source_id, "artifact_ref": artifact_ref}
+        if register:
+            now = _utc(self.clock())
+            with self._lock, self.database:
+                self.database.execute(
+                    """INSERT INTO browser_commands
+                       (command_id, operation, request_digest, status, result_json, created_at, updated_at)
+                       VALUES (?, 'visual_reading', ?, 'completed', ?, ?, ?)
+                       ON CONFLICT(command_id) DO NOTHING""",
+                    (key, digest, json.dumps(binding, sort_keys=True), now, now),
+                )
+        status = self.command_status(key)
+        if (status is None or status.operation != "visual_reading" or status.status != "completed"
+                or status.request_digest != digest or status.result != binding):
+            raise ValueError("dashboard reading does not match a registered receipt")
 
     def command_status(self, command_id: str) -> CommandStatus | None:
         if not isinstance(command_id, str) or not command_id or len(command_id) > 128:
