@@ -1003,6 +1003,34 @@
     },
     {
       "schemaVersion": 1,
+      "chipId": "weir:rehearse-approved-saved-task",
+      "projectId": "weir",
+      "title": "Approve a private task edit and verify the saved title",
+      "summary": "Review a disposable task title, approve or decline it, reopen proof after restart and request a separately approved undo in Mission Control.",
+      "stage": "ready",
+      "sequence": 114,
+      "prereqs": [
+        "weir:prepare-linux-canary-review",
+        "weir:deliver-private-account-reports"
+      ],
+      "linkedRunIds": [],
+      "confidence": "authoritative",
+      "aheadOfPrereqs": null,
+      "timestamps": {
+        "createdAt": "2026-11-22T13:13:05.072Z",
+        "updatedAt": "2026-11-22T13:13:05.072Z"
+      },
+      "evidence": [
+        {
+          "entryId": "ev:saved-rehearsal-created",
+          "at": "2026-11-22T13:13:05.072Z",
+          "kind": "created",
+          "message": "Matt approved connecting the approval screen to saving and verification. Use the private task for implementation and testing."
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
       "chipId": "weir:deliver-verified-site-change",
       "projectId": "weir",
       "title": "Complete and verify a useful website change",
