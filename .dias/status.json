@@ -8,9 +8,9 @@
   "milestonePhase": "operational-proof",
   "portfolioGroup": "acquisition",
   "displayPriority": 50,
-  "assessedAt": "2026-11-21T11:05:22.126Z",
+  "assessedAt": "2026-11-22T06:26:23.042Z",
   "confidence": "authoritative",
-  "currentMilestone": "The WEIR board report and eBay comparison are deployed in Lugos with private history. The next milestone is browser-based account reporting.",
+  "currentMilestone": "Qualify the Linux browser and deliver a signed-in Mission Control task board report with reopenable evidence.",
   "remainingSummary": "Qualify a service browser for other signed-in dashboards. Windows browser startup, permit-bound site changes, a live approved change and visual fallback remain.",
   "nextChipId": "weir:verify-linux-host-admission",
   "source": {

@@ -871,6 +871,34 @@
           "message": "The selected reports are deployed. Qualify the browser host to support dashboards that require website login. The Windows service still exits before its first field read."
         }
       ]
+    },
+    {
+      "schemaVersion": 1,
+      "chipId": "weir:report-signed-in-review-tasks",
+      "projectId": "weir",
+      "title": "Report which Mission Control tasks are in review",
+      "summary": "Read the signed-in task board from Lugos and reopen the review list with its original timestamped source.",
+      "stage": "planned",
+      "sequence": 150,
+      "prereqs": [
+        "weir:verify-linux-host-admission",
+        "weir:deliver-private-account-reports"
+      ],
+      "linkedRunIds": [],
+      "confidence": "authoritative",
+      "aheadOfPrereqs": null,
+      "timestamps": {
+        "createdAt": "2026-11-22T06:26:23.042Z",
+        "updatedAt": "2026-11-22T06:26:23.042Z"
+      },
+      "evidence": [
+        {
+          "entryId": "ev:weir-review-report-created",
+          "at": "2026-11-22T06:26:23.042Z",
+          "kind": "created",
+          "message": "Matt approved the Linux browser qualification and the first signed-in task board report as one delivery."
+        }
+      ]
     }
   ]
 }
