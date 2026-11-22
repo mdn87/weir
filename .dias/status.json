@@ -8,10 +8,10 @@
   "milestonePhase": "operational-proof",
   "portfolioGroup": "acquisition",
   "displayPriority": 50,
-  "assessedAt": "2026-11-22T16:47:20.122Z",
+  "assessedAt": "2026-11-22T16:58:16.597Z",
   "confidence": "authoritative",
   "currentMilestone": "The public test field passed a Linux browser read. Fade verified the temporary fill on a private copy. The Linux caller credential is installed.",
-  "remainingSummary": "Connect the live passkey issuer, verify grant recovery and obtain the two owner decisions. The first live fill, a saved website edit and Windows isolation remain open.",
+  "remainingSummary": "Designate the live field signer, verify independent grant recovery and collect two owner passkey decisions. A saved website edit and Windows qualification remain.",
   "nextChipId": "weir:commission-live-field-approval",
   "source": {
     "label": "Operator release, saved change review and Dias board evidence",

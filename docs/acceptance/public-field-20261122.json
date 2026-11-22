@@ -122,5 +122,24 @@
     "run_id": "20261122-162621-cross-review",
     "live_issuance_available": false
   },
-  "production_fill_performed": false
+  "production_fill_performed": false,
+  "owner_and_recovery_inspection": {
+    "registered_owner_can_use_passkey": true,
+    "candidate_digest": "sha256:8c32dae73dda083ef3aade3c582344a0573d76ba008acd4741dc0bd8869482c6",
+    "preview": {
+      "url": "https://lugos-host.tail099c37.ts.net:8443/weir-field/",
+      "field_name": "WEIR canary",
+      "test_id": "weir-canary",
+      "before": "",
+      "after": "WEIR-CANARY",
+      "use_limit": 1,
+      "discard": "close-browser-and-read-again"
+    },
+    "production_trust_installed": false,
+    "grant_issued": false,
+    "independent_mount": true,
+    "image_shares_ledger_filesystem": true,
+    "scheduled_lugos_backup_includes_image": false,
+    "production_action_dispatched": false
+  }
 }

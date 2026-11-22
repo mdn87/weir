@@ -901,7 +901,7 @@
       "projectId": "weir",
       "title": "Connect owner passkey approval to the live test field",
       "summary": "Connect the protected production signer to Mission Control, Fade and WEIR. Verify the one-use grant survives ledger recovery and present the exact field to its owner.",
-      "stage": "ready",
+      "stage": "blocked",
       "sequence": 108,
       "prereqs": [
         "weir:prepare-linux-canary-review",
@@ -912,7 +912,7 @@
       "aheadOfPrereqs": null,
       "timestamps": {
         "createdAt": "2026-11-22T16:47:20.122Z",
-        "updatedAt": "2026-11-22T16:47:20.122Z"
+        "updatedAt": "2026-11-22T16:58:16.597Z"
       },
       "evidence": [
         {
@@ -920,6 +920,24 @@
           "at": "2026-11-22T16:47:20.122Z",
           "kind": "created",
           "message": "The Linux browser verified the live field and the service credential is installed. Independent review confirmed the current signer covers only rehearsals."
+        },
+        {
+          "entryId": "ev:inspect-production-owner-boundary",
+          "at": "2026-11-22T16:57:22.631Z",
+          "kind": "stage-change",
+          "message": "Check the registered owner, protected candidate, production issuer and restore boundary on the Linux host before opening live approval."
+        },
+        {
+          "entryId": "ev:owner-and-backup-verified",
+          "at": "2026-11-22T16:58:16.597Z",
+          "kind": "note",
+          "message": "The staged field matches the live read. Mission Control has an eligible owner passkey. Its field signer is private-only. The Linux backup excludes the grant image."
+        },
+        {
+          "entryId": "ev:owner-select-live-signer",
+          "at": "2026-11-22T16:58:16.597Z",
+          "kind": "stage-change",
+          "message": "No live issuer is designated. The owner can designate a production signer or commission a field-only one. Verify recovery of the one-use grant before issuing it."
         }
       ]
     },
