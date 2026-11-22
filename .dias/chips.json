@@ -807,7 +807,7 @@
       "projectId": "weir",
       "title": "Bind production actions to reviewed permits",
       "summary": "Connect reviewed browser actions to exact permits, current state and durable receipts; prove denial, ambiguity and retry behavior.",
-      "stage": "ready",
+      "stage": "active",
       "sequence": 100,
       "prereqs": [
         "weir:qualify-linux-first-action"
@@ -817,7 +817,7 @@
       "aheadOfPrereqs": null,
       "timestamps": {
         "createdAt": "2026-10-27T02:53:26.430Z",
-        "updatedAt": "2026-11-22T08:07:14.827Z"
+        "updatedAt": "2026-11-22T08:22:17.648Z"
       },
       "evidence": [
         {
@@ -837,6 +837,12 @@
           "at": "2026-11-22T08:07:14.827Z",
           "kind": "stage-change",
           "message": "The Linux rehearsal passed. The next step binds a live adapter to the enrolled owner, a signed approval, the exact field and one durable grant."
+        },
+        {
+          "entryId": "ev:linux-adapter-start",
+          "at": "2026-11-22T08:22:17.648Z",
+          "kind": "stage-change",
+          "message": "Started binding the normal action route to owner enrollment, a signed decision and one durable grant. Qualification will use disposable authority and an isolated browser."
         }
       ]
     },

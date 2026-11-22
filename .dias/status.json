@@ -8,9 +8,9 @@
   "milestonePhase": "operational-proof",
   "portfolioGroup": "acquisition",
   "displayPriority": 50,
-  "assessedAt": "2026-11-22T08:08:27.656Z",
+  "assessedAt": "2026-11-22T08:22:17.648Z",
   "confidence": "authoritative",
-  "currentMilestone": "The Linux service rehearsed one permit-bound unsaved fill with readback, discard, restart and isolation verified. Website actions remain disabled.",
+  "currentMilestone": "The Linux action rehearsal passed. Implementation of signed enrollment, exact action approval and one durable grant is underway.",
   "remainingSummary": "Build the Linux production adapter, enroll an eligible field and run one approved canary. Saved changes, Windows browser compatibility and visual fallback remain.",
   "nextChipId": "weir:implement-production-effect-adapter",
   "source": {
