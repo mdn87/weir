@@ -8,11 +8,11 @@
   "milestonePhase": "operational-proof",
   "portfolioGroup": "acquisition",
   "displayPriority": 50,
-  "assessedAt": "2026-11-22T14:11:47.695Z",
+  "assessedAt": "2026-11-22T16:04:11.593Z",
   "confidence": "authoritative",
   "currentMilestone": "The owner can approve, verify and undo a saved title in a private rehearsal. Live website changes are disabled.",
-  "remainingSummary": "Live writes need an eligible target and a commissioned host. A real saved edit needs its own review and verification. Windows service browser isolation remains open.",
-  "nextChipId": "weir:review-saved-effect-policy",
+  "remainingSummary": "Publish and verify the public test field, commission Linux for one use, then obtain the owner decisions. A saved website edit and Windows isolation remain open.",
+  "nextChipId": "weir:verify-production-action-canary",
   "source": {
     "label": "Operator release, saved change review and Dias board evidence",
     "updatedAt": "2026-11-22"

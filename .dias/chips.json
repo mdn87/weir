@@ -901,18 +901,18 @@
       "projectId": "weir",
       "title": "Verify the unsaved browser field canary",
       "summary": "With explicit approval, fill the enrolled unsaved field once. Verify readback, replay denial and rollback. The action expires with the tab.",
-      "stage": "planned",
+      "stage": "active",
       "sequence": 110,
       "prereqs": [
         "weir:implement-production-effect-adapter",
         "weir:prepare-linux-canary-review"
       ],
       "linkedRunIds": [],
-      "confidence": "inferred",
+      "confidence": "authoritative",
       "aheadOfPrereqs": null,
       "timestamps": {
         "createdAt": "2026-10-27T02:53:26.430Z",
-        "updatedAt": "2026-11-22T14:11:47.695Z"
+        "updatedAt": "2026-11-22T16:04:11.593Z"
       },
       "evidence": [
         {
@@ -950,6 +950,12 @@
           "at": "2026-11-22T14:11:47.695Z",
           "kind": "note",
           "message": "The Linux host has live read services. The write service, deployment settings, decision records and separate one-use grant storage are absent. No write was attempted."
+        },
+        {
+          "entryId": "ev:live-page-chosen",
+          "at": "2026-11-22T16:04:11.593Z",
+          "kind": "stage-change",
+          "message": "Matt delegated the test location. Publish a separate public textbox on his portfolio, verify it on Linux and prepare the owner approval for one temporary fill."
         }
       ]
     },
