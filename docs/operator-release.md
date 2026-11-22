@@ -10,6 +10,20 @@ Use the chip's stated outcome to decide what to build. Mark it active on the pro
 
 The first enrolled project on the installed service is WEIR. A separate host timer reads those two Dias display views on the Windows workstation about every 45 seconds. The report service accepts snapshots up to two minutes old and records the original observation time. Dias publishes these views without an upstream website login. Mission Control protects the report and its sources.
 
+## Read the signed-in task board
+
+Choose **Tasks in review** in **Lugos → Web reports**. The report lists the tasks in
+the **Review** column of your current Mission Control workspace, in task ID order.
+The **Review** heading on the task board opens the same read-only page. If the list
+exceeds 200 tasks, the page reports the full count and displays the first 200.
+**Source 1** reopens the exact document that the browser read.
+
+Mission Control uses the operator's current browser session to issue one short-lived
+read for this column. It checks the session, owner and workspace again when WEIR
+redeems the read. The isolated Linux browser requests the server-rendered page with
+JavaScript disabled. Only the host bridge contacts Mission Control. The saved report
+contains task IDs, titles, observation time and source evidence. [Signed-in release test](acceptance/linux-task-review-20261122.md)
+
 ## Compare marketplace listings
 
 Choose **Marketplace comparison** and enter the item. Enter a maximum price including shipping, currency, item country or condition as needed. A listing qualifies when its recorded fields meet the criteria. Missing shipping or location remains visible. The displayed total combines item price and known shipping before tax. A search returning zero rows can still create a report. A source failure returns an error.
@@ -42,4 +56,4 @@ Local command-line, campaign and Mission Control histories have different owners
 
 The release check exercised both forms, inspected both sources, compared two searches and reopened four reports after a restart. [Installed release evidence](acceptance/lugos-operator-reports-20261121.md)
 
-A dashboard that requires browser login still depends on qualifying the service browser. The Windows service driver exits before Playwright connects. Website writes remain disabled, and a saved website change still needs an enrolled target, a reviewed permit and independent readback. [Windows browser qualification](acceptance/windows-browser-driver-20261121.md) · [Production effect policy](production-effect-policy.md)
+The Linux browser supports the enrolled Mission Control Review column. Other websites need an enrolled read and account binding for their own dashboard. The Windows driver still exits before Playwright connects. Production writes require a reviewed permit and independent readback. [Windows browser qualification](acceptance/windows-browser-driver-20261121.md) · [Production effect policy](production-effect-policy.md)

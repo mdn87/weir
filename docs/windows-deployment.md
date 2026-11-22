@@ -2,7 +2,8 @@
 
 Status: independent native host acceptance passed on 2026-10-26. No production website actions are authorized by
 this deployment. The target is the inventoried Windows 11 workstation `4070pc`
-(Windows computer name `MATT`). Linux needs a production process-binding and host provider.
+(Windows computer name `MATT`). The Linux task board reader uses a separate systemd
+service and host verification. [Linux report controls](production-admission.md)
 
 ## Outcome and boundary
 

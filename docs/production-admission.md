@@ -59,9 +59,16 @@ to the existing Fade identity.
 The concrete Windows provider also requires a no-capability, low-integrity
 AppContainer. Its inspector runs before worker creation, verifies the child token
 before the factory, and refreshes live controls at admission. A protected named Job
-Object lets an independent verifier read limits and membership. Linux production
-process binding and host inspection still require implementation; prepared cgroup
-containment alone does not enable production admission.
+Object lets an independent verifier read limits and membership.
+
+The Linux task board reader runs in a socket-activated systemd service. The host
+bridge checks the kernel-reported sender PID and UID, process start time, boot ID,
+systemd invocation, cgroup v2 limits, and Chromium membership. It repeats admission
+when Chromium requests the document and when the observation returns. A private
+network namespace and a Unix-only socket policy isolate the service. Its only
+document comes from the trusted bridge, which redeems the signed-in owner's
+one-use grant for a fixed GET. Chromium receives the page without a session credential.
+The named worker implements read-only observation. [Linux host measurements](acceptance/linux-review-browser-20261122.json)
 
 The containment record alone is insufficient. Production admission also requires
 current restricted-identity, credential-protection, lifecycle, and OS egress evidence.

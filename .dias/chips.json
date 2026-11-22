@@ -845,17 +845,20 @@
       "projectId": "weir",
       "title": "Qualify a Linux browser for authenticated dashboard reports",
       "summary": "Run a sandboxed browser under its service identity, verify network and process limits, and read a dashboard field before enrolling an account.",
-      "stage": "ready",
+      "stage": "done",
       "sequence": 140,
       "prereqs": [
         "weir:gate-browser-session-work"
       ],
-      "linkedRunIds": [],
+      "linkedRunIds": [
+        "linux-339e9d190260447ebca2ea8c9899b3e7",
+        "linux-65a3a042a96a4cf79b7a150368123a65"
+      ],
       "confidence": "authoritative",
       "aheadOfPrereqs": null,
       "timestamps": {
         "createdAt": "2026-10-27T02:53:26.430Z",
-        "updatedAt": "2026-11-21T11:05:22.126Z"
+        "updatedAt": "2026-11-22T07:04:42.402Z"
       },
       "evidence": [
         {
@@ -869,6 +872,66 @@
           "at": "2026-11-21T11:05:22.126Z",
           "kind": "stage-change",
           "message": "The selected reports are deployed. Qualify the browser host to support dashboards that require website login. The Windows service still exits before its first field read."
+        },
+        {
+          "entryId": "ev:weir-linux-browser-start",
+          "at": "2026-11-22T06:27:04.453Z",
+          "kind": "stage-change",
+          "message": "Started Linux service browser qualification on lugos-host for the signed-in task board report."
+        },
+        {
+          "entryId": "ev:linux-browser-verified",
+          "at": "2026-11-22T06:43:18.212Z",
+          "kind": "stage-change",
+          "message": "A real service browser read the challenge field, enforced memory and process limits, and reaped all nine processes after disconnect and after a forced stop."
+        },
+        {
+          "entryId": "ev:linux-installed-host",
+          "at": "2026-11-22T07:04:42.402Z",
+          "kind": "note",
+          "message": "The installed Linux browser read a random field under its own service identity. All nine worker processes exited after disconnect and again after forced stop."
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "chipId": "weir:report-signed-in-review-tasks",
+      "projectId": "weir",
+      "title": "Report which Mission Control tasks are in review",
+      "summary": "Read the signed-in task board from Lugos and reopen the review list with its original timestamped source.",
+      "stage": "done",
+      "sequence": 150,
+      "prereqs": [
+        "weir:verify-linux-host-admission",
+        "weir:deliver-private-account-reports"
+      ],
+      "linkedRunIds": [
+        "run-cd77b5c30a3144878bcbd72d2a949533"
+      ],
+      "confidence": "authoritative",
+      "aheadOfPrereqs": null,
+      "timestamps": {
+        "createdAt": "2026-11-22T06:26:23.042Z",
+        "updatedAt": "2026-11-22T07:04:42.402Z"
+      },
+      "evidence": [
+        {
+          "entryId": "ev:weir-review-report-created",
+          "at": "2026-11-22T06:26:23.042Z",
+          "kind": "created",
+          "message": "Matt approved the Linux browser qualification and the first signed-in task board report as one delivery."
+        },
+        {
+          "entryId": "ev:review-board-start",
+          "at": "2026-11-22T06:43:18.212Z",
+          "kind": "stage-change",
+          "message": "The Linux service browser passed qualification. The signed-in task board view and its private report are under integration test."
+        },
+        {
+          "entryId": "ev:review-board-installed",
+          "at": "2026-11-22T07:04:42.402Z",
+          "kind": "stage-change",
+          "message": "The installed form read the two matching test tasks and saved the exact source. Only its owner could reopen the report and source after restart."
         }
       ]
     }
