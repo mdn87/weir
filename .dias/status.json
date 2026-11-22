@@ -10,7 +10,7 @@
   "displayPriority": 50,
   "assessedAt": "2026-11-22T09:00:56.284Z",
   "confidence": "authoritative",
-  "currentMilestone": "The Linux permit-bound action adapter passed independent review and host qualification using a disposable HTTPS field.",
+  "currentMilestone": "The reviewed Linux action adapter passed host qualification for a signed, one-use fill on a disposable HTTPS field.",
   "remainingSummary": "Commission the Linux grant, enroll one eligible field and approve its live canary. Saved changes, Windows browser compatibility and visual fallback remain.",
   "nextChipId": "weir:verify-production-action-canary",
   "source": {
