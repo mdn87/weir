@@ -947,18 +947,20 @@
       "projectId": "weir",
       "title": "Review the policy for a saved website change",
       "summary": "For a selected account and change, review permitted data and delivery, exact approval, independent readback and reversal before enrollment.",
-      "stage": "ready",
+      "stage": "blocked",
       "sequence": 112,
       "prereqs": [
         "weir:define-operator-release",
         "weir:review-production-effect-policy"
       ],
-      "linkedRunIds": [],
-      "confidence": "reported",
+      "linkedRunIds": [
+        "20261122-124642-cross-review"
+      ],
+      "confidence": "authoritative",
       "aheadOfPrereqs": null,
       "timestamps": {
         "createdAt": "2026-11-21T09:40:34.856Z",
-        "updatedAt": "2026-11-22T12:37:22.597Z"
+        "updatedAt": "2026-11-22T12:55:09.958Z"
       },
       "evidence": [
         {
@@ -978,6 +980,24 @@
           "at": "2026-11-22T12:37:22.597Z",
           "kind": "stage-change",
           "message": "Both prerequisites passed. Review a real saved change against its destination while live execution stays disabled."
+        },
+        {
+          "entryId": "ev:saved-policy-review-active",
+          "at": "2026-11-22T12:37:22.957Z",
+          "kind": "stage-change",
+          "message": "Checking the destination account, effects, owner approval, independent readback and reversal using private evidence."
+        },
+        {
+          "entryId": "ev:saved-policy-private-destination",
+          "at": "2026-11-22T12:55:09.958Z",
+          "kind": "note",
+          "message": "On disposable tasks, a title edit and a status change survived restart. A viewer was refused both. Reversing each value left two activity records."
+        },
+        {
+          "entryId": "ev:saved-policy-review-blocked",
+          "at": "2026-11-22T12:55:09.958Z",
+          "kind": "stage-change",
+          "message": "The title example passed private destination testing and an independent design review. No real saved job has been chosen. Live website changes are disabled."
         }
       ]
     },
