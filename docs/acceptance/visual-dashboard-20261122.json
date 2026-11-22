@@ -1,0 +1,91 @@
+{
+  "release": "0.8.0",
+  "wheel_sha256": "d0704bd563c8c73ba814899d0a349ecd4148da7c990eeaa26f7159d0d8785c5a",
+  "exercise": "Authenticated Chromium fixture on loopback, installed WEIR and local Aire readers",
+  "live_website_accessed": false,
+  "windows": {
+    "tested_at": "2026-11-22T12:25:44.185539+00:00",
+    "source": "authenticated loopback dashboard",
+    "requests": [
+      "GET"
+    ],
+    "reading_id": "visual-8b6a4b551fc7c6f2984772d8b3d65d0f2dc9bf1ffc2319bdb12491f05d716a23",
+    "crop": "weir-blob:sha256:40c8da07ddfa2b0fe9a308073a2e2fee25ada18026f4828c11b2b296af15457d",
+    "readers": [
+      {
+        "reader": "aire.windows",
+        "text": "In review: 23",
+        "status": "answered",
+        "value": 23
+      },
+      {
+        "reader": "aire.rapidocr",
+        "text": "In review: 23",
+        "status": "answered",
+        "value": 23
+      }
+    ],
+    "visual_count": 23,
+    "visual_state": "Passing",
+    "structured_count": 0,
+    "duplicate_labels": "ambiguous",
+    "blank_region": "unreadable",
+    "exact_crop_after_close": true,
+    "repeat_read_identical": true
+  },
+  "linux": {
+    "tested_at": "2026-11-22T12:27:11.116355+00:00",
+    "source": "authenticated loopback dashboard",
+    "requests": [
+      "GET"
+    ],
+    "reading_id": "visual-3fcee28697a8acd0fe05a4c23b103c3837406fb7138a1ebfe49df55f36c232cd",
+    "crop": "weir-blob:sha256:f17c0abe1177e4b006a42f1716a53614c3f0a1ccf0b5a238f8794d2f33c71b0a",
+    "readers": [
+      {
+        "reader": "aire.rapidocr",
+        "text": "In review:  23",
+        "status": "answered",
+        "value": 23
+      },
+      {
+        "reader": "aire.rapidocr.contrast",
+        "text": "In review: 23",
+        "status": "answered",
+        "value": 23
+      }
+    ],
+    "visual_count": 23,
+    "visual_state": "Passing",
+    "structured_count": 0,
+    "duplicate_labels": "ambiguous",
+    "blank_region": "unreadable",
+    "exact_crop_after_close": true,
+    "repeat_read_identical": true
+  },
+  "linux_replay_of_windows": {
+    "host": "lugos-host",
+    "os": "Debian Linux",
+    "method": "installed CLI on a copied synthetic browser observation",
+    "value": 23,
+    "state": "Passing",
+    "reading_id": "visual-038b8e29f6aac3501e4b6c99d071a6cdbd0a11782c74ee543736c79584709620",
+    "readers": [
+      {
+        "reader": "aire.rapidocr",
+        "text": "In review: 23",
+        "status": "answered",
+        "value": 23
+      },
+      {
+        "reader": "aire.rapidocr.contrast",
+        "text": "In review: 23",
+        "status": "answered",
+        "value": 23
+      }
+    ],
+    "matches_windows_crop": true,
+    "reopened_windows_reading": "visual-8b6a4b551fc7c6f2984772d8b3d65d0f2dc9bf1ffc2319bdb12491f05d716a23"
+  },
+  "cross_review_run": "20261122-121026-cross-review"
+}

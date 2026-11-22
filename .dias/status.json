@@ -8,11 +8,11 @@
   "milestonePhase": "operational-proof",
   "portfolioGroup": "acquisition",
   "displayPriority": 50,
-  "assessedAt": "2026-11-22T11:53:38.913Z",
+  "assessedAt": "2026-11-22T12:27:21.637Z",
   "confidence": "authoritative",
-  "currentMilestone": "The private passkey rehearsal passed. Delivering read-only visual evidence for dashboard values that structured observation misses.",
-  "remainingSummary": "Finish the visual reader. The live canary is on hold. Saved changes and Windows service browser isolation also remain.",
-  "nextChipId": "weir:add-visual-fallback",
+  "currentMilestone": "WEIR can read a dashboard value from retained browser pixels, verify the crop and reopen the evidence. Live website changes are disabled.",
+  "remainingSummary": "The live canary awaits an eligible page, a deployment decision and a grant. Saved-change policy and verification and Windows browser isolation remain.",
+  "nextChipId": "weir:verify-production-action-canary",
   "source": {
     "label": "Browser evidence, Aire regional OCR, operator acceptance and the Dias work record",
     "updatedAt": "2026-11-22"

@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "lugos-weir"
-version = "0.7.0"
+version = "0.8.0"
 description = "WEIR - Web Evidence, Interaction & Retrieval for Lugos"
 readme = "README.md"
 requires-python = ">=3.11"
@@ -13,8 +13,9 @@ authors = [{name = "Matthew Newman"}]
 dependencies = ["PyYAML>=6.0", "cryptography>=42.0"]
 
 [project.optional-dependencies]
-test = ["jsonschema>=4.21", "pytest>=8"]
+test = ["jsonschema>=4.21", "pytest>=8", "Pillow>=11,<13"]
 browser = ["playwright>=1.61,<2"]
+visual = ["Pillow>=11,<13"]
 
 [project.scripts]
 weir = "weir.cli:main"

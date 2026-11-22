@@ -1010,17 +1010,19 @@
       "projectId": "weir",
       "title": "Read a dashboard value from a screenshot",
       "summary": "When structured text is missing, read a selected screenshot region locally with Aire, retain the source and flag uncertain readings for review.",
-      "stage": "ready",
+      "stage": "done",
       "sequence": 130,
       "prereqs": [
         "weir:integrate-lugos-seats"
       ],
-      "linkedRunIds": [],
+      "linkedRunIds": [
+        "visual-8b6a4b551fc7c6f2984772d8b3d65d0f2dc9bf1ffc2319bdb12491f05d716a23"
+      ],
       "confidence": "authoritative",
       "aheadOfPrereqs": null,
       "timestamps": {
         "createdAt": "2026-09-27T22:07:55.000Z",
-        "updatedAt": "2026-11-22T11:53:38.913Z"
+        "updatedAt": "2026-11-22T12:27:21.637Z"
       },
       "evidence": [
         {
@@ -1034,6 +1036,18 @@
           "at": "2026-11-22T11:53:38.913Z",
           "kind": "stage-change",
           "message": "The browser already retains screenshots. Aire provides local region OCR. The release test reads a value painted on a dashboard and reopens its evidence."
+        },
+        {
+          "entryId": "ev:visual-region-active",
+          "at": "2026-11-22T11:53:39.219Z",
+          "kind": "stage-change",
+          "message": "Started the structured read, targeted crop, local interpretation and evidence verification through the operator entry point."
+        },
+        {
+          "entryId": "ev:visual-region-done",
+          "at": "2026-11-22T12:27:21.637Z",
+          "kind": "stage-change",
+          "message": "Windows and Linux read 23 and Passing in Chromium, reopened the exact crop and returned no answer for duplicate labels or a blank region."
         }
       ]
     },
