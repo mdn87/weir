@@ -1,0 +1,38 @@
+{
+  "recorded_at": "2026-11-22T13:55:10Z",
+  "site": "Disposable Mission Control rehearsal",
+  "system": "Linux on lugos-host",
+  "mission_control_runtime_source": "c07ae74f0ceac15e3cdacf1ca7f94a5f5ac1b045",
+  "fade_source": "1943341b724767dbb508e79bd1a01a570397560c",
+  "wheel_sha256": {
+    "lugos_fade-0.10.0-py3-none-any.whl": "6ed1b7f9f03ba5a3e19841230d80388bb9f916295b3c5ec97e0c17ce14b0fc77",
+    "lugos_weir-0.9.0-py3-none-any.whl": "ec15976c05f68dc6683b584eb57c1b9e7f9889af164a10711152c136cfbf3f03"
+  },
+  "implementation_review_run": "20261122-132602-cross-review",
+  "private_network_interfaces": [
+    "lo"
+  ],
+  "production_website_actions": 0,
+  "browser": "Chromium virtual authenticator",
+  "passkey_enrolled_in_owner_panel": true,
+  "original_job_link_reopened": true,
+  "verified_after_server_restart": true,
+  "separately_approved_undo": true,
+  "replay_returned_original_receipt": true,
+  "decline_preserved_title": true,
+  "viewer_denied_history": true,
+  "verified_receipts": 2,
+  "distinct_passkey_decisions": 3,
+  "final_title": "Initial title",
+  "final_revision": 3,
+  "stale_proposal_and_undo_refused": true,
+  "workspace_tasks_activities_notifications": [
+    0,
+    0,
+    0
+  ],
+  "tampered_signatures_refused": true,
+  "concurrent_dispatch_fenced": true,
+  "lost_effect_response_reconciled": true,
+  "withdrawal_fenced_delayed_commit": true
+}

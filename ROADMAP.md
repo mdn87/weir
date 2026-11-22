@@ -128,6 +128,11 @@ Mission Control task. A private deployment test confirmed that a title edit and
 its reversal each leave an activity record. Moving a task into Review can also
 start an automatic review. [Saved-change policy and destination evidence](docs/saved-task-change-policy.md)
 
+The private title workflow now runs from the signed-in Mission Control screen.
+WEIR independently verifies the saved result and reopens it from the original
+job after restart. A live job still needs its own account, destination and
+approval. [Private workflow and release test](docs/private-saved-task.md)
+
 ## P3 - Action authority integration
 
 Cross-repository sequence and accepted ownership decisions:

@@ -1003,6 +1003,48 @@
     },
     {
       "schemaVersion": 1,
+      "chipId": "weir:rehearse-approved-saved-task",
+      "projectId": "weir",
+      "title": "Approve a private task edit and verify the saved title",
+      "summary": "Review a disposable task title, approve or decline it, reopen proof after restart and request a separately approved undo in Mission Control.",
+      "stage": "done",
+      "sequence": 114,
+      "prereqs": [
+        "weir:prepare-linux-canary-review",
+        "weir:deliver-private-account-reports"
+      ],
+      "linkedRunIds": [
+        "20261122-132602-cross-review"
+      ],
+      "confidence": "authoritative",
+      "aheadOfPrereqs": null,
+      "timestamps": {
+        "createdAt": "2026-11-22T13:13:05.072Z",
+        "updatedAt": "2026-11-22T13:55:11.285Z"
+      },
+      "evidence": [
+        {
+          "entryId": "ev:saved-rehearsal-created",
+          "at": "2026-11-22T13:13:05.072Z",
+          "kind": "created",
+          "message": "Matt approved connecting the approval screen to saving and verification. Use the private task for implementation and testing."
+        },
+        {
+          "entryId": "ev:saved-rehearsal-active",
+          "at": "2026-11-22T13:13:05.542Z",
+          "kind": "stage-change",
+          "message": "Implement the owner review, one saved title, independent readback and a separately approved undo on a disposable task."
+        },
+        {
+          "entryId": "ev:saved-rehearsal-done",
+          "at": "2026-11-22T13:55:11.285Z",
+          "kind": "stage-change",
+          "message": "A browser passkey authorized a saved title and undo. WEIR verified the result after restart and response loss. Withdrawal prevented a late save."
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
       "chipId": "weir:deliver-verified-site-change",
       "projectId": "weir",
       "title": "Complete and verify a useful website change",
@@ -1012,14 +1054,15 @@
       "prereqs": [
         "weir:review-saved-effect-policy",
         "weir:deliver-private-account-reports",
-        "weir:verify-production-action-canary"
+        "weir:verify-production-action-canary",
+        "weir:rehearse-approved-saved-task"
       ],
       "linkedRunIds": [],
       "confidence": "reported",
       "aheadOfPrereqs": null,
       "timestamps": {
         "createdAt": "2026-11-21T09:38:06.173Z",
-        "updatedAt": "2026-11-21T09:40:34.856Z"
+        "updatedAt": "2026-11-22T13:55:11.285Z"
       },
       "evidence": [
         {
@@ -1027,6 +1070,12 @@
           "at": "2026-11-21T09:38:06.173Z",
           "kind": "created",
           "message": "The operator chooses the site and action. Delivery requires its own reviewed policy, enrollment, approval and independent readback of a real saved result."
+        },
+        {
+          "entryId": "ev:saved-job-rehearsal-done",
+          "at": "2026-11-22T13:55:11.285Z",
+          "kind": "note",
+          "message": "The private task passed approval, commit, readback and undo. A real saved job still needs a chosen account, enrolled target and its own approval."
         }
       ]
     },

@@ -12,6 +12,11 @@ sources. **Compare with** shows what changed on a later run. Choose **Tasks in r
 to read the Review column of your signed-in Mission Control workspace and retain its source.
 [Operator release](docs/operator-release.md)
 
+In the private Mission Control rehearsal, **Lugos → Private task rehearsal** lets
+you review a title, approve it with a passkey, reopen the verified result, and
+request an undo. The rehearsal uses a disposable task. Live website changes are
+disabled. [Run and use the private task rehearsal](docs/private-saved-task.md)
+
 WEIR is not a browser, search engine, autonomous agent, or second orchestrator. It is the subsystem that lets Lugos ask for web capabilities without coupling callers to a specific implementation such as `oc`, `agent-browser`, Playwright, Chromium/CDP, or a service-specific API.
 
 ## Thesis
