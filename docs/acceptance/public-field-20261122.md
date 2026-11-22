@@ -1,0 +1,19 @@
+# First public field test
+
+The portfolio publishes an unlinked textbox at [the test page](https://notanastronaut.com/weir-field/). A Linux fetch initially received an analytics script from the CDN. The page now sends `Cache-Control: no-store, no-transform`. Both public ingress addresses returned the exact 149-byte WEIR template. The CDN still attaches reporting headers, so this URL does not pass the production reader's header check. [Portfolio change](https://github.com/mdn87/notanastronaut/commit/54d2c82ee924c8fda15b120f69e9925a203f085e)
+
+The Lugos test endpoint serves the same bytes with the reviewed headers. The existing public HTTPS listener routes this path to a private Unix socket. The host's root-owned Tailscale daemon can reach the socket. The origin has a read-only filesystem and a private network. It serves one document and accepts GET and HEAD. The host verified that the other listener and route settings were identical before and after installation. [Public test field](https://lugos-host.tail099c37.ts.net:8443/weir-field/)
+
+The Linux production reader connected to a public ingress IP, checked the hostname and pinned TLS certificate, and verified the headers and body. Its isolated Chromium process read the empty textbox. All eight observed processes exited and the network receivers recorded zero deliveries. The general public reader on the tailnet correctly refuses the tailnet DNS address. The enrolled reader uses the pinned public ingress address.
+
+Fade and WEIR separately tested a byte-for-byte copy on a private HTTPS origin. One approved fixture request filled the field, independent readback verified the marker, and a new browser saw the empty field. A lost response and a service restart returned the same receipt. The public observation and the private fill are recorded separately. [Acceptance data](public-field-20261122.json)
+
+## Live activation
+
+The Linux host has the candidate, its session ledger, the caller's work context and a loopback port assigned to the installed supervisor. A dedicated Linux Fade caller was provisioned through GLAS and Bitwarden. A transient systemd service loaded the host-encrypted credential under the expected name. Starting the actual supervisor skipped execution on its commissioning conditions. No process listened on the action port. [Supervisor unit](../../config/lugos-host/weir-enrolled-fill.service)
+
+The root-private grant mount is active. Install the mount template under the name printed by `systemd-escape --path --suffix=mount /var/lib/weir-grant-witness`. Its backing image sits outside the session directory on the same physical disk. The distinct mount protects against restoring the session directory alone. A whole-disk restore can rewind both. Keep the grant outside every permitted restore of the session ledger and verify that recovery boundary before issuing it. The host has no issued grant. [Mount template](../../config/lugos-host/weir-grant-witness.mount)
+
+Mission Control has a registered owner passkey. Its field issuer currently signs the private rehearsal audience. The live operation still requires a production issuer, an independent record of each owner verification, and separate passkey decisions for enrollment and the fill. A new TLS leaf changes the candidate digest and requires fresh review. The production fill has no receipt. [Linux commissioning contract](../linux-first-action-policy.md)
+
+Independent review `20261122-162621-cross-review` identified the missing production issuer and the limits of the loop-backed witness. On Linux, all 23 field, approval and recovery regression tests passed, including the process-exit cases on either side of dispatch. The full Windows suite passed 418 tests and skipped 21 platform-specific or optional cases. [Linux recovery tests](../../tests/test_enrolled_driver.py)

@@ -1,0 +1,126 @@
+{
+  "schema": "weir.public-field-test/v1",
+  "public_observation": {
+    "observed_at": "2026-11-22T16:41:40.248031+00:00",
+    "candidate": {
+      "url": "https://lugos-host.tail099c37.ts.net:8443/weir-field/",
+      "name": "WEIR canary",
+      "test_id": "weir-canary",
+      "profile_id": "public-field-test",
+      "profile_digest": "sha256:f773631c9c074fed49d91ff3be9bf4f8ee9a79ab1a2d131efda18e89e7b6a97f",
+      "credential_binding_id": "public-field-anonymous",
+      "body_digest": "sha256:3a062a0cdf705e815504af7831dbd07d05749e2a2c41aa25eea693be7991d709",
+      "headers_digest": "sha256:8bede93e274503188f117044add9cd1392d94f33e9b559ef45da2c922338d6c9",
+      "tls_fingerprint": "sha256:9abe219710b1267a44f4f87d7b6e0e73796f1ef0bdfbc4caf8da165855d9f6d7",
+      "peer_address": "209.177.145.97"
+    },
+    "candidate_digest": "sha256:8c32dae73dda083ef3aade3c582344a0573d76ba008acd4741dc0bd8869482c6",
+    "document_bytes": 149,
+    "textbox_value": "",
+    "document_identity": "sha256:d6968c8c59956e4e5c3124b704e20ae071d2b135eafadf332f3af7d75d497739",
+    "browser_processes_exited": 8,
+    "cgroup_removed": true,
+    "unit_policy_digest": "sha256:5ac7019035d02b95f29d64eb5025ac32ae06487842da1a9419f284595dab4c8b",
+    "controlled_receivers": [
+      "ipv4_tcp",
+      "ipv4_udp",
+      "ipv6_tcp",
+      "ipv6_udp",
+      "unix_abstract",
+      "unix_path"
+    ],
+    "unexpected_deliveries": 0,
+    "action_dispatched": false
+  },
+  "private_fill": {
+    "schema": "weir-enrolled-fill-qualification/v1",
+    "run_id": "run-1deddfb02bbf18750475e9c6",
+    "observed_at": "2026-11-22T16:21:42.337371+00:00",
+    "receipt_hash": "sha256:b0144926c6dbbb17882550a4baf155128a9ed3131a070fd39988593aef00300e",
+    "fade_execute_calls": 1,
+    "lost_responses_reconciled": 1,
+    "same_receipt_on_replay": true,
+    "cross_role_denials": 2,
+    "grant_states": [
+      "available",
+      "reserved",
+      "dispatch"
+    ],
+    "signed_disposable_enrollment_and_approval": true,
+    "separate_browser_discard": true,
+    "fixture_https_gets": 2,
+    "ordinary_trust_rejected_fixture_ca": true,
+    "separate_append_only_volume_checked": true,
+    "commissioned_trust_rejected_fixture_signature": true,
+    "kernel_observed_reaped_thread": true,
+    "same_receipt_after_weir_restart": true,
+    "exit_evidence_digest": "sha256:105adb1ebbfd2064125be3430395c48243d92706d5287ec0584af65d22ebb3e9",
+    "browser_exits": [
+      {
+        "invocation": "4bc804bd9ac74330b2584be4467b0082",
+        "cgroup_removed": true,
+        "pinned_pidfds_exited": 2,
+        "processes_exited": 8,
+        "receivers": [
+          "ipv4_tcp",
+          "ipv4_udp",
+          "ipv6_tcp",
+          "ipv6_udp",
+          "unix_abstract",
+          "unix_path"
+        ],
+        "unexpected_deliveries": 0
+      },
+      {
+        "invocation": "2f2f9ce8a4dc47ec87f211efe6043857",
+        "cgroup_removed": true,
+        "pinned_pidfds_exited": 2,
+        "processes_exited": 8,
+        "receivers": [
+          "ipv4_tcp",
+          "ipv4_udp",
+          "ipv6_tcp",
+          "ipv6_udp",
+          "unix_abstract",
+          "unix_path"
+        ],
+        "unexpected_deliveries": 0
+      }
+    ],
+    "live_website_accessed": false,
+    "page_body_digest": "sha256:3a062a0cdf705e815504af7831dbd07d05749e2a2c41aa25eea693be7991d709",
+    "independent_owner_records": 0
+  },
+  "host_commissioning": {
+    "candidate_staged": true,
+    "ledger_version": 2,
+    "work_context": "sha256:d46dd8df53d13b1e45208bd09e3dd8334cb875c1e40dfcc466f89ee92700f5dd",
+    "distinct_filesystem": true,
+    "mount_unit": "var-lib-weir\\x2dgrant\\x2dwitness.mount",
+    "grant_issued": false,
+    "owner_enrolled": false,
+    "supervisor_unit_verified": true,
+    "linux_specific_bws_caller": true,
+    "systemd_credential_projected": true,
+    "missing_enrollment_skipped_start": true,
+    "live_listener_present": false,
+    "port": 18643,
+    "public_unit": "active"
+  },
+  "portfolio": {
+    "url": "https://notanastronaut.com/weir-field/",
+    "release": "54d2c82ee924c8fda15b120f69e9925a203f085e",
+    "matches_template": true,
+    "accepted_by_production_reader": false,
+    "additional_headers": [
+      "nel",
+      "report-to",
+      "alt-svc"
+    ]
+  },
+  "review": {
+    "run_id": "20261122-162621-cross-review",
+    "live_issuance_available": false
+  },
+  "production_fill_performed": false
+}

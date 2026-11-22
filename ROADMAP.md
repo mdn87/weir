@@ -133,6 +133,11 @@ WEIR independently verifies the saved result and reopens it from the original
 job after restart. A live job still needs its own account, destination and
 approval. [Private workflow and release test](docs/private-saved-task.md)
 
+The Linux reader and isolated browser now recognize the first public test field.
+Its published bytes passed the private fill and discard test. The Linux service has
+its own caller credential. The live fill still needs a production passkey issuer,
+verified grant recovery and the two owner decisions. [Public field test](docs/acceptance/public-field-20261122.md)
+
 ## P3 - Action authority integration
 
 Cross-repository sequence and accepted ownership decisions:

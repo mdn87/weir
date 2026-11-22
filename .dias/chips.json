@@ -897,22 +897,51 @@
     },
     {
       "schemaVersion": 1,
+      "chipId": "weir:commission-live-field-approval",
+      "projectId": "weir",
+      "title": "Connect owner passkey approval to the live test field",
+      "summary": "Connect the protected production signer to Mission Control, Fade and WEIR. Verify the one-use grant survives ledger recovery and present the exact field to its owner.",
+      "stage": "ready",
+      "sequence": 108,
+      "prereqs": [
+        "weir:prepare-linux-canary-review",
+        "weir:implement-production-effect-adapter"
+      ],
+      "linkedRunIds": [],
+      "confidence": "authoritative",
+      "aheadOfPrereqs": null,
+      "timestamps": {
+        "createdAt": "2026-11-22T16:47:20.122Z",
+        "updatedAt": "2026-11-22T16:47:20.122Z"
+      },
+      "evidence": [
+        {
+          "entryId": "ev:live-issuer-gap",
+          "at": "2026-11-22T16:47:20.122Z",
+          "kind": "created",
+          "message": "The Linux browser verified the live field and the service credential is installed. Independent review confirmed the current signer covers only rehearsals."
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
       "chipId": "weir:verify-production-action-canary",
       "projectId": "weir",
       "title": "Verify the unsaved browser field canary",
       "summary": "With explicit approval, fill the enrolled unsaved field once. Verify readback, replay denial and rollback. The action expires with the tab.",
-      "stage": "active",
+      "stage": "blocked",
       "sequence": 110,
       "prereqs": [
         "weir:implement-production-effect-adapter",
-        "weir:prepare-linux-canary-review"
+        "weir:prepare-linux-canary-review",
+        "weir:commission-live-field-approval"
       ],
       "linkedRunIds": [],
       "confidence": "authoritative",
       "aheadOfPrereqs": null,
       "timestamps": {
         "createdAt": "2026-10-27T02:53:26.430Z",
-        "updatedAt": "2026-11-22T16:04:11.593Z"
+        "updatedAt": "2026-11-22T16:47:20.122Z"
       },
       "evidence": [
         {
@@ -956,6 +985,24 @@
           "at": "2026-11-22T16:04:11.593Z",
           "kind": "stage-change",
           "message": "Matt delegated the test location. Publish a separate public textbox on his portfolio, verify it on Linux and prepare the owner approval for one temporary fill."
+        },
+        {
+          "entryId": "ev:public-target-linux-observation",
+          "at": "2026-11-22T16:47:20.122Z",
+          "kind": "note",
+          "message": "The public Linux endpoint passed the production reader and isolated Chromium. Fade filled the same bytes privately and verified discard and replay."
+        },
+        {
+          "entryId": "ev:linux-caller-and-endpoint",
+          "at": "2026-11-22T16:47:20.122Z",
+          "kind": "note",
+          "message": "The Linux Fade caller is in Bitwarden and loads through systemd. The conditional supervisor, session ledger and separate grant mount are installed."
+        },
+        {
+          "entryId": "ev:production-signing-required",
+          "at": "2026-11-22T16:47:20.122Z",
+          "kind": "stage-change",
+          "message": "The field issuer accepts rehearsal decisions only. A live issuer, protected owner records and a grant outside ledger restoration are needed for the two passkey decisions."
         }
       ]
     },

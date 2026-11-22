@@ -8,11 +8,11 @@
   "milestonePhase": "operational-proof",
   "portfolioGroup": "acquisition",
   "displayPriority": 50,
-  "assessedAt": "2026-11-22T16:04:11.593Z",
+  "assessedAt": "2026-11-22T16:47:20.122Z",
   "confidence": "authoritative",
-  "currentMilestone": "The owner can approve, verify and undo a saved title in a private rehearsal. Live website changes are disabled.",
-  "remainingSummary": "Publish and verify the public test field, commission Linux for one use, then obtain the owner decisions. A saved website edit and Windows isolation remain open.",
-  "nextChipId": "weir:verify-production-action-canary",
+  "currentMilestone": "The public test field passed a Linux browser read. Fade verified the temporary fill on a private copy. The Linux caller credential is installed.",
+  "remainingSummary": "Connect the live passkey issuer, verify grant recovery and obtain the two owner decisions. The first live fill, a saved website edit and Windows isolation remain open.",
+  "nextChipId": "weir:commission-live-field-approval",
   "source": {
     "label": "Operator release, saved change review and Dias board evidence",
     "updatedAt": "2026-11-22"

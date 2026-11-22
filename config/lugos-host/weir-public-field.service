@@ -1,0 +1,21 @@
+[Unit]
+Description=Serve the single public WEIR test field
+
+[Service]
+DynamicUser=yes
+RuntimeDirectory=weir-public-field
+RuntimeDirectoryMode=0700
+ExecStart=/usr/bin/node /opt/weir-public-field/server.mjs /opt/weir-public-field/index.html /run/weir-public-field/http.sock
+PrivateNetwork=yes
+RestrictAddressFamilies=AF_UNIX
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectSystem=strict
+ProtectHome=yes
+NoNewPrivileges=yes
+CapabilityBoundingSet=
+UMask=0077
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target

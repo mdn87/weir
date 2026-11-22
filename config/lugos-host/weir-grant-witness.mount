@@ -1,0 +1,12 @@
+[Unit]
+# Install with the name from systemd-escape --path --suffix=mount /var/lib/weir-grant-witness.
+Description=Keep the first WEIR live grant outside the session ledger
+
+[Mount]
+What=/var/lib/weir-live-grant-storage/witness.ext4
+Where=/var/lib/weir-grant-witness
+Type=ext4
+Options=loop,nodev,nosuid,noexec,errors=remount-ro
+
+[Install]
+WantedBy=multi-user.target
