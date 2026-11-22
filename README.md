@@ -8,7 +8,8 @@ In Mission Control, open **Lugos → Web reports**. Choose **Dias project work**
 to see what you can start on the WEIR board and which chips need a prerequisite.
 Choose **Marketplace comparison** to compare eBay listings by item, budget,
 location and condition. **Saved reports** reopens your original answers and
-sources. **Compare with** shows what changed on a later run.
+sources. **Compare with** shows what changed on a later run. Choose **Tasks in review**
+to read the Review column of your signed-in Mission Control workspace and retain its source.
 [Operator release](docs/operator-release.md)
 
 WEIR is not a browser, search engine, autonomous agent, or second orchestrator. It is the subsystem that lets Lugos ask for web capabilities without coupling callers to a specific implementation such as `oc`, `agent-browser`, Playwright, Chromium/CDP, or a service-specific API.

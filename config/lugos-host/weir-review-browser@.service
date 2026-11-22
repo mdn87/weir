@@ -1,0 +1,33 @@
+[Unit]
+Description=Read one signed-in task board in an isolated Linux browser
+
+[Service]
+DynamicUser=yes
+User=weir-review
+ExecStart=/srv/lugos/runtimes/weir-operator-reports/0.6.0/bin/python -I -m weir.browser.linux_review_worker
+Environment=PLAYWRIGHT_BROWSERS_PATH=/srv/lugos/runtimes/weir-operator-reports/0.6.0/browsers
+Environment=HOME=/tmp
+StandardInput=socket
+StandardOutput=socket
+StandardError=journal
+RuntimeMaxSec=65
+TimeoutStopSec=3
+KillMode=control-group
+MemoryMax=512M
+TasksMax=128
+PrivateNetwork=yes
+RestrictAddressFamilies=AF_UNIX
+PrivateTmp=yes
+PrivatePIDs=yes
+PrivateIPC=yes
+NoNewPrivileges=yes
+CapabilityBoundingSet=
+ProtectSystem=strict
+ProtectHome=yes
+ProtectControlGroups=yes
+PrivateDevices=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+TemporaryFileSystem=/srv:ro /run:ro /var:ro
+BindReadOnlyPaths=/srv/lugos/runtimes/weir-operator-reports/0.6.0
+UMask=0077

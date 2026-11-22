@@ -8,11 +8,11 @@
   "milestonePhase": "operational-proof",
   "portfolioGroup": "acquisition",
   "displayPriority": 50,
-  "assessedAt": "2026-11-22T06:26:23.042Z",
+  "assessedAt": "2026-11-22T06:43:18.212Z",
   "confidence": "authoritative",
-  "currentMilestone": "Qualify the Linux browser and deliver a signed-in Mission Control task board report with reopenable evidence.",
+  "currentMilestone": "The Linux report browser passed host qualification. The signed-in Mission Control task board report is in integration testing.",
   "remainingSummary": "Qualify a service browser for other signed-in dashboards. Windows browser startup, permit-bound site changes, a live approved change and visual fallback remain.",
-  "nextChipId": "weir:verify-linux-host-admission",
+  "nextChipId": "weir:report-signed-in-review-tasks",
   "source": {
     "label": "Installed Lugos release and verified operator report runs",
     "updatedAt": "2026-11-21"

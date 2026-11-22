@@ -25,6 +25,7 @@ _FIELDS = {
         "previous",
     },
     "dias": {"project", "since", "previous"},
+    "task_review": set(),
     "list": {"limit"},
     "open": {"report_id"},
     "source": {"report_id", "number"},
@@ -52,6 +53,7 @@ def run_job(
     permitted_jobs: frozenset[str],
     context: WorkContext | None = None,
     dias_display: DiasDisplay | None = None,
+    review_grant: str | None = None,
 ) -> dict:
     if (
         not isinstance(action, str)
@@ -72,6 +74,10 @@ def run_job(
     history.require_job(action)
     if context is not None:
         context.validate()
+    if action == "task_review":
+        from weir.review_board import task_review_report
+
+        return task_review_report(history, owner, review_grant, context.run_id if context else None)
     if action == "dias":
         snapshot_dir = os.environ.get("WEIR_DIAS_SNAPSHOT_DIR")
         display = dias_display or DiasDisplay(

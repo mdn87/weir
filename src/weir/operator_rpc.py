@@ -44,7 +44,12 @@ def _marketplace_profile(action, jobs):
 
 
 def dispatch(body: object) -> dict:
-    if not isinstance(body, dict) or set(body) != {"owner", "action", "args", "permitted_jobs"}:
+    if not isinstance(body, dict):
+        raise ValueError("Invalid operator report request.")
+    fields = {"owner", "action", "args", "permitted_jobs"}
+    if body.get("action") == "task_review" and "review_grant" in body:
+        fields.add("review_grant")
+    if set(body) != fields:
         raise ValueError("Invalid operator report request.")
     owner = body["owner"]
     jobs = body["permitted_jobs"]
@@ -52,9 +57,9 @@ def dispatch(body: object) -> dict:
         not isinstance(owner, str)
         or not re.fullmatch(r"[a-zA-Z0-9][a-zA-Z0-9:._-]{0,199}", owner)
         or not isinstance(jobs, list)
-        or len(jobs) > 2
+        or len(jobs) > 3
         or not jobs
-        or not all(isinstance(j, str) and j in {"dias", "marketplace"} for j in jobs)
+        or not all(isinstance(j, str) and j in {"dias", "marketplace", "task_review"} for j in jobs)
     ):
         raise PermissionError("An authorized report reader is required.")
     with _marketplace_profile(body["action"], jobs):
@@ -64,6 +69,7 @@ def dispatch(body: object) -> dict:
             owner=owner,
             root=personal_root(),
             permitted_jobs=frozenset(jobs),
+            review_grant=body.get("review_grant"),
         )
 
 

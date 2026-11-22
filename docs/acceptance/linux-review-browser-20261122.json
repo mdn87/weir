@@ -1,0 +1,19 @@
+{
+  "observed_at": "2026-11-22T06:42:52.068351+00:00",
+  "field_read": true,
+  "platform": "linux",
+  "run_id": "linux-339e9d190260447ebca2ea8c9899b3e7",
+  "limits": {
+    "memory_bytes": 536870912,
+    "process_count": 128
+  },
+  "peak_bytes": 169967616,
+  "observed_threads": 71,
+  "processes_reaped_on_disconnect": 9,
+  "processes_reaped_on_stop": 9,
+  "separate_network_namespace": true,
+  "host_state_hidden": true,
+  "ordinary_process_denied": true,
+  "disconnected_cgroup_removed": true,
+  "egress_policy": "private-network-unix-only"
+}
