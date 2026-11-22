@@ -235,6 +235,11 @@ The Linux action adapter completed one signed fill on a disposable HTTPS page th
 Fade and the normal WEIR service. A live canary still needs a commissioned grant,
 an owner-enrolled page and a separate passkey approval for its proposal.
 [Linux adapter acceptance](docs/acceptance/linux-enrolled-fill-20261122.md)
+
+Mission Control now supports separate passkey reviews for enrollment and the
+temporary fill on the private Linux fixture. WEIR and Fade ship installable host
+commands. Live website use stays disabled. [Owner review and setup](docs/linux-field-owner-review.md)
+
 The frozen Batch 8 signed-capsule, queue, acknowledgement, revocation, and redacted
 audit contracts are in `docs/remote-decision-contract.md` and
 `contracts/fixtures/remote-relay-v1.json`. Source flags remain disabled by default;

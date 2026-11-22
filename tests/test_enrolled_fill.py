@@ -1,16 +1,12 @@
 import unittest
-import sys
 from dataclasses import replace
-from pathlib import Path
-from unittest.mock import patch
 
 from weir.browser.enrolled_document import EnrolledDocument, HEADERS, byte_digest, inert_page
 from weir.browser.enrolled_fill import EnrolledField
 from weir.contract import canonical_digest
 from weir.engines.base import EnginePolicyBlocked
 
-with patch.object(sys, "path", [str(Path(__file__).resolve().parents[1] / "scripts"), *sys.path]):
-    from linux_field_runtime import verify_task_events
+from weir.linux_field.runtime import verify_task_events
 
 
 def target(url="https://canary.example/field"):
