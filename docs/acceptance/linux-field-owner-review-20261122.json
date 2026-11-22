@@ -1,0 +1,95 @@
+{
+  "native_qualification": {
+    "schema": "weir-enrolled-fill-qualification/v1",
+    "run_id": "run-d8e5088cadf68c39a7721c3b",
+    "observed_at": "2026-11-22T10:22:24.949269+00:00",
+    "receipt_hash": "sha256:be35ddd7eef4985bbb34cd14d6e5c9228b80b764a3bbc639c988bfdf400eee8a",
+    "fade_execute_calls": 1,
+    "lost_responses_reconciled": 1,
+    "same_receipt_on_replay": true,
+    "cross_role_denials": 2,
+    "grant_states": [
+      "available",
+      "reserved",
+      "dispatch"
+    ],
+    "signed_disposable_enrollment_and_approval": true,
+    "separate_browser_discard": true,
+    "fixture_https_gets": 2,
+    "ordinary_trust_rejected_fixture_ca": true,
+    "separate_append_only_volume_checked": true,
+    "commissioned_trust_rejected_fixture_signature": true,
+    "kernel_observed_reaped_thread": true,
+    "same_receipt_after_weir_restart": true,
+    "exit_evidence_digest": "sha256:e5ed0ba81d2cc795a7b43abdb93363291415229ad93b33c3a764622adf57ffd9",
+    "browser_exits": [
+      {
+        "invocation": "004744b0996d4176b5872a415cd91f0d",
+        "cgroup_removed": true,
+        "pinned_pidfds_exited": 2,
+        "processes_exited": 8,
+        "receivers": [
+          "ipv4_tcp",
+          "ipv4_udp",
+          "ipv6_tcp",
+          "ipv6_udp",
+          "unix_abstract",
+          "unix_path"
+        ],
+        "unexpected_deliveries": 0
+      },
+      {
+        "invocation": "171443d9d69245cda66e98ec73594e81",
+        "cgroup_removed": true,
+        "pinned_pidfds_exited": 2,
+        "processes_exited": 8,
+        "receivers": [
+          "ipv4_tcp",
+          "ipv4_udp",
+          "ipv6_tcp",
+          "ipv6_udp",
+          "unix_abstract",
+          "unix_path"
+        ],
+        "unexpected_deliveries": 0
+      }
+    ],
+    "live_website_accessed": false,
+    "independent_owner_records": 2
+  },
+  "passkey_verifier": "Mission Control WebAuthn with a Chromium virtual authenticator",
+  "relying_party": "field-owner.test",
+  "human_passkey_used": false,
+  "fill_review_pause_seconds": 32,
+  "published_reviews": [
+    {
+      "state": "signed",
+      "review_hash": "sha256:dd2d2ff7fced371b1fc6652c593c9a7a6d5ca484276bae7fcdf0d813558c5be3"
+    },
+    {
+      "state": "signed",
+      "review_hash": "sha256:546ef5b943541a339d510f035ce04bcce45aa4a6dd3c8d6feae49193b0d9723e"
+    }
+  ],
+  "installed_fade_check": {
+    "state": "verified",
+    "phase": "fill",
+    "review_hash": "sha256:546ef5b943541a339d510f035ce04bcce45aa4a6dd3c8d6feae49193b0d9723e"
+  },
+  "installed_host_readiness": {
+    "host_state": "incomplete",
+    "checks": {
+      "deployment": "missing",
+      "service": "missing",
+      "session_ledger": "missing",
+      "work_context": "missing",
+      "decision_ingress": "missing",
+      "grant_witness": "missing",
+      "separate_witness_mount": "missing"
+    },
+    "live_authority_checked": false
+  },
+  "qualification_artifact_sha256": "ecbf50e36209861ed44b8e4345ada8a552b545c6b075eaa849791d69ed382206",
+  "implementation_review_run": "20261122-101121-cross-review",
+  "implementation_review_packet": "37fefca81cb8b9a2606199ce19aa800ddcde61ba5997ce1579d89badd67b1720"
+}

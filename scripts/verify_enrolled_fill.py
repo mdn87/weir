@@ -8,6 +8,7 @@ import secrets
 import ssl
 import subprocess
 import sys
+import time
 from contextlib import ExitStack, contextmanager
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -18,9 +19,10 @@ from unittest.mock import patch
 from cryptography import x509
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import ec
-from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
-import linux_field_runtime
-from linux_field_runtime import _launch_peer, browser_service, field_peer, read_in_service
+from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey, Ed25519PublicKey
+from weir.linux_field import runtime as linux_field_runtime
+from weir.linux_field.runtime import _launch_peer, browser_service, field_peer, read_in_service
+from weir.linux_field.review import REHEARSAL_AUDIENCE, accept_rehearsal_review, owner_review, publish_review
 from weir.browser.effect_driver import FADE_AUTHORITY_ID
 from weir.browser.enrolled_document import EnrolledDocument, HEADERS, byte_digest, inert_page
 from weir.browser.enrolled_fill import DecisionTrust, ENROLL_ACTION, EnrolledField, GRANT, LinuxFillAuthority
@@ -45,10 +47,10 @@ def utc():
 class QualificationAuthority:
     """Trusted fixture signer. The deployed service contains only a pinned public key."""
 
-    def __init__(self, directory, *, source=None):
-        self.key = Ed25519PrivateKey.generate()
-        self.trust = DecisionTrust("fixture-issuer", "fixture-key", "fixture-device", "fixture-owner",
-                                   "fixture-enrolled-action", self.key.public_key())
+    def __init__(self, directory, *, source=None, owner_trust=None):
+        self.key = None if owner_trust else Ed25519PrivateKey.generate()
+        self.trust = owner_trust or DecisionTrust("fixture-issuer", "fixture-key", "fixture-device", "fixture-owner",
+                                                  "fixture-enrolled-action", self.key.public_key())
         auth_dir, witness = directory / "authority", directory / "witness"
         auth_dir.mkdir(mode=0o700)
         witness.mkdir(mode=0o700)
@@ -61,10 +63,11 @@ class QualificationAuthority:
                                    "fixture-enrollment", canonical_digest("profile"), "fixture-exclusive",
                                    byte_digest(body), canonical_digest(HEADERS),
                                    source[1] if source else self.document.peer_fingerprint, "127.0.0.1")
-        enroll = self.capsule("fixture-enroll", ENROLL_ACTION, self.field.digest,
-                              canonical_digest({"grant": GRANT, "operation": "enroll"}), enrollment=True)
-        self.authority.accept_enrollment(self.field, enroll, enroll.step_up_ref, utc())
-        self.refresh()
+        if owner_trust is None:
+            enroll = self.capsule("fixture-enroll", ENROLL_ACTION, self.field.digest,
+                                  canonical_digest({"grant": GRANT, "operation": "enroll"}), enrollment=True)
+            self.authority.accept_enrollment(self.field, enroll, enroll.step_up_ref, utc())
+            self.refresh()
 
     def refresh(self):
         self.authority.record_revocations(self.field.digest, utc(), [])
@@ -218,8 +221,60 @@ def check_reaped_thread():
         trace.rmdir()
 
 
-def run(directory, fade_source):
-    sys.path.insert(0, str(fade_source))
+class RehearsalExchange:
+    """Read both independent decisions for a private fixture. No live deployment accepts this audience."""
+
+    def __init__(self, directory):
+        from fade.field_review import FieldPins, protected_json
+
+        self.directory = directory
+        root = directory.stat()
+        if directory != directory.resolve() or root.st_uid != 0 or root.st_mode & 0o022:
+            raise ValueError("The rehearsal exchange must be in a protected root-owned directory")
+        config = protected_json(directory / "config" / "pins.json", 0)
+        self.issuer_uid, self.web_uid = config["issuer_uid"], config["web_uid"]
+        if (type(self.issuer_uid) is not int or type(self.web_uid) is not int or
+                min(self.issuer_uid, self.web_uid) < 1 or self.issuer_uid == self.web_uid):
+            raise ValueError("The web application and issuer need separate unprivileged accounts")
+        key = Ed25519PublicKey.from_public_bytes(base64.b64decode(config["public_key"], validate=True))
+        self.pins = FieldPins(config["actor_id"], config["device_id"], config["issuer"], config["key_id"], key)
+        self.trust = DecisionTrust(self.pins.issuer, self.pins.key_id, self.pins.device, self.pins.actor,
+                                   REHEARSAL_AUDIENCE, key)
+        self.stepups = []
+
+    def decide(self, qa, *, proposal=None, proposals=None, coordinator=None):
+        from fade.field_review import deliver_field_decision, protected_decision, verify_field_decision
+
+        card = owner_review(qa.field, self.trust, proposal=proposal, proposals=proposals)
+        publish_review(self.directory / "review", card)
+        while utc() < datetime.fromisoformat(card["expires_at"]):
+            try:
+                sealed = protected_decision(self.directory / "decisions", card["review_hash"], self.issuer_uid)
+                step = protected_decision(self.directory / "stepups", card["review_hash"], self.web_uid)
+                break
+            except FileNotFoundError:
+                time.sleep(0.25)
+        else:
+            raise TimeoutError("The owner review expired before both independent records arrived")
+        verified = verify_field_decision(card, sealed, self.pins)
+        if step["step_up_ref"] in self.stepups:
+            raise ValueError("Enrollment and fill require different passkey ceremonies")
+        def accept(event):
+            if proposal is not None:
+                qa.refresh()
+            ack = accept_rehearsal_review(qa.authority, qa.field, card, event, step,
+                                          proposal=proposal, proposals=proposals)
+            if proposal is None:
+                qa.refresh()
+            return ack
+        result = deliver_field_decision(card, sealed, self.pins, accept=accept, coordinator=coordinator)
+        self.stepups.append(step["step_up_ref"])
+        return result, verified.command
+
+
+def run(directory, fade_source=None, owner_exchange=None):
+    if fade_source is not None:
+        sys.path.insert(0, str(fade_source))
     from fade.weir_authority import (AmbiguousWeirTransportError, AuthorityRunStore, HttpWeirActionClient,
                                      WeirAuthorityCoordinator)
     from fade.weir_contract import WeirApprovalCommand
@@ -238,7 +293,12 @@ def run(directory, fade_source):
                                  assignment_id="qa-" + ident, source=WorkContextSource.AUTOWORK, created_at=utc().isoformat())
     with ExitStack() as stack:
         source, ca_file, received = stack.enter_context(tls_fixture(directory))
-        qa = QualificationAuthority(directory, source=source)
+        exchange = RehearsalExchange(owner_exchange) if owner_exchange else None
+        qa = QualificationAuthority(directory, source=source, owner_trust=exchange.trust if exchange else None)
+        if exchange:
+            enrolled, command = exchange.decide(qa)
+            if enrolled["state"] != "enrolled" or command is not None:
+                raise RuntimeError("Field enrollment unexpectedly authorized a fill")
         try:
             read_in_service(qa.field)
         except EnginePolicyBlocked:
@@ -272,12 +332,6 @@ def run(directory, fade_source):
             return controller
         app, p = prepare_enrolled_fill(store=store, proposals=proposals, context=context, authority=qa.authority,
                                        clients=clients, backend=object(), open_controller=open_controller)
-        command = WeirApprovalCommand(command_id="cmd-" + ident, proposal_hash=p.proposal_hash, action_id=p.action_id,
-                                      work_context_hash=p.work_context_hash, decision="approved", reason="Fixed offline acceptance")
-        proof = qa.capsule(command.command_id, p.action_id, p.proposal_hash, p.work_context_hash)
-        ref = "approval-" + command.decision_digest(qa.trust.owner).removeprefix("sha256:")[:32]
-        qa.authority.accept_approval(ref, proof, proof.step_up_ref, utc())
-        qa.refresh()
         with WeirService(app) as service:
             client = HttpWeirActionClient(f"http://{service.address[0]}:{service.address[1]}", credential=token)
             dropped = DropFirstExecuteResponseClient(client, AmbiguousWeirTransportError)
@@ -286,7 +340,17 @@ def run(directory, fade_source):
                     pass
             coordinator = WeirAuthorityCoordinator(AuthorityRunStore(directory / "fade"), dropped, event_sink=Events(),
                                                    sleeper=lambda _: None)
-            first = coordinator.decide(command, actor_id=qa.trust.owner)
+            if exchange:
+                first, command = exchange.decide(qa, proposal=p, proposals=proposals, coordinator=coordinator)
+            else:
+                command = WeirApprovalCommand(command_id="cmd-" + ident, proposal_hash=p.proposal_hash,
+                    action_id=p.action_id, work_context_hash=p.work_context_hash, decision="approved",
+                    reason="Fixed offline acceptance")
+                proof = qa.capsule(command.command_id, p.action_id, p.proposal_hash, p.work_context_hash)
+                ref = "approval-" + command.decision_digest(qa.trust.owner).removeprefix("sha256:")[:32]
+                qa.authority.accept_approval(ref, proof, proof.step_up_ref, utc())
+                qa.refresh()
+                first = coordinator.decide(command, actor_id=qa.trust.owner)
             if first["state"] != "completed":
                 raise RuntimeError("WEIR did not verify the enrolled fill: " + str(first["state"]))
             second = coordinator.decide(command, actor_id=qa.trust.owner)
@@ -323,12 +387,13 @@ def run(directory, fade_source):
                                    "pinned_pidfds_exited": item["exited_pidfds"], "processes_exited": len(item["exited_lifetimes"]),
                                    "receivers": item["controlled_receivers"], "unexpected_deliveries": item["unexpected_deliveries"]}
                                   for item in retained["evidence"].values()],
-                "live_website_accessed": False, "operator_passkey_used": False}
+                "live_website_accessed": False, "independent_owner_records": len(exchange.stepups) if exchange else 0}
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("directory", type=Path)
-    parser.add_argument("--fade-source", required=True, type=Path)
+    parser.add_argument("--fade-source", type=Path, help="Optional checkout for development builds")
+    parser.add_argument("--owner-exchange", type=Path, help="Use the protected Mission Control rehearsal exchange")
     args = parser.parse_args()
-    print(json.dumps(run(args.directory.resolve(), args.fade_source.resolve()), indent=2))
+    print(json.dumps(run(args.directory.resolve(), args.fade_source, args.owner_exchange), indent=2))

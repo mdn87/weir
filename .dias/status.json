@@ -8,13 +8,13 @@
   "milestonePhase": "operational-proof",
   "portfolioGroup": "acquisition",
   "displayPriority": 50,
-  "assessedAt": "2026-11-22T09:00:56.284Z",
+  "assessedAt": "2026-11-22T10:24:01.404Z",
   "confidence": "authoritative",
-  "currentMilestone": "The reviewed Linux action adapter passed host qualification for a signed, one-use fill on a disposable HTTPS field.",
-  "remainingSummary": "Commission the Linux grant, enroll one eligible field and approve its live canary. Saved changes, Windows browser compatibility and visual fallback remain.",
+  "currentMilestone": "Mission Control, Fade and WEIR verified a two-passkey Linux rehearsal for one unsaved field. Live website actions remain disabled.",
+  "remainingSummary": "The live canary awaits a deployment decision, an eligible page and a commissioned grant. Saved changes, Windows browser support and visual fallback remain.",
   "nextChipId": "weir:verify-production-action-canary",
   "source": {
-    "label": "Linux host qualification, crash recovery tests and independent implementation review",
+    "label": "Installed Linux rehearsal, passkey verification and independent review",
     "updatedAt": "2026-11-22"
   }
 }
