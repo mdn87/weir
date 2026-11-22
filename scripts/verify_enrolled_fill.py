@@ -22,7 +22,7 @@ from cryptography.hazmat.primitives.asymmetric import ec
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey, Ed25519PublicKey
 from weir.linux_field import runtime as linux_field_runtime
 from weir.linux_field.runtime import _launch_peer, browser_service, field_peer, read_in_service
-from weir.linux_field.review import REHEARSAL_AUDIENCE, accept_rehearsal_review, owner_review, publish_review
+from weir.linux_field.review import REHEARSAL_AUDIENCE, accept_rehearsal_review, owner_review, page_template, publish_review
 from weir.browser.effect_driver import FADE_AUTHORITY_ID
 from weir.browser.enrolled_document import EnrolledDocument, HEADERS, byte_digest, inert_page
 from weir.browser.enrolled_fill import DecisionTrust, ENROLL_ACTION, EnrolledField, GRANT, LinuxFillAuthority
@@ -47,7 +47,7 @@ def utc():
 class QualificationAuthority:
     """Trusted fixture signer. The deployed service contains only a pinned public key."""
 
-    def __init__(self, directory, *, source=None, owner_trust=None):
+    def __init__(self, directory, *, source=None, owner_trust=None, field_name="Fixture value", test_id="fixture-value"):
         self.key = None if owner_trust else Ed25519PrivateKey.generate()
         self.trust = owner_trust or DecisionTrust("fixture-issuer", "fixture-key", "fixture-device", "fixture-owner",
                                                   "fixture-enrolled-action", self.key.public_key())
@@ -57,9 +57,9 @@ class QualificationAuthority:
         (witness / "grant.jsonl").write_text(json.dumps({"grant": GRANT, "state": "available"}) + "\n")
         (witness / "grant.jsonl").chmod(0o600)
         self.authority = LinuxFillAuthority(auth_dir, witness, self.trust)
-        body = inert_page("Fixture value", "fixture-value")
+        body = inert_page(field_name, test_id)
         self.document = EnrolledDocument(body, tuple(HEADERS.items()), canonical_digest("fixture-peer-cert"))
-        self.field = EnrolledField(source[0] if source else "https://offline.example/field", "Fixture value", "fixture-value",
+        self.field = EnrolledField(source[0] if source else "https://offline.example/field", field_name, test_id,
                                    "fixture-enrollment", canonical_digest("profile"), "fixture-exclusive",
                                    byte_digest(body), canonical_digest(HEADERS),
                                    source[1] if source else self.document.peer_fingerprint, "127.0.0.1")
@@ -84,7 +84,7 @@ class QualificationAuthority:
 
 
 @contextmanager
-def tls_fixture(directory):
+def tls_fixture(directory, body):
     """An actual HTTPS peer. Only the disposable reader namespace trusts this CA."""
     now = utc()
     ca_key, leaf_key = [ec.generate_private_key(ec.SECP256R1()) for _ in range(2)]
@@ -105,7 +105,6 @@ def tls_fixture(directory):
     key_file.write_bytes(leaf_key.private_bytes(pem, serialization.PrivateFormat.PKCS8, serialization.NoEncryption()))
     tls = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
     tls.load_cert_chain(leaf_file, key_file)
-    body = inert_page("Fixture value", "fixture-value")
     requests = []
     class Page(BaseHTTPRequestHandler):
         def do_GET(self):
@@ -272,13 +271,23 @@ class RehearsalExchange:
         return result, verified.command
 
 
-def run(directory, fade_source=None, owner_exchange=None):
+def run(directory, fade_source=None, owner_exchange=None, page_copy=None):
     if fade_source is not None:
         sys.path.insert(0, str(fade_source))
     from fade.weir_authority import (AmbiguousWeirTransportError, AuthorityRunStore, HttpWeirActionClient,
                                      WeirAuthorityCoordinator)
     from fade.weir_contract import WeirApprovalCommand
     from run_fade_weir_action_canary import DropFirstExecuteResponseClient
+
+    field_name, test_id = "Fixture value", "fixture-value"
+    body = inert_page(field_name, test_id)
+    if page_copy is not None:
+        template = page_template()
+        with page_copy.open("rb") as stream:
+            body = stream.read(8193)
+        if body != template["html"].encode("ascii"):
+            raise ValueError("The copy must exactly match the public field template.")
+        field_name, test_id = template["name"], template["test_id"]
 
     os.umask(0o077)
     directory.mkdir(mode=0o700, exist_ok=False)
@@ -292,9 +301,10 @@ def run(directory, fade_source=None, owner_exchange=None):
     context = WorkContext.create(context_id="context-" + ident, run_id="run-" + ident, correlation_id="corr-" + ident,
                                  assignment_id="qa-" + ident, source=WorkContextSource.AUTOWORK, created_at=utc().isoformat())
     with ExitStack() as stack:
-        source, ca_file, received = stack.enter_context(tls_fixture(directory))
+        source, ca_file, received = stack.enter_context(tls_fixture(directory, body))
         exchange = RehearsalExchange(owner_exchange) if owner_exchange else None
-        qa = QualificationAuthority(directory, source=source, owner_trust=exchange.trust if exchange else None)
+        qa = QualificationAuthority(directory, source=source, owner_trust=exchange.trust if exchange else None,
+                                    field_name=field_name, test_id=test_id)
         if exchange:
             enrolled, command = exchange.decide(qa)
             if enrolled["state"] != "enrolled" or command is not None:
@@ -387,7 +397,8 @@ def run(directory, fade_source=None, owner_exchange=None):
                                    "pinned_pidfds_exited": item["exited_pidfds"], "processes_exited": len(item["exited_lifetimes"]),
                                    "receivers": item["controlled_receivers"], "unexpected_deliveries": item["unexpected_deliveries"]}
                                   for item in retained["evidence"].values()],
-                "live_website_accessed": False, "independent_owner_records": len(exchange.stepups) if exchange else 0}
+                "live_website_accessed": False, "page_body_digest": byte_digest(body),
+                "independent_owner_records": len(exchange.stepups) if exchange else 0}
 
 
 if __name__ == "__main__":
@@ -395,5 +406,6 @@ if __name__ == "__main__":
     parser.add_argument("directory", type=Path)
     parser.add_argument("--fade-source", type=Path, help="Optional checkout for development builds")
     parser.add_argument("--owner-exchange", type=Path, help="Use the protected Mission Control rehearsal exchange")
+    parser.add_argument("--page-copy", type=Path, help="Serve the exact published field bytes on the private test origin")
     args = parser.parse_args()
-    print(json.dumps(run(args.directory.resolve(), args.fade_source, args.owner_exchange), indent=2))
+    print(json.dumps(run(args.directory.resolve(), args.fade_source, args.owner_exchange, args.page_copy), indent=2))

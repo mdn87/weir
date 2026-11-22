@@ -1,0 +1,15 @@
+[Unit]
+Description=Serve the owner's one approved Linux field change on loopback
+RequiresMountsFor=/var/lib/weir-grant-witness
+ConditionPathExists=/etc/weir/enrolled-fill/deployment.json
+ConditionPathExists=/etc/weir/enrolled-fill/service.json
+ConditionPathExists=/var/lib/weir-grant-witness/grant.jsonl
+ConditionPathExists=/var/lib/weir-enrolled-fill/decisions/current.json
+
+[Service]
+Type=exec
+User=root
+UMask=0077
+LoadCredentialEncrypted=fade-weir-authority:/etc/credstore.encrypted/weir-linux-fade-caller
+ExecStart=/opt/weir-public-field/ec15976c05f68dc6683b584eb57c1b9e7f9889af164a10711152c136cfbf3f03/venv/bin/weir-field-host serve
+Restart=no

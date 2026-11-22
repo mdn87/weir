@@ -8,11 +8,11 @@
   "milestonePhase": "operational-proof",
   "portfolioGroup": "acquisition",
   "displayPriority": 50,
-  "assessedAt": "2026-11-22T14:11:47.695Z",
+  "assessedAt": "2026-11-22T16:47:20.122Z",
   "confidence": "authoritative",
-  "currentMilestone": "The owner can approve, verify and undo a saved title in a private rehearsal. Live website changes are disabled.",
-  "remainingSummary": "Live writes need an eligible target and a commissioned host. A real saved edit needs its own review and verification. Windows service browser isolation remains open.",
-  "nextChipId": "weir:review-saved-effect-policy",
+  "currentMilestone": "The public test field passed a Linux browser read. Fade verified the temporary fill on a private copy. The Linux caller credential is installed.",
+  "remainingSummary": "Connect the live passkey issuer, verify grant recovery and obtain the two owner decisions. The first live fill, a saved website edit and Windows isolation remain open.",
+  "nextChipId": "weir:commission-live-field-approval",
   "source": {
     "label": "Operator release, saved change review and Dias board evidence",
     "updatedAt": "2026-11-22"
