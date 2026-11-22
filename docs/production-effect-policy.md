@@ -1,10 +1,11 @@
 # First production browser action
 
-The production allowlist is empty. A future Windows canary may request permission to
+The production allowlist is empty. The first Linux canary may request permission to
 fill one empty, unsaved text field with the public marker `WEIR-CANARY`. Its effect
 lasts only for the life of that browser tab. The current Windows service admits a
-deny-only worker. Browser compatibility, a permit-bound adapter and approval of a
-named live action are separate delivery steps.
+deny-only worker. The Linux policy specifies host controls for the selected deployment.
+The permit-bound production adapter and approval of a named live action are separate
+delivery steps. [Linux action policy](linux-first-action-policy.md)
 
 ## Enroll one page and one field
 
@@ -36,7 +37,7 @@ once, read it back and close. Each uses a fixed browser protocol operation with 
 arguments. Deny arbitrary evaluation, caller selectors, click, submit, upload and
 all other operations.
 
-Before reservation, the trusted host inspector must establish a continuous block on
+On Windows, before reservation, the trusted host inspector must establish a continuous block on
 outbound delivery for the AppContainer and every browser descendant. Bind Windows
 Filtering Platform or equivalent kernel enforcement and its protected audit records
 to the AppContainer SID, Job membership and process lifetimes. Close any initial
@@ -142,7 +143,9 @@ retention rules. [Browser store](browser-store-v2.md) · [Frozen action contract
 ## Evidence required for implementation and rollout
 
 First prove browser startup, observation, isolation and descendant cleanup under the
-Windows service identity. Adapter qualification must then demonstrate the following.
+selected host's service identity. The Linux policy defines the checks for the first
+action. A future Windows rollout requires the same proof under the Windows service.
+Adapter qualification must then demonstrate the following.
 
 | Case | Evidence |
 | --- | --- |

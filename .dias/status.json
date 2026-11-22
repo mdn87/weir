@@ -8,13 +8,13 @@
   "milestonePhase": "operational-proof",
   "portfolioGroup": "acquisition",
   "displayPriority": 50,
-  "assessedAt": "2026-11-22T07:50:08.020Z",
+  "assessedAt": "2026-11-22T08:08:27.656Z",
   "confidence": "authoritative",
-  "currentMilestone": "Two Windows service trials identified the native startup failure and restored the service. Linux qualification for the first approved action is underway.",
-  "remainingSummary": "Qualify Linux for an approved unsaved fill, bind permits and run the canary. A saved change needs its own policy. Windows compatibility and visual fallback remain.",
-  "nextChipId": "weir:qualify-linux-first-action",
+  "currentMilestone": "The Linux service rehearsed one permit-bound unsaved fill with readback, discard, restart and isolation verified. Website actions remain disabled.",
+  "remainingSummary": "Build the Linux production adapter, enroll an eligible field and run one approved canary. Saved changes, Windows browser compatibility and visual fallback remain.",
+  "nextChipId": "weir:implement-production-effect-adapter",
   "source": {
-    "label": "Installed Windows service trials and Linux action planning",
+    "label": "Independent policy review and installed Linux service rehearsal",
     "updatedAt": "2026-11-22"
   }
 }

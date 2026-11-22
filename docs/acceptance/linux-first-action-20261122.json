@@ -1,0 +1,54 @@
+{
+  "authority": {
+    "conflicting_replay_rejected": true,
+    "effect_count": 1,
+    "fade_http_boundary": true,
+    "operator_actor": "local-operator",
+    "post_restart_replay_stable": true,
+    "public_parameter_leak": false,
+    "real_playwright_effect": true,
+    "same_process_replay_stable": true,
+    "session_state": "active",
+    "transport_response_loss_reconciled": true,
+    "weir_http_boundary": true,
+    "worker_apply_calls": 1
+  },
+  "chromium_version": "149.0.7827.55",
+  "closed_browser_replay_returned_same_receipt": true,
+  "closed_service_trees": 2,
+  "finished_at": "2026-11-22T08:07:56.899103+00:00",
+  "fixture_sha256": "d290846e7f98ecde1a23583bb6a77af23a44c6844f4c2d85d168cd4a4aec65e2",
+  "fresh_browser_empty": true,
+  "maximum_observed_processes": [
+    8,
+    8
+  ],
+  "memory_limit_bytes": 536870912,
+  "ordinary_service_denied_rehearsal_permit": true,
+  "playwright_version": "1.61.0",
+  "production_action_performed": false,
+  "production_destination_enrolled": false,
+  "receipt_hash": "sha256:ba2ef097ce9a5fa52ca897ad4970950d9c36372ea1f625236676a3ea2f324aeb",
+  "receipt_reopened_in_new_process": true,
+  "receiver_controls_before_and_after": [
+    "ipv4_tcp",
+    "ipv4_udp",
+    "ipv6_tcp",
+    "ipv6_udp",
+    "unix_abstract",
+    "unix_path"
+  ],
+  "resolved_unit_policy_sha256": "790c6ebc07afdf8c1feb22e1f80e3d4db20393b0979e539bb9602bef5c8a01b8",
+  "run_id": "batch9-canary-c6dc556cb464b875",
+  "same_loader_and_backend_node": true,
+  "schema": "weir-linux-unsaved-fill-rehearsal/v1",
+  "scope": "offline fixed public fixture",
+  "separate_dom_snapshot_verified_exact_value": true,
+  "service_invocations": [
+    "30796c74a13c418087d452efe99abb76",
+    "8ab948173c544b5ba0ca724b659777b9"
+  ],
+  "task_limit": 128,
+  "unexpected_deliveries": 0,
+  "weir_version": "0.6.0"
+}
