@@ -912,7 +912,7 @@
       "aheadOfPrereqs": null,
       "timestamps": {
         "createdAt": "2026-11-22T06:26:23.042Z",
-        "updatedAt": "2026-11-22T07:04:42.402Z"
+        "updatedAt": "2026-11-22T07:08:55.000Z"
       },
       "evidence": [
         {
@@ -932,6 +932,12 @@
           "at": "2026-11-22T07:04:42.402Z",
           "kind": "stage-change",
           "message": "The installed form read the two matching test tasks and saved the exact source. Only its owner could reopen the report and source after restart."
+        },
+        {
+          "entryId": "ev:review-board-operator-confirmed",
+          "at": "2026-11-22T07:08:55.000Z",
+          "kind": "note",
+          "message": "The operator ran the live report in their signed-in workspace and confirmed zero tasks in Review. Its saved entry and source link showed the same observation time."
         }
       ]
     }
