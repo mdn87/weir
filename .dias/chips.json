@@ -571,18 +571,20 @@
       "projectId": "weir",
       "title": "Identify the Windows service browser startup failure",
       "summary": "Use the service identity and native loader evidence to identify which browser dependency fails and verify a control that loads successfully.",
-      "stage": "active",
+      "stage": "done",
       "sequence": 89,
       "prereqs": [
         "weir:provision-deployment-controls",
         "weir:review-production-effect-policy"
       ],
-      "linkedRunIds": [],
+      "linkedRunIds": [
+        "windows-efe19ba7db664c198f84c9b8ac01ce57"
+      ],
       "confidence": "authoritative",
       "aheadOfPrereqs": null,
       "timestamps": {
         "createdAt": "2026-11-22T07:19:05.062Z",
-        "updatedAt": "2026-11-22T07:19:48.060Z"
+        "updatedAt": "2026-11-22T07:36:34.667Z"
       },
       "evidence": [
         {
@@ -596,6 +598,12 @@
           "at": "2026-11-22T07:19:48.060Z",
           "kind": "stage-change",
           "message": "Started native loader inspection using the recorded service failure and the packaged Node driver as the baseline."
+        },
+        {
+          "entryId": "ev:win-loader-identified",
+          "at": "2026-11-22T07:36:34.667Z",
+          "kind": "stage-change",
+          "message": "The service failed to initialize USER32 and GDI32. A native USER32 control reproduced the Node exit. The same control and the browser field read passed on the desktop."
         }
       ]
     },
@@ -605,7 +613,7 @@
       "projectId": "weir",
       "title": "Prove browser isolation in the Windows service",
       "summary": "Prove the selected browser starts inside the service sandbox and shuts down with its descendants; review any new capabilities before use.",
-      "stage": "blocked",
+      "stage": "active",
       "sequence": 90,
       "prereqs": [
         "weir:review-production-effect-policy",
@@ -616,7 +624,7 @@
       "aheadOfPrereqs": null,
       "timestamps": {
         "createdAt": "2026-10-27T02:53:26.430Z",
-        "updatedAt": "2026-11-22T07:19:05.062Z"
+        "updatedAt": "2026-11-22T07:43:02.163Z"
       },
       "evidence": [
         {
@@ -672,6 +680,12 @@
           "at": "2026-11-22T07:19:05.062Z",
           "kind": "note",
           "message": "The loader diagnostic is the next prerequisite for the Windows field read and browser cleanup check."
+        },
+        {
+          "entryId": "ev:win-browser-package-confirm",
+          "at": "2026-11-22T07:43:02.163Z",
+          "kind": "stage-change",
+          "message": "Started the final packaged browser under the commissioned service after identifying the failing Windows libraries."
         }
       ]
     },
@@ -732,6 +746,34 @@
     },
     {
       "schemaVersion": 1,
+      "chipId": "weir:qualify-linux-first-action",
+      "projectId": "weir",
+      "title": "Qualify Linux for the first approved website change",
+      "summary": "Review the Linux policy and test a permit-bound fill of one unsaved field. Verify readback, discard, network isolation and denial on replay.",
+      "stage": "ready",
+      "sequence": 97,
+      "prereqs": [
+        "weir:review-production-effect-policy",
+        "weir:verify-linux-host-admission"
+      ],
+      "linkedRunIds": [],
+      "confidence": "authoritative",
+      "aheadOfPrereqs": null,
+      "timestamps": {
+        "createdAt": "2026-11-22T07:45:45.206Z",
+        "updatedAt": "2026-11-22T07:45:45.206Z"
+      },
+      "evidence": [
+        {
+          "entryId": "ev:linux-action-selected",
+          "at": "2026-11-22T07:45:45.206Z",
+          "kind": "created",
+          "message": "Matt chose Linux for the first approved website change after the Windows service failed the native browser comparison."
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
       "chipId": "weir:implement-production-effect-adapter",
       "projectId": "weir",
       "title": "Bind production actions to reviewed permits",
@@ -739,14 +781,14 @@
       "stage": "planned",
       "sequence": 100,
       "prereqs": [
-        "weir:prove-windows-browser-compatibility"
+        "weir:qualify-linux-first-action"
       ],
       "linkedRunIds": [],
       "confidence": "inferred",
       "aheadOfPrereqs": null,
       "timestamps": {
         "createdAt": "2026-10-27T02:53:26.430Z",
-        "updatedAt": "2026-10-27T02:53:26.430Z"
+        "updatedAt": "2026-11-22T07:45:45.206Z"
       },
       "evidence": [
         {
@@ -754,6 +796,12 @@
           "at": "2026-10-27T02:53:26.430Z",
           "kind": "created",
           "message": "Refined from the accepted Windows deployment limits, production admission contract and remaining roadmap; implementation has not started."
+        },
+        {
+          "entryId": "ev:linux-action-prerequisite",
+          "at": "2026-11-22T07:45:45.206Z",
+          "kind": "note",
+          "message": "Matt selected Linux. Adapter qualification now builds on the reviewed Linux action policy and service proof."
         }
       ]
     },
