@@ -856,6 +856,33 @@
     },
     {
       "schemaVersion": 1,
+      "chipId": "weir:prepare-linux-canary-review",
+      "projectId": "weir",
+      "title": "Prepare the Linux canary for owner review",
+      "summary": "Package the host service, show its commissioning requirements and let the owner inspect the exact page and proposed unsaved edit before any decision.",
+      "stage": "ready",
+      "sequence": 105,
+      "prereqs": [
+        "weir:implement-production-effect-adapter"
+      ],
+      "linkedRunIds": [],
+      "confidence": "authoritative",
+      "aheadOfPrereqs": null,
+      "timestamps": {
+        "createdAt": "2026-11-22T09:46:21.275Z",
+        "updatedAt": "2026-11-22T09:46:21.275Z"
+      },
+      "evidence": [
+        {
+          "entryId": "ev:linux-review-prep-created",
+          "at": "2026-11-22T09:46:21.275Z",
+          "kind": "created",
+          "message": "The adapter passed its private rehearsal. Its host tools and owner review still need an installable path before live enrollment."
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
       "chipId": "weir:verify-production-action-canary",
       "projectId": "weir",
       "title": "Verify the unsaved browser field canary",
@@ -863,14 +890,15 @@
       "stage": "planned",
       "sequence": 110,
       "prereqs": [
-        "weir:implement-production-effect-adapter"
+        "weir:implement-production-effect-adapter",
+        "weir:prepare-linux-canary-review"
       ],
       "linkedRunIds": [],
       "confidence": "inferred",
       "aheadOfPrereqs": null,
       "timestamps": {
         "createdAt": "2026-10-27T02:53:26.430Z",
-        "updatedAt": "2026-11-22T09:00:56.284Z"
+        "updatedAt": "2026-11-22T09:46:21.275Z"
       },
       "evidence": [
         {
