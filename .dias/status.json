@@ -8,13 +8,13 @@
   "milestonePhase": "operational-proof",
   "portfolioGroup": "acquisition",
   "displayPriority": 50,
-  "assessedAt": "2026-11-22T08:08:27.656Z",
+  "assessedAt": "2026-11-22T09:00:56.284Z",
   "confidence": "authoritative",
-  "currentMilestone": "The Linux service rehearsed one permit-bound unsaved fill with readback, discard, restart and isolation verified. Website actions remain disabled.",
-  "remainingSummary": "Build the Linux production adapter, enroll an eligible field and run one approved canary. Saved changes, Windows browser compatibility and visual fallback remain.",
-  "nextChipId": "weir:implement-production-effect-adapter",
+  "currentMilestone": "The reviewed Linux action adapter passed host qualification for a signed, one-use fill on a disposable HTTPS field.",
+  "remainingSummary": "Commission the Linux grant, enroll one eligible field and approve its live canary. Saved changes, Windows browser compatibility and visual fallback remain.",
+  "nextChipId": "weir:verify-production-action-canary",
   "source": {
-    "label": "Independent policy review and installed Linux service rehearsal",
+    "label": "Linux host qualification, crash recovery tests and independent implementation review",
     "updatedAt": "2026-11-22"
   }
 }

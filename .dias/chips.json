@@ -806,18 +806,20 @@
       "chipId": "weir:implement-production-effect-adapter",
       "projectId": "weir",
       "title": "Bind production actions to reviewed permits",
-      "summary": "Connect reviewed browser actions to exact permits, current state and durable receipts; prove denial, ambiguity and retry behavior.",
-      "stage": "ready",
+      "summary": "On Linux, the exact signed proposal and one durable permit authorize an unsaved fill. Independent readback, browser exit and recovery bind the receipt.",
+      "stage": "done",
       "sequence": 100,
       "prereqs": [
         "weir:qualify-linux-first-action"
       ],
-      "linkedRunIds": [],
+      "linkedRunIds": [
+        "run-63a1fb39e9c385140247c5be"
+      ],
       "confidence": "authoritative",
       "aheadOfPrereqs": null,
       "timestamps": {
         "createdAt": "2026-10-27T02:53:26.430Z",
-        "updatedAt": "2026-11-22T08:07:14.827Z"
+        "updatedAt": "2026-11-22T09:00:56.284Z"
       },
       "evidence": [
         {
@@ -837,6 +839,18 @@
           "at": "2026-11-22T08:07:14.827Z",
           "kind": "stage-change",
           "message": "The Linux rehearsal passed. The next step binds a live adapter to the enrolled owner, a signed approval, the exact field and one durable grant."
+        },
+        {
+          "entryId": "ev:linux-adapter-start",
+          "at": "2026-11-22T08:22:17.648Z",
+          "kind": "stage-change",
+          "message": "Started binding the normal action route to owner enrollment, a signed decision and one durable grant. Qualification will use disposable authority and an isolated browser."
+        },
+        {
+          "entryId": "ev:linux-enrolled-fill-proof",
+          "at": "2026-11-22T09:00:56.284Z",
+          "kind": "stage-change",
+          "message": "One signed fixture fill returned the same receipt after response loss and restart. Cross-role calls failed. Crash and rollback tests kept the grant spent."
         }
       ]
     },
@@ -856,7 +870,7 @@
       "aheadOfPrereqs": null,
       "timestamps": {
         "createdAt": "2026-10-27T02:53:26.430Z",
-        "updatedAt": "2026-11-21T09:38:06.173Z"
+        "updatedAt": "2026-11-22T09:00:56.284Z"
       },
       "evidence": [
         {
@@ -870,6 +884,12 @@
           "at": "2026-11-21T09:38:06.173Z",
           "kind": "note",
           "message": "The existing policy covers only the unsaved marker. A useful saved change has a separate delivery and approval."
+        },
+        {
+          "entryId": "ev:linux-canary-prereq-done",
+          "at": "2026-11-22T09:00:56.284Z",
+          "kind": "note",
+          "message": "The Linux adapter passed. The owner accepted rehearsal only. A live run still needs a commissioned grant, an eligible enrolled field and separate passkey approval."
         }
       ]
     },

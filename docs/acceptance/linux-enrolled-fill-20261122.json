@@ -1,0 +1,58 @@
+{
+  "schema": "weir-enrolled-fill-qualification/v1",
+  "run_id": "run-63a1fb39e9c385140247c5be",
+  "observed_at": "2026-11-22T09:00:29.419167+00:00",
+  "receipt_hash": "sha256:7aabf0709509524cea9e2f26d0d4822cd893a18747d3607e4e4a4232647db969",
+  "fade_execute_calls": 1,
+  "lost_responses_reconciled": 1,
+  "same_receipt_on_replay": true,
+  "cross_role_denials": 2,
+  "grant_states": [
+    "available",
+    "reserved",
+    "dispatch"
+  ],
+  "signed_disposable_enrollment_and_approval": true,
+  "separate_browser_discard": true,
+  "fixture_https_gets": 2,
+  "ordinary_trust_rejected_fixture_ca": true,
+  "separate_append_only_volume_checked": true,
+  "commissioned_trust_rejected_fixture_signature": true,
+  "kernel_observed_reaped_thread": true,
+  "same_receipt_after_weir_restart": true,
+  "exit_evidence_digest": "sha256:458c8e77f27a29b8260a35cabb1bfe1ddb3c621e3aefc49d5d78a6e039777d38",
+  "browser_exits": [
+    {
+      "invocation": "90c286c9e480487aa76ec0c7efea7174",
+      "cgroup_removed": true,
+      "pinned_pidfds_exited": 2,
+      "processes_exited": 8,
+      "receivers": [
+        "ipv4_tcp",
+        "ipv4_udp",
+        "ipv6_tcp",
+        "ipv6_udp",
+        "unix_abstract",
+        "unix_path"
+      ],
+      "unexpected_deliveries": 0
+    },
+    {
+      "invocation": "486b95ae029a4ca8905a7a4e17b93f08",
+      "cgroup_removed": true,
+      "pinned_pidfds_exited": 2,
+      "processes_exited": 8,
+      "receivers": [
+        "ipv4_tcp",
+        "ipv4_udp",
+        "ipv6_tcp",
+        "ipv6_udp",
+        "unix_abstract",
+        "unix_path"
+      ],
+      "unexpected_deliveries": 0
+    }
+  ],
+  "live_website_accessed": false,
+  "operator_passkey_used": false
+}

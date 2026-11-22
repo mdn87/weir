@@ -8,7 +8,7 @@ from pathlib import Path
 
 
 RUNTIME = Path("/srv/lugos/runtimes/weir-operator-reports/0.6.0")
-UNIT_RE = re.compile(r"weir-fill-rehearsal-[0-9a-f]{16}")
+UNIT_RE = re.compile(r"weir-(?:fill-rehearsal|enrolled-field)-[0-9a-f]{16}")
 PROPERTIES = {
     "DynamicUser": "yes", "User": "weir-fill-stage", "PrivateNetwork": "yes",
     "RestrictAddressFamilies": "AF_UNIX", "PrivatePIDs": "yes", "PrivateIPC": "yes",
@@ -77,7 +77,9 @@ def main():
         raise ValueError("Expected the sealed Linux rehearsal driver")
     argv = ["/usr/bin/systemd-run", "--quiet", "--pipe", "--wait", "--collect",
             "--service-type=exec", "--unit=" + unit]
-    argv.extend("--property=" + key + "=" + value for key, value in PROPERTIES.items())
+    properties = PROPERTIES | ({"User": "weir-enrolled", "RuntimeMaxSec": "420"}
+                               if unit.startswith("weir-enrolled-field-") else {})
+    argv.extend("--property=" + key + "=" + value for key, value in properties.items())
     argv.extend(["--setenv=HOME=/tmp", "--setenv=PLAYWRIGHT_BROWSERS_PATH=" + str(RUNTIME / "browsers"),
                  "--", str(RUNTIME / "bin/python"), "-I", "-c", PREFLIGHT, str(port), unix_socket,
                  str(driver / "node"), cli, "run-driver"])

@@ -93,6 +93,10 @@ class ActionProposalStore:
     def load(self, proposal_hash: str) -> ActionProposal:
         return self.load_record(proposal_hash).proposal
 
+    def approved_observation(self, proposal: ActionProposal) -> Observation:
+        observation, _ = self._verify_observation_binding(proposal, require_current=False)
+        return observation
+
     def load_by_action(self, action_id: str) -> ActionProposal:
         metadata = self._read_document(
             self._action_path(action_id),

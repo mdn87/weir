@@ -231,8 +231,10 @@ live Windows inspection and an explicit deny-only installer described in
 [`docs/windows-deployment.md`](docs/windows-deployment.md). Its no-capability
 AppContainer worker cannot read caller credentials or modify the supervisor.
 Independent review accepted a policy for one unsaved field on an operator-owned page.
-Browser compatibility and the production adapter still need proof. No destination
-is enrolled. [First production browser action](docs/production-effect-policy.md)
+The Linux action adapter completed one signed fill on a disposable HTTPS page through
+Fade and the normal WEIR service. A live canary still needs a commissioned grant,
+an owner-enrolled page and a separate passkey approval for its proposal.
+[Linux adapter acceptance](docs/acceptance/linux-enrolled-fill-20261122.md)
 The frozen Batch 8 signed-capsule, queue, acknowledgement, revocation, and redacted
 audit contracts are in `docs/remote-decision-contract.md` and
 `contracts/fixtures/remote-relay-v1.json`. Source flags remain disabled by default;
