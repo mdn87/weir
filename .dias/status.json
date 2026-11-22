@@ -8,13 +8,13 @@
   "milestonePhase": "operational-proof",
   "portfolioGroup": "acquisition",
   "displayPriority": 50,
-  "assessedAt": "2026-11-22T10:24:01.404Z",
+  "assessedAt": "2026-11-22T11:53:38.913Z",
   "confidence": "authoritative",
-  "currentMilestone": "Mission Control, Fade and WEIR verified a two-passkey Linux rehearsal for one unsaved field. Live website actions remain disabled.",
-  "remainingSummary": "The live canary awaits a deployment decision, an eligible page and a commissioned grant. Saved changes, Windows browser support and visual fallback remain.",
-  "nextChipId": "weir:verify-production-action-canary",
+  "currentMilestone": "The private passkey rehearsal passed. Delivering read-only visual evidence for dashboard values that structured observation misses.",
+  "remainingSummary": "Finish the visual reader. The live canary is on hold. Saved changes and Windows service browser isolation also remain.",
+  "nextChipId": "weir:add-visual-fallback",
   "source": {
-    "label": "Installed Linux rehearsal, passkey verification and independent review",
+    "label": "Browser evidence, Aire regional OCR, operator acceptance and the Dias work record",
     "updatedAt": "2026-11-22"
   }
 }
