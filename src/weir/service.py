@@ -5,11 +5,13 @@ import ipaddress
 import json
 import re
 import socket
+import sys
 from contextlib import AbstractContextManager
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from pathlib import Path
 from threading import Thread
 from typing import Any, Callable, Mapping
 from urllib.parse import unquote, urlsplit
@@ -826,8 +828,47 @@ class WeirServiceApplication:
         return ServiceResponse(HTTPStatus.OK, canonical_json_bytes(value))
 
 
-class _WeirHTTPServer(ThreadingHTTPServer):
+def _load_lugos_http():
+    """Import shared ``lugos_http`` hardening helpers when available.
+
+    In superproject checkouts and deployed Lugos venvs, ``lugos-http`` supplies
+    ``BoundedThreadingHTTPServer`` (concurrency cap, live-socket tracking, and
+    header-read watchdogs). Standalone ``weir`` installs without the sibling
+    package fall back cleanly to stdlib ``ThreadingHTTPServer``.
+    """
+    try:
+        import lugos_http
+
+        return lugos_http
+    except ImportError:
+        here = Path(__file__).resolve()
+        for parent in here.parents[:6]:
+            candidate = parent / "lugos-http" / "src"
+            if (candidate / "lugos_http" / "__init__.py").is_file():
+                if str(candidate) not in sys.path:
+                    sys.path.insert(0, str(candidate))
+                try:
+                    import lugos_http
+
+                    return lugos_http
+                except ImportError:
+                    return None
+        return None
+
+
+_LUGOS_HTTP = _load_lugos_http()
+_HTTP_SERVER_BASE = (
+    _LUGOS_HTTP.BoundedThreadingHTTPServer
+    if _LUGOS_HTTP is not None
+    else ThreadingHTTPServer
+)
+
+
+class _WeirHTTPServer(_HTTP_SERVER_BASE):
     daemon_threads = True
+    max_request_threads = 16
+    header_timeout = 10.0
+    tls_handshake_timeout = None
 
 
 class _WeirIPv6HTTPServer(_WeirHTTPServer):
@@ -888,6 +929,14 @@ class WeirService(AbstractContextManager["WeirService"]):
 
         class Handler(BaseHTTPRequestHandler):
             protocol_version = "HTTP/1.1"
+
+            def parse_request(self) -> bool:
+                ok = super().parse_request()
+                if ok:
+                    complete = getattr(self.server, "complete_request_headers", None)
+                    if callable(complete):
+                        complete(self.connection)
+                return ok
 
             def handle_expect_100(self) -> bool:
                 raw_length = self.headers.get("Content-Length")
