@@ -1,0 +1,27 @@
+# lugos-module.toml — weir submodule self-report (Contract 1)
+[identity]
+name = "weir"
+version = "0.9.0"
+owner = "mdn87"
+schema_version = "1.0.0"
+
+[surfaces.weir-cli]
+type = "command"
+path = "src/weir/cli.py"
+
+[surfaces.weir-operator-rpc]
+type = "command"
+path = "src/weir/operator_rpc.py"
+
+[docs.readme]
+path = "README.md"
+post_pass_eligible = true
+
+[risk]
+security_boundary = true
+network_egress = true
+command_exec = true
+
+[provenance]
+generated_by = "hand"
+last_validated = "2026-11-24T00:00:00Z"
