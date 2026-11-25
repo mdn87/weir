@@ -2,7 +2,7 @@
 
 **Web Evidence, Interaction & Retrieval**
 
-WEIR is the proposed web capability plane for the Lugos ecosystem. It provides one typed boundary for public web acquisition, authenticated browser observation, browser interaction, evidence capture, engine routing, and escalation to visual fallbacks.
+WEIR is the web capability plane for the Lugos ecosystem (current package release `0.9.0` in `pyproject.toml`, shipping 7 CLI entrypoints and Linux `systemd` units under `config/lugos-host/`). It provides one typed boundary for public web acquisition, authenticated browser observation, browser interaction, evidence capture, engine routing, and escalation to visual fallbacks.
 
 In Mission Control, open **Lugos → Web reports**. Choose **Dias project work**
 to see what you can start on the WEIR board and which chips need a prerequisite.
@@ -231,10 +231,13 @@ remaining sibling work is in `docs/remaining-integration-plan.md`. The accepted 
 The implemented Batch 1A caller, cache, persistence, and telemetry invariants are in
 `docs/context-bound-acquisition.md`.
 The 7P evidence contract, fail-closed gates, and host rollout boundary are in
-`docs/production-admission.md`. Version 0.4.0 adds schema-v2 process lifetime binding,
-live Windows inspection and an explicit deny-only installer described in
-[`docs/windows-deployment.md`](docs/windows-deployment.md). Its no-capability
-AppContainer worker cannot read caller credentials or modify the supervisor.
+`docs/production-admission.md`. Schema-v2 process lifetime binding (introduced in 0.4.0,
+retained through current `0.9.0`), live Windows inspection, and an explicit deny-only installer
+are described in [`docs/windows-deployment.md`](docs/windows-deployment.md). Its no-capability
+AppContainer worker cannot read caller credentials or modify the supervisor. Current `0.9.0`
+ships seven CLI entrypoints (`weir`, `weir-operator-rpc`, `weir-saved-task-rpc`,
+`weir-dias-snapshot`, `weir-canary`, `weir-field-host`, `weir-field-browser-driver`) and
+Linux `systemd` unit templates under `config/lugos-host/`.
 Independent review accepted a policy for one unsaved field on an operator-owned page.
 The Linux action adapter completed one signed fill on a disposable HTTPS page through
 Fade and the normal WEIR service. A live canary still needs a commissioned grant,
